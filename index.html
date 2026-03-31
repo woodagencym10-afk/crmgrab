@@ -1,60 +1,48 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> SD Analytics | Enterprise PRO</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f1f5f9', subtle: '#94a3b8' } } } }
-        }
-    </script>
-    <style>
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        canvas { color: #f1f5f9 !important; }
-        .dropdown-content { display: none; max-height: 250px; overflow-y: auto; z-index: 50; }
-        .dropdown-content.show { display: block; }
-        .checkbox-label { display: flex; align-items: center; padding: 8px 12px; cursor: pointer; transition: background 0.2s; }
-        .checkbox-label:hover { background: #334155; }
-        .tab-btn { transition: all 0.2s; }
-        .tab-btn.active { background: #3b82f6; color: #fff; }
-        .kpi-up { color: #10b981; }
-        .kpi-down { color: #ef4444; }
-        .kpi-same { color: #94a3b8; }
-        /* Панель порівняння — плавна анімація */
-        #comparePanel {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out, opacity 0.3s ease;
-            opacity: 0;
-        }
-        #comparePanel.open {
-            max-height: 4000px;
-            opacity: 1;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecoforma Analytics | Enterprise PRO</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { colors: { dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f1f5f9', subtle: '#94a3b8' } } } }
+    }
+</script>
+<style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    canvas { color: #f1f5f9 !important; }
+    .dropdown-content { display: none; max-height: 250px; overflow-y: auto; z-index: 50; }
+    .dropdown-content.show { display: block; }
+    .checkbox-label { display: flex; align-items: center; padding: 8px 12px; cursor: pointer; transition: background 0.2s; }
+    .checkbox-label:hover { background: #334155; }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active { background: #3b82f6; color: #fff; }
+    .kpi-up { color: #10b981; }
+    .kpi-down { color: #ef4444; }
+    .kpi-same { color: #94a3b8; }
+    #comparePanel { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out, opacity 0.3s ease; opacity: 0; }
+    #comparePanel.open { max-height: 4000px; opacity: 1; }
+</style>
 </head>
 <body class="bg-dark-bg p-4 md:p-8 font-sans text-dark-text antialiased">
 <div class="max-w-7xl mx-auto">
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- HEADER                                                  -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- HEADER -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-dark-border pb-6 gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold text-white uppercase tracking-tight"> SD <span class="text-blue-500">Analytics</span></h1>
-            <p class="text-dark-subtle mt-1 text-sm">Синхронізація з вкладкою "МП"</p>
+            <h1 class="text-3xl font-extrabold text-white uppercase tracking-tight">Ecoforma <span class="text-blue-500">Analytics</span></h1>
+            <p class="text-dark-subtle mt-1 text-sm">Синхронізація з вкладкою "МП" + База авансів</p>
         </div>
         <div class="flex items-center gap-3">
             <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 font-bold shadow-lg text-sm">📥 CSV</button>
-            <!-- КНОПКА ПОРІВНЯННЯ -->
             <button id="comparePanelBtn" onclick="toggleComparePanel()"
                 class="bg-purple-700 hover:bg-purple-600 text-white px-5 py-2 rounded-xl font-bold shadow-lg text-sm flex items-center gap-2 transition">
                 <span>⚖️</span> <span id="compareBtnLabel">Порівняти з періодом</span>
@@ -62,13 +50,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- ПАНЕЛЬ ПОРІВНЯННЯ — КРОК 1: вибір дат                  -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ПАНЕЛЬ ПОРІВНЯННЯ -->
     <div id="comparePanel">
         <div class="bg-purple-950/30 rounded-2xl border border-purple-800/50 shadow-xl mb-8 overflow-hidden">
-
-            <!-- Заголовок + вибір Період Б -->
             <div class="bg-purple-950/60 p-5 border-b border-purple-800/40">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -84,49 +68,29 @@
                                 <input type="date" id="cmpEndB" class="bg-dark-bg border border-purple-800/60 rounded-lg p-2 text-xs text-white outline-none">
                             </div>
                         </div>
-                        <button onclick="runComparison()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-lg text-sm transition self-end flex items-center gap-2">
-                            ⚖️ Порівняти
-                        </button>
+                        <button onclick="runComparison()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-lg text-sm transition self-end flex items-center gap-2">⚖️ Порівняти</button>
                     </div>
                 </div>
-
-                <!-- Підказка Період А -->
-                <div class="mt-4 flex items-center gap-3">
-                    <!-- Активні бейджі А / Б -->
-                    <div class="mt-4 flex flex-wrap items-center gap-3">
-                        <div class="flex items-center gap-2 bg-blue-900/30 border border-blue-700/50 rounded-xl px-4 py-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                            <div>
-                                <p class="text-[9px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Період А</p>
-                                <p id="cmpPeriodALabel" class="text-xs font-black text-white">—</p>
-                            </div>
-                        </div>
-                        <span class="text-slate-500 font-bold text-sm">vs</span>
-                        <div class="flex items-center gap-2 bg-purple-900/30 border border-purple-700/50 rounded-xl px-4 py-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-purple-400 flex-shrink-0"></span>
-                            <div>
-                                <p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest leading-none mb-0.5">Період Б</p>
-                                <p id="cmpPeriodBLabel" class="text-xs font-black text-white">Оберіть Період Б</p>
-                            </div>
-                        </div>
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2 bg-blue-900/30 border border-blue-700/50 rounded-xl px-4 py-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                        <div><p class="text-[9px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Період А</p><p id="cmpPeriodALabel" class="text-xs font-black text-white">—</p></div>
+                    </div>
+                    <span class="text-slate-500 font-bold text-sm">vs</span>
+                    <div class="flex items-center gap-2 bg-purple-900/30 border border-purple-700/50 rounded-xl px-4 py-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-purple-400 flex-shrink-0"></span>
+                        <div><p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest leading-none mb-0.5">Період Б</p><p id="cmpPeriodBLabel" class="text-xs font-black text-white">Оберіть Період Б</p></div>
                     </div>
                 </div>
-            </div><!-- /bg-purple-950/60 -->
-
-            <!-- РЕЗУЛЬТАТИ (з'являються після натискання "Порівняти") -->
+            </div>
             <div id="cmpResults" class="hidden">
-
-                <!-- KPI картки -->
                 <div id="cmpKpiCards" class="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 border-b border-purple-800/30"></div>
-
-                <!-- Перемикач + графік + таблиця -->
                 <div class="p-6 border-b border-purple-800/30">
                     <div class="flex flex-wrap gap-3 items-center justify-between mb-6">
                         <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
-                            <button id="btnCmpSrc" onclick="setCmpView('source')"  class="tab-btn active px-4 py-2 text-xs font-bold text-slate-300">📊 По джерелах</button>
+                            <button id="btnCmpSrc" onclick="setCmpView('source')" class="tab-btn active px-4 py-2 text-xs font-bold text-slate-300">📊 По джерелах</button>
                             <button id="btnCmpMgr" onclick="setCmpView('manager')" class="tab-btn px-4 py-2 text-xs font-bold text-slate-300">👤 По менеджерах</button>
                         </div>
-                        <!-- Легенда графіка -->
                         <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
                             <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-blue-500"></span> А — всього</span>
                             <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-emerald-500"></span> А — ЦА</span>
@@ -135,39 +99,24 @@
                             <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500"></span> Б — ЦА</span>
                         </div>
                     </div>
-
-                    <div class="relative h-[320px] mb-8">
-                        <canvas id="cmpBarChart"></canvas>
-                    </div>
-
-                    <!-- Шапка таблиці з кольоровими групами -->
+                    <div class="relative h-[320px] mb-8"><canvas id="cmpBarChart"></canvas></div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="text-[10px] font-bold uppercase tracking-wider">
-                                <!-- Рядок-група -->
                                 <tr>
                                     <th class="px-4 py-2 bg-slate-900/80"></th>
-                                    <th colspan="3" class="px-4 py-2 text-center text-blue-300 bg-blue-950/40 border-l-2 border-blue-700/60 rounded-tl-lg">
-                                        🔵 Період А
-                                        <span id="cmpHeadA" class="text-blue-500 font-normal normal-case ml-1 text-[9px]"></span>
-                                    </th>
-                                    <th colspan="3" class="px-4 py-2 text-center text-slate-400 bg-slate-900/60 border-l border-slate-700">
-                                        ↕ Зміна (А − Б)
-                                    </th>
-                                    <th colspan="3" class="px-4 py-2 text-center text-purple-300 bg-purple-950/40 border-l-2 border-purple-700/60 rounded-tr-lg">
-                                        🟣 Період Б
-                                        <span id="cmpHeadB" class="text-purple-500 font-normal normal-case ml-1 text-[9px]"></span>
-                                    </th>
+                                    <th colspan="3" class="px-4 py-2 text-center text-blue-300 bg-blue-950/40 border-l-2 border-blue-700/60 rounded-tl-lg">🔵 Період А <span id="cmpHeadA" class="text-blue-500 font-normal normal-case ml-1 text-[9px]"></span></th>
+                                    <th colspan="3" class="px-4 py-2 text-center text-slate-400 bg-slate-900/60 border-l border-slate-700">↕ Зміна (А − Б)</th>
+                                    <th colspan="3" class="px-4 py-2 text-center text-purple-300 bg-purple-950/40 border-l-2 border-purple-700/60 rounded-tr-lg">🟣 Період Б <span id="cmpHeadB" class="text-purple-500 font-normal normal-case ml-1 text-[9px]"></span></th>
                                 </tr>
-                                <!-- Рядок колонок -->
                                 <tr class="bg-slate-900/60">
                                     <th class="px-4 py-2 text-left text-slate-400" id="cmpTableHeader">Джерело</th>
                                     <th class="px-4 py-2 text-center text-blue-400 bg-blue-950/20 border-l-2 border-blue-700/40">Ліди</th>
                                     <th class="px-4 py-2 text-center text-blue-400 bg-blue-950/20">ЦА</th>
                                     <th class="px-4 py-2 text-center text-blue-400 bg-blue-950/20">% ЦА</th>
-                                    <th class="px-4 py-2 text-center text-slate-400 border-l border-slate-700/60" title="Різниця: Період А мінус Період Б">Ліди ↕</th>
-                                    <th class="px-4 py-2 text-center text-slate-400" title="Різниця: Період А мінус Період Б">ЦА ↕</th>
-                                    <th class="px-4 py-2 text-center text-slate-400" title="Різниця: Період А мінус Період Б">% ЦА ↕</th>
+                                    <th class="px-4 py-2 text-center text-slate-400 border-l border-slate-700/60">Ліди ↕</th>
+                                    <th class="px-4 py-2 text-center text-slate-400">ЦА ↕</th>
+                                    <th class="px-4 py-2 text-center text-slate-400">% ЦА ↕</th>
                                     <th class="px-4 py-2 text-center text-purple-400 bg-purple-950/20 border-l-2 border-purple-700/40">Ліди</th>
                                     <th class="px-4 py-2 text-center text-purple-400 bg-purple-950/20">ЦА</th>
                                     <th class="px-4 py-2 text-center text-purple-400 bg-purple-950/20">% ЦА</th>
@@ -177,35 +126,27 @@
                         </table>
                     </div>
                 </div>
-
-                <!-- Загальні KPI (згорнуті) -->
                 <div class="p-6">
                     <button onclick="toggleKpiTable()" class="text-[10px] font-bold text-purple-400 uppercase tracking-widest flex items-center gap-2 mb-4 hover:text-purple-300 transition">
                         <span id="kpiTableArrow">▶</span> Детальні загальні показники
                     </button>
                     <div id="kpiTableWrap" class="hidden overflow-x-auto">
                         <table class="min-w-full text-sm">
-                            <thead>
-                                <tr class="bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider">
-                                    <th class="px-5 py-3 text-left text-slate-400">Показник</th>
-                                    <th class="px-5 py-3 text-center text-blue-400">Період А</th>
-                                    <th class="px-5 py-3 text-center text-purple-400">Період Б</th>
-                                    <th class="px-5 py-3 text-center text-slate-400">Зміна</th>
-                                </tr>
-                            </thead>
+                            <thead><tr class="bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider">
+                                <th class="px-5 py-3 text-left text-slate-400">Показник</th>
+                                <th class="px-5 py-3 text-center text-blue-400">Період А</th>
+                                <th class="px-5 py-3 text-center text-purple-400">Період Б</th>
+                                <th class="px-5 py-3 text-center text-slate-400">Зміна</th>
+                            </tr></thead>
                             <tbody id="comparisonTableBody" class="divide-y divide-purple-900/30"></tbody>
                         </table>
                     </div>
                 </div>
-
-            </div><!-- /cmpResults -->
-
+            </div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- ФІЛЬТРИ ОСНОВНІ                                        -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ФІЛЬТРИ -->
     <div class="bg-dark-card p-6 rounded-2xl border border-dark-border shadow-xl mb-8">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="grid grid-cols-2 gap-2 border-r border-dark-border pr-6">
@@ -224,7 +165,7 @@
                 </div>
             </div>
             <div class="relative">
-                <label class="block text-[10px] font-bold text-dark-subtle mb-1 uppercase tracking-widest">Джерела</label>
+                <label class="block text-[10px] font-bold text-dark-subtle mb-1 uppercase tracking-widest">Джерела (Сирі)</label>
                 <div class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-sm text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('sourceDropdown')">
                     <span id="sourceSelectText" class="truncate pr-2">Всі джерела</span><span class="text-xs">▼</span>
                 </div>
@@ -234,17 +175,15 @@
                 </div>
             </div>
             <div class="flex items-end">
-                <button onclick="fetchDataFromDB()" class="bg-blue-600 text-white w-full py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-lg text-sm transition-all active:scale-95">🔄 ОНОВИТИ БАЗУ</button>
+                <button onclick="fetchAllData()" class="bg-blue-600 text-white w-full py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-lg text-sm transition-all active:scale-95">🔄 ОНОВИТИ БАЗУ</button>
             </div>
         </div>
     </div>
 
     <div id="loader" class="hidden text-center text-blue-400 my-8 text-sm uppercase tracking-widest animate-pulse font-bold">⏳ Завантаження бази даних...</div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- 1. KPI                                                  -->
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-10">
+    <!-- KPI -->
+    <div class="grid grid-cols-2 md:grid-cols-8 gap-4 mb-10">
         <div class="bg-dark-card p-4 rounded-xl border border-dark-border text-center shadow-lg">
             <p class="text-[10px] text-dark-subtle font-bold uppercase tracking-wider">Всього лідів</p>
             <p id="kpiTotal" class="text-3xl font-black text-white mt-1">0</p>
@@ -275,11 +214,21 @@
             <p class="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">% в ЦА</p>
             <p id="kpiConvTarget" class="text-3xl font-black text-emerald-400 mt-1">0%</p>
         </div>
+        <!-- НОВІ KPI АВАНСІВ -->
+        <div class="bg-orange-900/30 p-4 rounded-xl border border-orange-700 text-center shadow-lg">
+            <p class="text-[10px] text-orange-300 font-bold uppercase tracking-wider">Авансів</p>
+            <p class="mt-1 flex items-baseline justify-center gap-1.5">
+                <span id="kpiAdvCount" class="text-3xl font-black text-orange-300">0</span>
+                <span id="kpiAdvConv" class="text-sm font-bold text-orange-400">0%</span>
+            </p>
+        </div>
+        <div class="bg-orange-900/30 p-4 rounded-xl border border-orange-700 text-center shadow-lg">
+            <p class="text-[10px] text-orange-300 font-bold uppercase tracking-wider">Сума угод</p>
+            <p id="kpiAdvSum" class="text-2xl font-black text-orange-300 mt-1">₴0</p>
+        </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- 2. ТРАФІК + ВОРОНКА                                    -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ТРАФІК + ВОРОНКА -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
         <div class="bg-dark-card p-6 rounded-xl border border-dark-border shadow-xl">
             <h3 class="text-base font-bold text-white mb-6 uppercase tracking-wider text-center">Трафік (Згруповано)</h3>
@@ -293,23 +242,23 @@
                 </select>
             </div>
             <div class="flex-1 flex flex-row items-center justify-center w-full relative">
-                <div class="flex flex-col items-center w-1/2 justify-center gap-1.5 h-[300px]">
-                    <div class="bg-blue-600 h-20 w-full flex items-center justify-center text-white font-extrabold text-xl" style="clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);">Всього: <span id="fValTotal" class="ml-2">0</span></div>
-                    <div class="bg-amber-500 h-20 w-[70%] flex items-center justify-center text-white font-extrabold text-xl" style="clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);">Додзвін: <span id="fValReached" class="ml-2">0</span></div>
-                    <div class="bg-emerald-500 h-20 w-[42%] flex items-center justify-center text-white font-extrabold text-xl" style="clip-path: polygon(0 0, 100% 0, 75% 100%, 25% 100%);">ЦА: <span id="fValTarget" class="ml-2">0</span></div>
+                <div class="flex flex-col items-center w-1/2 justify-center gap-1.5 h-[320px]">
+                    <div class="bg-blue-600 h-16 w-full flex items-center justify-center text-white font-extrabold text-lg" style="clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);">Ліди: <span id="fValTotal" class="ml-2">0</span></div>
+                    <div class="bg-amber-500 h-16 w-[75%] flex items-center justify-center text-white font-extrabold text-lg" style="clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);">Додзвін: <span id="fValReached" class="ml-2">0</span></div>
+                    <div class="bg-emerald-500 h-16 w-[50%] flex items-center justify-center text-white font-extrabold text-lg" style="clip-path: polygon(0 0, 100% 0, 75% 100%, 25% 100%);">ЦА: <span id="fValTarget" class="ml-2">0</span></div>
+                    <div class="bg-orange-500 h-16 w-[32%] flex items-center justify-center text-white font-extrabold text-base" style="clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%);">💰 <span id="fValAdv" class="ml-1">0</span></div>
                 </div>
-                <div class="w-1/2 flex flex-col justify-center gap-5 pl-8 relative h-[300px]">
-                    <div class="relative"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-slate-500"></div><div class="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-lg max-w-[180px] text-center"><div class="text-[10px] text-slate-400 mb-1 uppercase">Додзвін (з опрац.)</div><div id="fConvReached" class="text-blue-400 font-bold text-2xl">0%</div></div></div>
-                    <div class="relative"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-slate-500"></div><div class="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-lg max-w-[180px] text-center"><div class="text-[10px] text-slate-400 mb-1 uppercase">В ЦА (з опрац.)</div><div id="fConvTargetStage" class="text-amber-400 font-bold text-2xl">0%</div></div></div>
-                    <div class="relative mt-2"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-emerald-700"></div><div class="bg-emerald-950/40 border border-emerald-800 rounded-xl px-4 py-3 shadow-lg max-w-[180px] text-center"><div class="text-[10px] text-emerald-400 mb-1 font-bold uppercase">🏆 Загальна в ЦА</div><div id="fConvTargetTotal" class="text-emerald-400 font-bold text-2xl">0%</div></div></div>
+                <div class="w-1/2 flex flex-col justify-center gap-3 pl-8 relative h-[320px]">
+                    <div class="relative"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-slate-500"></div><div class="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-lg max-w-[190px] text-center"><div class="text-[10px] text-slate-400 mb-1 uppercase">Додзвін (з опрац.)</div><div id="fConvReached" class="text-blue-400 font-bold text-2xl">0%</div></div></div>
+                    <div class="relative"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-slate-500"></div><div class="bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 shadow-lg max-w-[190px] text-center"><div class="text-[10px] text-slate-400 mb-1 uppercase">В ЦА (з опрац.)</div><div id="fConvTargetStage" class="text-amber-400 font-bold text-2xl">0%</div></div></div>
+                    <div class="relative"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-emerald-700"></div><div class="bg-emerald-950/40 border border-emerald-800 rounded-xl px-4 py-3 shadow-lg max-w-[190px] text-center"><div class="text-[10px] text-emerald-400 mb-1 font-bold uppercase">🏆 Загальна в ЦА</div><div id="fConvTargetTotal" class="text-emerald-400 font-bold text-2xl">0%</div></div></div>
+                    <div class="relative"><div class="absolute -left-8 top-1/2 w-8 border-b-2 border-dashed border-orange-700"></div><div class="bg-orange-950/40 border border-orange-700 rounded-xl px-4 py-3 shadow-lg max-w-[190px] text-center"><div class="text-[10px] text-orange-400 mb-1 font-bold uppercase">💰 Ліди → Аванс</div><div id="fConvAdv" class="text-orange-400 font-bold text-2xl">0%</div></div></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- 3. ПОТРЕБУЄ УВАГИ + РЕЙТИНГ                           -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ПОТРЕБУЄ УВАГИ + РЕЙТИНГ -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
         <div class="bg-dark-card rounded-xl border border-red-900/40 overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.05)] flex flex-col">
             <div class="bg-red-950/40 p-4 border-b border-red-900/40 flex justify-between items-center">
@@ -333,12 +282,15 @@
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-slate-900 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10">
                         <tr>
-                            <th class="px-5 py-4 border-b border-dark-border">Менеджер</th>
-                            <th class="px-5 py-4 border-b border-dark-border text-center">Отримано</th>
-                            <th class="px-5 py-4 border-b border-dark-border">Прогрес</th>
-                            <th class="px-5 py-4 border-b border-dark-border text-center">Додзвін</th>
-                            <th class="px-5 py-4 border-b border-dark-border text-center">ЦА</th>
-                            <th class="px-5 py-4 border-b border-dark-border text-center text-emerald-400">% ЦА</th>
+                            <th class="px-4 py-4 border-b border-dark-border">Менеджер</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center">Отримано</th>
+                            <th class="px-4 py-4 border-b border-dark-border">Прогрес</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center">Додзвін</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center">ЦА</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center text-emerald-400">% ЦА</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center text-orange-400">Авансів</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center text-orange-400">% Конв.</th>
+                            <th class="px-4 py-4 border-b border-dark-border text-center text-orange-300">Сума угод</th>
                         </tr>
                     </thead>
                     <tbody id="managerTableBody" class="divide-y divide-dark-border"></tbody>
@@ -347,12 +299,42 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- 4. ДЕТАЛІ МЕНЕДЖЕР → ДЖЕРЕЛО                          -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ПОВТОРНІ ПРОДАЖІ -->
+    <div class="bg-dark-card rounded-xl border border-yellow-700/50 mb-10 overflow-hidden shadow-xl">
+        <div class="bg-yellow-900/20 p-4 border-b border-yellow-700/40 flex justify-between items-center">
+            <div>
+                <h3 class="text-sm font-bold text-yellow-300 uppercase tracking-widest">🔄 Повторні продажі</h3>
+                <p class="text-xs text-yellow-600 mt-0.5">Джерело «Інше» — клієнти поза рекламними каналами</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-center">
+                    <p class="text-[10px] text-yellow-500 uppercase font-bold">Кількість</p>
+                    <p id="repeatCount" class="text-2xl font-black text-yellow-300">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[10px] text-yellow-500 uppercase font-bold">Сума угод</p>
+                    <p id="repeatSum" class="text-2xl font-black text-yellow-300">₴0</p>
+                </div>
+            </div>
+        </div>
+        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-slate-900 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0">
+                    <tr>
+                        <th class="px-5 py-3 text-left">Менеджер</th>
+                        <th class="px-5 py-3 text-center">Авансів</th>
+                        <th class="px-5 py-3 text-center text-yellow-400">Сума угод</th>
+                    </tr>
+                </thead>
+                <tbody id="repeatTableBody" class="divide-y divide-dark-border/50"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ДЕТАЛІ МЕНЕДЖЕР → ДЖЕРЕЛО -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-10 overflow-visible shadow-xl">
         <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-t-xl">
-            <h3 class="text-sm font-bold text-white uppercase tracking-widest">📊 Деталі (Менеджер ➔ Джерело)</h3>
+            <h3 class="text-sm font-bold text-white uppercase tracking-widest">📊 Деталі (Менеджер ➔ Джерело Сире)</h3>
             <div class="flex gap-3 w-full md:w-auto">
                 <div class="relative w-full md:w-48">
                     <div class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('tblMgrDropdown')">
@@ -378,13 +360,15 @@
             <table class="min-w-full text-left text-sm">
                 <thead class="bg-slate-900 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-md">
                     <tr>
-                        <th class="px-5 py-4 w-[25%]">Менеджер / Джерело</th>
+                        <th class="px-5 py-4 w-[22%]">Менеджер / Джерело</th>
                         <th class="px-5 py-4 text-center">Всього</th>
                         <th class="px-5 py-4 text-center">Опрац.</th>
                         <th class="px-5 py-4 text-center">Додзвін</th>
                         <th class="px-5 py-4 text-center text-amber-400">% Додзвін</th>
                         <th class="px-5 py-4 text-center">ЦА</th>
                         <th class="px-5 py-4 text-center text-emerald-400">% ЦА</th>
+                        <th class="px-5 py-4 text-center text-orange-400">Авансів</th>
+                        <th class="px-5 py-4 text-center text-orange-300">Сума угод</th>
                     </tr>
                 </thead>
                 <tbody id="detailTableBody" class="divide-y divide-dark-border/50"></tbody>
@@ -392,9 +376,7 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- 5. АНАЛІТИКА ДЖЕРЕЛ — тільки таблиця                  -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- АНАЛІТИКА ДЖЕРЕЛ -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-10 shadow-xl overflow-hidden">
         <div class="bg-slate-800 p-4 border-b border-dark-border">
             <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
@@ -411,6 +393,8 @@
                         <th class="px-5 py-3 text-center text-red-400">% зливів</th>
                         <th class="px-5 py-3 text-center text-amber-400">Не дозвон</th>
                         <th class="px-5 py-3 text-center text-blue-400">Не опрац.</th>
+                        <th class="px-5 py-3 text-center text-orange-400">Авансів</th>
+                        <th class="px-5 py-3 text-center text-orange-300">Сума угод</th>
                         <th class="px-5 py-3 text-center">Рейтинг</th>
                     </tr>
                 </thead>
@@ -419,9 +403,7 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- 6. АНАЛІТИКА ЯКОСТІ ТА ЗЛИВІВ                         -->
-    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- АНАЛІТИКА ЯКОСТІ ТА ЗЛИВІВ -->
     <div class="bg-dark-card rounded-xl border border-red-900/40 mb-10 overflow-visible shadow-xl">
         <div class="bg-red-950/40 p-4 border-b border-red-900/40 rounded-t-xl">
             <h3 class="text-sm font-bold text-red-400 uppercase tracking-widest">🗑️ Аналітика якості та зливів</h3>
@@ -430,9 +412,7 @@
             <div class="flex flex-col gap-4">
                 <div class="flex justify-between items-center">
                     <label class="text-xs font-bold text-slate-400 uppercase">По джерелу:</label>
-                    <select id="badChartSourceSelect" onchange="updateBadAnalysisCharts('source')" class="bg-slate-900 border border-dark-border rounded-lg px-2 py-1 text-xs text-white outline-none w-44 font-medium">
-                        <option value="Всі">Всі джерела (Згруповано)</option>
-                    </select>
+                    <select id="badChartSourceSelect" onchange="updateBadAnalysisCharts('source')" class="bg-slate-900 border border-dark-border rounded-lg px-2 py-1 text-xs text-white outline-none w-44 font-medium"><option value="Всі">Всі джерела (Згруповано)</option></select>
                 </div>
                 <div class="flex flex-row gap-4 items-center">
                     <div class="relative bg-slate-900/30 p-4 rounded-2xl border border-dark-border/50 h-[280px] w-[280px] flex-shrink-0 flex items-center justify-center">
@@ -445,9 +425,7 @@
             <div class="flex flex-col gap-4">
                 <div class="flex justify-between items-center">
                     <label class="text-xs font-bold text-slate-400 uppercase">По менеджеру:</label>
-                    <select id="badChartMgrSelect" onchange="updateBadAnalysisCharts('mgr')" class="bg-slate-900 border border-dark-border rounded-lg px-2 py-1 text-xs text-white outline-none w-44 font-medium">
-                        <option value="Всі">Всі менеджери</option>
-                    </select>
+                    <select id="badChartMgrSelect" onchange="updateBadAnalysisCharts('mgr')" class="bg-slate-900 border border-dark-border rounded-lg px-2 py-1 text-xs text-white outline-none w-44 font-medium"><option value="Всі">Всі менеджери</option></select>
                 </div>
                 <div class="flex flex-row gap-4 items-center">
                     <div class="relative bg-slate-900/30 p-4 rounded-2xl border border-dark-border/50 h-[280px] w-[280px] flex-shrink-0 flex items-center justify-center">
@@ -488,9 +466,10 @@
 </div>
 <script>
 // ╔══════════════════════════════════════════════════════╗
-// ║  URL БАЗИ — міняти тільки тут                       ║
+// ║  URLs                                               ║
 // ╚══════════════════════════════════════════════════════╝
-const API_URL = "https://script.google.com/macros/s/AKfycbxASi2q5wK2aYZW2mbhm7Yi-DPqyoEu_QUKkbkh2CGXgtUWokk27Z_BjjpH_24TXtftGQ/exec";
+const API_URL     = "https://script.google.com/macros/s/AKfycbxASi2q5wK2aYZW2mbhm7Yi-DPqyoEu_QUKkbkh2CGXgtUWokk27Z_BjjpH_24TXtftGQ/exec";
+const API_ADV_URL = "https://script.google.com/macros/s/AKfycbxq4F8snb9kJFPil6q6zTfYvv8dLmQcE5Jiy7qCKhLoUhKVyXy3mPVlqWGp1ck_uFf_Vw/exec";
 
 Chart.register(ChartDataLabels);
 
@@ -500,9 +479,10 @@ const STATUS_BAD       = "неякісний";
 const STATUS_NO_CALL   = "не виходить на зв'язок";
 
 let globalRawData      = [];
+let globalAdvData      = [];
 let mainData           = [];
+let mainAdvData        = [];
 let allBadLeads        = [];
-let cmpGrouping        = 'day';
 let comparePanelOpen   = false;
 let volumeChartInst    = null;
 let badSourceChartInst = null;
@@ -512,24 +492,27 @@ let badMgrMode         = 'main';
 
 // ─── ІНІЦІАЛІЗАЦІЯ ────────────────────────────────────
 window.onload = () => {
-    const today       = new Date();
-    const weekAgo     = new Date(); weekAgo.setDate(today.getDate() - 7);
-    const twoWeeksAgo = new Date(); twoWeeksAgo.setDate(today.getDate() - 14);
-
+    const today   = new Date();
+    const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
+    const twoW    = new Date(); twoW.setDate(today.getDate() - 14);
     document.getElementById('dateStart').valueAsDate = today;
     document.getElementById('dateEnd').valueAsDate   = today;
     document.getElementById('cmpStartB').valueAsDate = weekAgo;
-    document.getElementById('cmpEndB').valueAsDate   = twoWeeksAgo;
-    fetchDataFromDB();
+    document.getElementById('cmpEndB').valueAsDate   = twoW;
+    fetchAllData();
 };
 
-async function fetchDataFromDB() {
+async function fetchAllData() {
     document.getElementById('loader').classList.remove('hidden');
     try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const raw = await res.json();
-        globalRawData = Array.isArray(raw) ? raw : (raw.data || []);
+        const [resLeads, resAdv] = await Promise.all([
+            fetch(API_URL),
+            fetch(API_ADV_URL)
+        ]);
+        const rawLeads = await resLeads.json();
+        const rawAdv   = await resAdv.json();
+        globalRawData = Array.isArray(rawLeads) ? rawLeads : (rawLeads.data || []);
+        globalAdvData = Array.isArray(rawAdv)   ? rawAdv   : (rawAdv.data  || []);
         populateFilters(globalRawData);
         applyLocalFiltersAndRender();
     } catch(e) {
@@ -544,13 +527,41 @@ async function fetchDataFromDB() {
 function normalizeStatus(l) { return String(l.status||"").trim().toLowerCase(); }
 
 function getParentGroup(row) {
-    let s = row.source;
-    if (!s || String(s).trim()===""||s==="undefined") return "Інше";
+    let s  = row.source;
+    const mgr = String(row.manager||"").toLowerCase();
+    if (!s || String(s).trim()===""||s==="undefined") return null; // фільтруємо Інше/пусте
     s = String(s).trim();
-    const ls = s.toLowerCase(), lm = (row.manager||"").toLowerCase();
-    if (ls.includes("facebook")||ls.includes("фб")||ls.includes("instagram")||ls.includes("tiktok")||ls.includes("тікток")) return s;
+    const ls = s.toLowerCase();
+    // Савчук: дзвінок = Сайт Wood Agency
+    if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
+    // Дзвінок для інших — прибираємо з аналізу лідів
+    if (ls==="дзвінок") return null;
+    if (ls==="інше" || ls==="other") return null;
+    if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
+    if (ls.includes("facebook")&&(ls.includes("wood")||ls.includes("вуд")))          return "Facebook Wood Agency";
     if (ls.includes("ecoforma")||ls.includes("екоформа")) return "Сайт EcoForma";
-    if (ls.includes("wood")||ls.includes("відповідальним")||(ls==="дзвінок"&&lm.includes("савчук"))) return "Сайт Wood Agency";
+    if (ls.includes("wood")||ls.includes("відповідальним")) return "Сайт Wood Agency";
+    if (ls.includes("дзвінок")&&(ls.includes("ecoforma")||ls.includes("сайт"))) return "Сайт EcoForma";
+    if (ls.includes("olx")) return "OLX";
+    if (ls.includes("facebook")||ls.includes("фб")||ls.includes("instagram")||ls.includes("tiktok")) return s;
+    return s;
+}
+
+// Групування авансів — аналогічна логіка але включає Інше → повторні продажі
+function getAdvGroup(adv) {
+    let s = String(adv['Джерело']||adv.source||"").trim();
+    const mgr = String(adv['Відповідальний']||adv.manager||"").toLowerCase();
+    if (!s||s==="undefined"||s==="") return "Інше";
+    const ls = s.toLowerCase();
+    if (ls==="інше"||ls==="other"||ls==="") return "Інше";
+    if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
+    if (ls==="дзвінок") return "Дзвінок"; // загальний дзвінок у авансах залишаємо
+    if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
+    if (ls.includes("facebook")&&(ls.includes("wood")||ls.includes("вуд")))          return "Facebook Wood Agency";
+    if (ls.includes("дзвінок")&&(ls.includes("ecoforma")||ls.includes("сайт")))      return "Сайт EcoForma";
+    if (ls.includes("ecoforma")||ls.includes("екоформа")) return "Сайт EcoForma";
+    if (ls.includes("wood")||ls.includes("відповідальним")) return "Сайт Wood Agency";
+    if (ls.includes("olx")) return "OLX";
     return s;
 }
 
@@ -558,20 +569,63 @@ function parseDate(str) {
     if (!str) return null;
     let d;
     if (String(str).includes('.')) { const p=String(str).split(/[. :]/); d=new Date(+p[2],+p[1]-1,+p[0]); }
-    else d=new Date(str);
-    return isNaN(d.getTime())?null:d;
+    else d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
 }
 
 function filterByDateRange(data, s, e) {
     if (!s||!e) return data;
     const st=new Date(s); st.setHours(0,0,0,0);
     const en=new Date(e); en.setHours(23,59,59,999);
-    return data.filter(r=>{const d=parseDate(r.dateUpdate);return d&&d>=st&&d<=en;});
+    return data.filter(r=>{const d=parseDate(r.dateUpdate||r['Дата авансу']||r['date']);return d&&d>=st&&d<=en;});
 }
 
-function formatDateKey(date, g) {
-    if (g==='week') { const d=new Date(date); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()+1); return d.toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit'}); }
-    return date.toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit'});
+// Фільтруємо аванси по даті авансу
+function filterAdvByDate(data, s, e) {
+    if (!s||!e) return data;
+    const st=new Date(s); st.setHours(0,0,0,0);
+    const en=new Date(e); en.setHours(23,59,59,999);
+    return data.filter(r=>{
+        const raw = r['Дата авансу']||r.date||r.dateUpdate||"";
+        const d   = parseDate(raw);
+        return d && d>=st && d<=en;
+    });
+}
+
+// Нечіткий матч по прізвищу
+function matchManager(advMgr, leadMgr) {
+    if (!advMgr||!leadMgr) return false;
+    const a = String(advMgr).trim().toLowerCase();
+    const b = String(leadMgr).trim().toLowerCase();
+    if (a===b) return true;
+    // Беремо перше слово кожного (прізвище)
+    const surA = a.split(/\s+/)[0];
+    const surB = b.split(/\s+/)[0];
+    return surA && surB && surA===surB;
+}
+
+// Індекс авансів по менеджеру (прізвище) і джерелу
+function buildAdvIndex(advArr) {
+    // { surname_lower: { group: [adv,...] } }
+    const idx = {};
+    advArr.forEach(adv => {
+        const mgr  = String(adv['Відповідальний']||"").trim();
+        const sur  = mgr.toLowerCase().split(/\s+/)[0];
+        const grp  = getAdvGroup(adv);
+        if (!idx[sur]) idx[sur] = {};
+        if (!idx[sur][grp]) idx[sur][grp] = [];
+        idx[sur][grp].push(adv);
+    });
+    return idx;
+}
+
+function advSum(advArr) {
+    return advArr.reduce((s,a)=>s+parseFloat(String(a['Сума угоди']||a.dealAmount||0).replace(/\s/g,'')||0),0);
+}
+
+function fmtMoney(n) {
+    if (n===0) return '—';
+    return '₴' + Math.round(n).toLocaleString('uk-UA');
 }
 
 // ─── АНАЛІЗ ──────────────────────────────────────────
@@ -606,9 +660,9 @@ function populateFilters(data) {
     document.querySelector('.mgr-cb[value="Всі"]').checked=true;
     document.querySelector('.src-cb[value="Всі"]').checked=true;
     updateSelectText('mgr-cb'); updateSelectText('src-cb');
-
-    // Фільтри якості
-    const grouped=new Set(); data.forEach(l=>grouped.add(getParentGroup(l)));
+    // Якість фільтри
+    const grouped=new Set();
+    data.forEach(l=>{const g=getParentGroup(l);if(g)grouped.add(g);});
     const bs=document.getElementById('badChartSourceSelect');
     bs.innerHTML='<option value="Всі">Всі джерела (Згруповано)</option>';
     Array.from(grouped).sort().forEach(g=>{bs.innerHTML+=`<option value="${g}">${g}</option>`;});
@@ -625,28 +679,35 @@ function applyLocalFiltersAndRender() {
     if(!mgrs.includes("Всі")) mainData=mainData.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
     if(!srcs.includes("Всі")) mainData=mainData.filter(r=>srcs.includes(r.source?String(r.source).trim():"Інше"));
 
-    renderMetrics(mainData);
+    // Фільтруємо аванси по датах
+    mainAdvData = filterAdvByDate(globalAdvData, sDate, eDate);
+    // Якщо обрані конкретні менеджери — фільтруємо і аванси
+    if (!mgrs.includes("Всі")) {
+        mainAdvData = mainAdvData.filter(a => {
+            const advMgr = String(a['Відповідальний']||"").trim();
+            return mgrs.some(m => matchManager(advMgr, m));
+        });
+    }
+
+    renderMetrics(mainData, mainAdvData);
     drawVolumeChart(mainData);
-    updateFunnelSelector(mainData);
-    renderTables(mainData);
-    renderSourceTable(mainData);
+    updateFunnelSelector(mainData, mainAdvData);
+    renderTables(mainData, mainAdvData);
+    renderSourceTable(mainData, mainAdvData);
+    renderRepeatSales(mainAdvData);
     updateBadAnalysisCharts('source');
     updateBadAnalysisCharts('mgr');
     renderBadLeadsList(mainData);
 
-    // Якщо панель відкрита — оновити підпис Період А
     if (comparePanelOpen) {
-        const sDate = document.getElementById('dateStart').value;
-        const eDate = document.getElementById('dateEnd').value;
         document.getElementById('cmpPeriodALabel').innerText =
             sDate && eDate ? `${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}` : '—';
-        // Сховати результати — треба знову натиснути "Порівняти"
         document.getElementById('cmpResults').classList.add('hidden');
     }
 }
 
 // ─── KPI ─────────────────────────────────────────────
-function renderMetrics(data) {
+function renderMetrics(data, advData) {
     const m=analyzeData(data);
     document.getElementById('kpiTotal').innerText=m.total;
     document.getElementById('kpiProcessed').innerText=m.processed;
@@ -656,12 +717,21 @@ function renderMetrics(data) {
     document.getElementById('kpiReachedPerc').innerText=m.convReached+"%";
     document.getElementById('kpiTarget').innerText=m.target;
     document.getElementById('kpiConvTarget').innerText=m.convTarget+"%";
+
+    // Аванси KPI — без повторних продажів
+    const advMain = advData.filter(a=>getAdvGroup(a)!=="Інше");
+    const advCount = advMain.length;
+    const advTotal = advSum(advMain);
+    const convAdv  = m.total>0 ? ((advCount/m.total)*100).toFixed(1) : "0.0";
+    document.getElementById('kpiAdvCount').innerText = advCount;
+    document.getElementById('kpiAdvConv').innerText  = convAdv+"%";
+    document.getElementById('kpiAdvSum').innerText   = fmtMoney(advTotal);
 }
 
 // ─── ТРАФІК ──────────────────────────────────────────
 function drawVolumeChart(data) {
     const gm={};
-    data.forEach(l=>{const p=getParentGroup(l);gm[p]=(gm[p]||0)+1;});
+    data.forEach(l=>{const p=getParentGroup(l);if(p)gm[p]=(gm[p]||0)+1;});
     const labels=Object.keys(gm).sort((a,b)=>gm[b]-gm[a]), totals=labels.map(k=>gm[k]);
     if(volumeChartInst) volumeChartInst.destroy();
     volumeChartInst=new Chart(document.getElementById('volumeChart'),{
@@ -672,27 +742,62 @@ function drawVolumeChart(data) {
 }
 
 // ─── ВОРОНКА ─────────────────────────────────────────
-function updateFunnelSelector(data) {
-    const p=new Set(); data.forEach(l=>p.add(getParentGroup(l)));
+function updateFunnelSelector(data, advData) {
+    const p=new Set();
+    data.forEach(l=>{const g=getParentGroup(l);if(g)p.add(g);});
     const sel=document.getElementById('funnelSourceSelect');
     sel.innerHTML=`<option value="Всі">Всі джерела (Згруповано)</option>`;
     Array.from(p).sort().forEach(x=>{sel.innerHTML+=`<option value="${x}">${x}</option>`;});
     updateFunnelView();
 }
+
 function updateFunnelView() {
     const ps=document.getElementById('funnelSourceSelect').value;
-    const d=ps==="Всі"?mainData:mainData.filter(l=>getParentGroup(l)===ps);
+    const d  = ps==="Всі" ? mainData : mainData.filter(l=>getParentGroup(l)===ps);
+    const adv= ps==="Всі"
+        ? mainAdvData.filter(a=>getAdvGroup(a)!=="Інше")
+        : mainAdvData.filter(a=>getAdvGroup(a)===ps);
     const a=analyzeData(d);
+    const advCount=adv.length;
+    const convAdv=a.total>0?((advCount/a.total)*100).toFixed(1):"0.0";
     document.getElementById('fValTotal').innerText=a.total;
     document.getElementById('fValReached').innerText=a.reached;
     document.getElementById('fValTarget').innerText=a.target;
+    document.getElementById('fValAdv').innerText=advCount;
     document.getElementById('fConvReached').innerText=a.convReached+"%";
     document.getElementById('fConvTargetStage').innerText=a.convTargetFromProc+"%";
     document.getElementById('fConvTargetTotal').innerText=a.convTarget+"%";
+    document.getElementById('fConvAdv').innerText=convAdv+"%";
+}
+
+// ─── ПОВТОРНІ ПРОДАЖІ ─────────────────────────────────
+function renderRepeatSales(advData) {
+    const repeats = advData.filter(a=>getAdvGroup(a)==="Інше");
+    const totalCount = repeats.length;
+    const totalSum   = advSum(repeats);
+    document.getElementById('repeatCount').innerText = totalCount;
+    document.getElementById('repeatSum').innerText   = fmtMoney(totalSum);
+
+    // По менеджерах
+    const byMgr = {};
+    repeats.forEach(a=>{
+        const mgr = String(a['Відповідальний']||"Невідомий").trim();
+        if(!byMgr[mgr]) byMgr[mgr]={count:0,sum:0};
+        byMgr[mgr].count++;
+        byMgr[mgr].sum += parseFloat(String(a['Сума угоди']||0).replace(/\s/g,'')||0);
+    });
+    const rows = Object.entries(byMgr).sort((a,b)=>b[1].sum-a[1].sum);
+    document.getElementById('repeatTableBody').innerHTML = rows.length===0
+        ? '<tr><td colspan="3" class="p-6 text-center text-slate-500">Повторних продажів немає</td></tr>'
+        : rows.map(([mgr,s])=>`<tr class="hover:bg-yellow-900/10 transition">
+            <td class="px-5 py-3 font-medium text-slate-200">${mgr}</td>
+            <td class="px-5 py-3 text-center font-bold text-yellow-300">${s.count}</td>
+            <td class="px-5 py-3 text-center font-bold text-yellow-400">${fmtMoney(s.sum)}</td>
+          </tr>`).join('');
 }
 
 // ─── ТАБЛИЦІ ─────────────────────────────────────────
-function renderTables(data) {
+function renderTables(data, advData) {
     const pl=data.filter(l=>{const s=normalizeStatus(l);return s===""||INITIAL_STATUSES.has(s);});
     document.getElementById('attentionTotalCount').innerText=pl.length;
     const ab=document.getElementById('attentionTableBody');
@@ -703,18 +808,32 @@ function renderTables(data) {
         ab.innerHTML=Object.keys(pbm).map(m=>({name:m,count:pbm[m]})).sort((a,b)=>b.count-a.count)
             .map(m=>`<tr class="hover:bg-slate-800/50 transition"><td class="px-5 py-3 font-bold text-slate-200">${m.name}</td><td class="px-5 py-3 text-center font-black text-red-400 bg-red-900/10">${m.count}</td></tr>`).join('');
     }
+
+    const advIdx = buildAdvIndex(advData.filter(a=>getAdvGroup(a)!=="Інше"));
+
     const mm={};
     data.forEach(l=>{const m=l.manager?String(l.manager).trim():"Невідомий";if(!mm[m])mm[m]=[];mm[m].push(l);});
     const ml=Object.keys(mm).map(n=>({name:n,...analyzeData(mm[n])})).sort((a,b)=>parseFloat(b.convTarget)-parseFloat(a.convTarget));
-    document.getElementById('managerTableBody').innerHTML=ml.map((m,i)=>`
-        <tr class="${parseFloat(m.convTarget)>=40?'bg-emerald-500/10 border-l-4 border-l-emerald-500':'hover:bg-slate-800/50'}">
-            <td class="px-5 py-4 font-bold text-white">${i===0?'👑 ':''}${m.name}</td>
-            <td class="px-5 py-4 text-center">${m.total}</td>
-            <td class="px-5 py-4 min-w-[150px]"><div class="flex items-center gap-3"><div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width:${m.procPerc}%"></div></div><span class="text-[11px] font-bold text-blue-300">${m.processed}/${m.total}</span></div></td>
-            <td class="px-5 py-4 text-center font-bold text-amber-400">${m.reached}</td>
-            <td class="px-5 py-4 text-center font-bold text-emerald-400">${m.target}</td>
-            <td class="px-5 py-4 text-center font-extrabold text-white bg-emerald-500/20">${m.convTarget}%</td>
-        </tr>`).join('');
+
+    document.getElementById('managerTableBody').innerHTML=ml.map((m,i)=>{
+        const sur = m.name.toLowerCase().split(/\s+/)[0];
+        const mAdvAll = Object.values(advIdx[sur]||{}).flat();
+        const advCount = mAdvAll.length;
+        const advTotal = advSum(mAdvAll);
+        const convAdv  = m.total>0 ? ((advCount/m.total)*100).toFixed(1) : "0.0";
+        return `<tr class="${parseFloat(m.convTarget)>=40?'bg-emerald-500/10 border-l-4 border-l-emerald-500':'hover:bg-slate-800/50'}">
+            <td class="px-4 py-4 font-bold text-white">${i===0?'👑 ':''}${m.name}</td>
+            <td class="px-4 py-4 text-center">${m.total}</td>
+            <td class="px-4 py-4 min-w-[130px]"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width:${m.procPerc}%"></div></div><span class="text-[11px] font-bold text-blue-300">${m.processed}/${m.total}</span></div></td>
+            <td class="px-4 py-4 text-center font-bold text-amber-400">${m.reached}</td>
+            <td class="px-4 py-4 text-center font-bold text-emerald-400">${m.target}</td>
+            <td class="px-4 py-4 text-center font-extrabold text-white bg-emerald-500/20">${m.convTarget}%</td>
+            <td class="px-4 py-4 text-center font-bold text-orange-300">${advCount||'—'}</td>
+            <td class="px-4 py-4 text-center font-bold text-orange-400">${advCount>0?convAdv+'%':'—'}</td>
+            <td class="px-4 py-4 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(advTotal)}</td>
+        </tr>`;
+    }).join('');
+
     updateTableFilterOptions(data); applyTableFilters();
 }
 
@@ -736,48 +855,74 @@ function applyTableFilters() {
     let f=mainData;
     if(!mf.includes("Всі")) f=f.filter(l=>mf.includes(l.manager?String(l.manager).trim():"Невідомий менеджер"));
     if(!sf.includes("Всі")) f=f.filter(l=>sf.includes(l.source?String(l.source).trim():"Інше"));
-    renderDetailTableHTML(f);
+    renderDetailTableHTML(f, mainAdvData);
 }
 
-function renderDetailTableHTML(data) {
+function renderDetailTableHTML(data, advData) {
+    const advIdx = buildAdvIndex(advData.filter(a=>getAdvGroup(a)!=="Інше"));
     const mg={};
     data.forEach(l=>{
-        const m=l.manager?String(l.manager).trim():"Невідомий",g=getParentGroup(l),r=l.source?String(l.source).trim():"Інше";
+        const m=l.manager?String(l.manager).trim():"Невідомий",g=getParentGroup(l)||"Інше",r=l.source?String(l.source).trim():"Інше";
         if(!mg[m])mg[m]={};if(!mg[m][g])mg[m][g]={};if(!mg[m][g][r])mg[m][g][r]=[];mg[m][g][r].push(l);
     });
     let h="";
     Object.keys(mg).sort().forEach(mgr=>{
-        h+=`<tr class="bg-slate-800/80 border-t-4 border-slate-900"><td colspan="7" class="px-5 py-3 text-base font-black text-blue-400 flex items-center gap-2">👤 ${mgr}</td></tr>`;
+        const sur = mgr.toLowerCase().split(/\s+/)[0];
+        h+=`<tr class="bg-slate-800/80 border-t-4 border-slate-900"><td colspan="9" class="px-5 py-3 text-base font-black text-blue-400">👤 ${mgr}</td></tr>`;
         let all=[];
         Object.keys(mg[mgr]).sort().forEach(gn=>{
             const sub=mg[mgr][gn],sk=Object.keys(sub);
             let gl=[]; sk.forEach(k=>{gl.push(...sub[k]);all.push(...sub[k]);});
             const ps=analyzeData(gl);
+            // Аванси для цього менеджера + цієї групи
+            const grpAdvArr = (advIdx[sur]&&advIdx[sur][gn]) ? advIdx[sur][gn] : [];
+            const grpAdvCount = grpAdvArr.length;
+            const grpAdvSum   = advSum(grpAdvArr);
+
             if((gn==="Сайт EcoForma"||gn==="Сайт Wood Agency")&&sk.length>1){
-                sk.sort().forEach(on=>{const os=analyzeData(sub[on]);h+=`<tr class="hover:bg-slate-800/50 text-sm"><td class="px-5 py-2 pl-12 text-slate-400">↳ ${on}</td><td class="px-5 py-2 text-center text-slate-500">${os.total}</td><td class="px-5 py-2 text-center text-blue-300/60">${os.processed}</td><td class="px-5 py-2 text-center text-amber-400/60">${os.reached}</td><td class="px-5 py-2 text-center text-amber-400/60">${os.convReached}%</td><td class="px-5 py-2 text-center text-emerald-400/60">${os.target}</td><td class="px-5 py-2 text-center text-emerald-400/60">${os.convTarget}%</td></tr>`;});
-                h+=`<tr class="bg-slate-800/40 font-bold border-y border-slate-700/50 text-sm"><td class="px-5 py-3 pl-8 text-slate-300">∑ ${gn}</td><td class="px-5 py-3 text-center text-white">${ps.total}</td><td class="px-5 py-3 text-center text-blue-300">${ps.processed}</td><td class="px-5 py-3 text-center text-amber-400">${ps.reached}</td><td class="px-5 py-3 text-center text-amber-400">${ps.convReached}%</td><td class="px-5 py-3 text-center text-emerald-400">${ps.target}</td><td class="px-5 py-3 text-center text-emerald-400">${ps.convTarget}%</td></tr>`;
+                sk.sort().forEach(on=>{
+                    const os=analyzeData(sub[on]);
+                    h+=`<tr class="hover:bg-slate-800/50 text-sm"><td class="px-5 py-2 pl-12 text-slate-400">↳ ${on}</td><td class="px-5 py-2 text-center text-slate-500">${os.total}</td><td class="px-5 py-2 text-center text-blue-300/60">${os.processed}</td><td class="px-5 py-2 text-center text-amber-400/60">${os.reached}</td><td class="px-5 py-2 text-center text-amber-400/60">${os.convReached}%</td><td class="px-5 py-2 text-center text-emerald-400/60">${os.target}</td><td class="px-5 py-2 text-center text-emerald-400/60">${os.convTarget}%</td><td class="px-5 py-2 text-center text-slate-500">—</td><td class="px-5 py-2 text-center text-slate-500">—</td></tr>`;
+                });
+                h+=`<tr class="bg-slate-800/40 font-bold border-y border-slate-700/50 text-sm"><td class="px-5 py-3 pl-8 text-slate-300">∑ ${gn}</td><td class="px-5 py-3 text-center text-white">${ps.total}</td><td class="px-5 py-3 text-center text-blue-300">${ps.processed}</td><td class="px-5 py-3 text-center text-amber-400">${ps.reached}</td><td class="px-5 py-3 text-center text-amber-400">${ps.convReached}%</td><td class="px-5 py-3 text-center text-emerald-400">${ps.target}</td><td class="px-5 py-3 text-center text-emerald-400">${ps.convTarget}%</td><td class="px-5 py-3 text-center text-orange-300 font-bold">${grpAdvCount||'—'}</td><td class="px-5 py-3 text-center text-orange-300 font-bold bg-orange-900/10">${fmtMoney(grpAdvSum)}</td></tr>`;
             } else {
-                h+=`<tr class="hover:bg-slate-800 text-sm border-y border-slate-700/30"><td class="px-5 py-3 pl-8 text-slate-200">${sk[0]||gn}</td><td class="px-5 py-3 text-center text-slate-300 font-bold">${ps.total}</td><td class="px-5 py-3 text-center text-blue-300">${ps.processed}</td><td class="px-5 py-3 text-center text-amber-400">${ps.reached}</td><td class="px-5 py-3 text-center text-amber-400 font-bold">${ps.convReached}%</td><td class="px-5 py-3 text-center text-emerald-400">${ps.target}</td><td class="px-5 py-3 text-center text-emerald-400 font-bold">${ps.convTarget}%</td></tr>`;
+                h+=`<tr class="hover:bg-slate-800 text-sm border-y border-slate-700/30"><td class="px-5 py-3 pl-8 text-slate-200">${sk[0]||gn}</td><td class="px-5 py-3 text-center text-slate-300 font-bold">${ps.total}</td><td class="px-5 py-3 text-center text-blue-300">${ps.processed}</td><td class="px-5 py-3 text-center text-amber-400">${ps.reached}</td><td class="px-5 py-3 text-center text-amber-400 font-bold">${ps.convReached}%</td><td class="px-5 py-3 text-center text-emerald-400">${ps.target}</td><td class="px-5 py-3 text-center text-emerald-400 font-bold">${ps.convTarget}%</td><td class="px-5 py-3 text-center text-orange-300 font-bold">${grpAdvCount||'—'}</td><td class="px-5 py-3 text-center text-orange-300 font-bold bg-orange-900/10">${fmtMoney(grpAdvSum)}</td></tr>`;
             }
         });
+        // Підсумок менеджера
         const ms=analyzeData(all);
-        h+=`<tr class="bg-blue-900/10 font-black text-sm uppercase border-y border-slate-700/50"><td class="px-5 py-4 text-right text-blue-400">Всього:</td><td class="px-5 py-4 text-center text-white">${ms.total}</td><td class="px-5 py-4 text-center text-blue-300">${ms.processed}</td><td class="px-5 py-4 text-center text-amber-400">${ms.reached}</td><td class="px-5 py-4 text-center text-amber-400/80">${ms.convReached}%</td><td class="px-5 py-4 text-center text-emerald-400">${ms.target}</td><td class="px-5 py-4 text-center text-emerald-400">${ms.convTarget}%</td></tr>`;
+        const mAdvAll = Object.values(advIdx[sur]||{}).flat();
+        const mAdvCount=mAdvAll.length, mAdvSum=advSum(mAdvAll);
+        h+=`<tr class="bg-blue-900/10 font-black text-sm uppercase border-y border-slate-700/50"><td class="px-5 py-4 text-right text-blue-400">Всього:</td><td class="px-5 py-4 text-center text-white">${ms.total}</td><td class="px-5 py-4 text-center text-blue-300">${ms.processed}</td><td class="px-5 py-4 text-center text-amber-400">${ms.reached}</td><td class="px-5 py-4 text-center text-amber-400/80">${ms.convReached}%</td><td class="px-5 py-4 text-center text-emerald-400">${ms.target}</td><td class="px-5 py-4 text-center text-emerald-400">${ms.convTarget}%</td><td class="px-5 py-4 text-center text-orange-300">${mAdvCount||'—'}</td><td class="px-5 py-4 text-center text-orange-300 bg-orange-900/10">${fmtMoney(mAdvSum)}</td></tr>`;
     });
-    document.getElementById('detailTableBody').innerHTML=h||'<tr><td colspan="7" class="p-8 text-center text-slate-500 uppercase font-bold">Дані відсутні</td></tr>';
+    document.getElementById('detailTableBody').innerHTML=h||'<tr><td colspan="9" class="p-8 text-center text-slate-500 uppercase font-bold">Дані відсутні</td></tr>';
 }
 
-// ─── АНАЛІТИКА ДЖЕРЕЛ (тільки таблиця) ───────────────
-function renderSourceTable(data) {
+// ─── АНАЛІТИКА ДЖЕРЕЛ ────────────────────────────────
+function renderSourceTable(data, advData) {
+    const advMainData = advData.filter(a=>getAdvGroup(a)!=="Інше");
+    // Будуємо індекс авансів по групі
+    const advByGroup = {};
+    advMainData.forEach(a=>{
+        const g=getAdvGroup(a);
+        if(!advByGroup[g])advByGroup[g]=[];
+        advByGroup[g].push(a);
+    });
+
     const sm={};
-    data.forEach(l=>{const g=getParentGroup(l);if(!sm[g])sm[g]=[];sm[g].push(l);});
+    data.forEach(l=>{const g=getParentGroup(l);if(g){if(!sm[g])sm[g]=[];sm[g].push(l);}});
     const stats=Object.keys(sm).map(s=>({src:s,...analyzeData(sm[s])})).sort((a,b)=>parseFloat(b.convTarget)-parseFloat(a.convTarget));
     const maxCT=Math.max(...stats.map(s=>parseFloat(s.convTarget)),0);
     const maxBad=Math.max(...stats.map(s=>parseFloat(s.convBad)),0);
+
     document.getElementById('sourceTableBody').innerHTML=stats.map((s,i)=>{
         const isTop=parseFloat(s.convTarget)===maxCT&&maxCT>0;
         const isWorst=parseFloat(s.convBad)===maxBad&&maxBad>0&&stats.length>1;
         const stars='★'.repeat(Math.min(5,Math.round(parseFloat(s.convTarget)/20)))+'☆'.repeat(5-Math.min(5,Math.round(parseFloat(s.convTarget)/20)));
         const rc=isTop?'bg-emerald-900/10 border-l-4 border-l-emerald-500':isWorst?'bg-red-900/10 border-l-4 border-l-red-500':'hover:bg-slate-800/30';
+        const grpAdv = advByGroup[s.src]||[];
+        const grpAdvCount = grpAdv.length;
+        const grpAdvSum   = advSum(grpAdv);
         return `<tr class="${rc} border-b border-dark-border/40 text-sm transition">
             <td class="px-5 py-3 font-bold text-slate-200">${isTop?'🏆 ':''}${s.src}</td>
             <td class="px-5 py-3 text-center text-slate-300">${s.total}</td>
@@ -787,9 +932,11 @@ function renderSourceTable(data) {
             <td class="px-5 py-3 text-center font-bold ${parseFloat(s.convBad)>=40?'text-red-400':'text-slate-400'}">${s.convBad}%</td>
             <td class="px-5 py-3 text-center text-amber-400">${s.noCall}</td>
             <td class="px-5 py-3 text-center text-blue-400">${s.notWorked}</td>
+            <td class="px-5 py-3 text-center font-bold text-orange-300">${grpAdvCount||'—'}</td>
+            <td class="px-5 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(grpAdvSum)}</td>
             <td class="px-5 py-3 text-center text-amber-300 text-xs tracking-widest">${stars}</td>
         </tr>`;
-    }).join('')||'<tr><td colspan="9" class="p-8 text-center text-slate-500">Дані відсутні</td></tr>';
+    }).join('')||'<tr><td colspan="11" class="p-8 text-center text-slate-500">Дані відсутні</td></tr>';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -798,296 +945,146 @@ function renderSourceTable(data) {
 function toggleComparePanel() {
     comparePanelOpen = !comparePanelOpen;
     const panel = document.getElementById('comparePanel');
-    const btn   = document.getElementById('comparePanelBtn');
-    const label = document.getElementById('compareBtnLabel');
     panel.classList.toggle('open', comparePanelOpen);
-    btn.classList.toggle('bg-purple-700', !comparePanelOpen);
-    btn.classList.toggle('bg-purple-500', comparePanelOpen);
-    label.innerText = comparePanelOpen ? 'Закрити порівняння ✕' : 'Порівняти з періодом';
-
-    // При відкритті — показати Період А в підказці, сховати результати
+    document.getElementById('comparePanelBtn').classList.toggle('bg-purple-700', !comparePanelOpen);
+    document.getElementById('comparePanelBtn').classList.toggle('bg-purple-500', comparePanelOpen);
+    document.getElementById('compareBtnLabel').innerText = comparePanelOpen ? 'Закрити порівняння ✕' : 'Порівняти з періодом';
     if (comparePanelOpen) {
-        const sDate = document.getElementById('dateStart').value;
-        const eDate = document.getElementById('dateEnd').value;
-        document.getElementById('cmpPeriodALabel').innerText =
-            sDate && eDate ? `${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}` : '—';
+        const sDate=document.getElementById('dateStart').value, eDate=document.getElementById('dateEnd').value;
+        document.getElementById('cmpPeriodALabel').innerText = sDate&&eDate?`${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}`:'—';
         document.getElementById('cmpResults').classList.add('hidden');
     }
 }
 
 function formatDisplayDate(str) {
     if (!str) return '—';
-    const d = new Date(str);
-    return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit', year:'numeric' });
+    return new Date(str).toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
-let cmpView = 'source'; // 'source' | 'manager'
-let cmpBarInst = null;
-let _cmpDataA = [], _cmpDataB = [];
+let cmpView='source', cmpBarInst=null, _cmpDataA=[], _cmpDataB=[];
 
 function setCmpView(v) {
-    cmpView = v;
-    document.getElementById('btnCmpSrc').classList.toggle('active', v==='source');
-    document.getElementById('btnCmpMgr').classList.toggle('active', v==='manager');
-    document.getElementById('cmpTableHeader').innerText = v==='source' ? 'Джерело' : 'Менеджер';
-    renderCmpBarChart(_cmpDataA, _cmpDataB);
-    renderCmpDetailTable(_cmpDataA, _cmpDataB);
-}
-
-function setCmpGrouping(g) {
-    cmpGrouping = g;
-    document.getElementById('btnCmpDay').classList.toggle('active',  g==='day');
-    document.getElementById('btnCmpWeek').classList.toggle('active', g==='week');
-    runComparison();
+    cmpView=v;
+    document.getElementById('btnCmpSrc').classList.toggle('active',v==='source');
+    document.getElementById('btnCmpMgr').classList.toggle('active',v==='manager');
+    document.getElementById('cmpTableHeader').innerText=v==='source'?'Джерело':'Менеджер';
+    renderCmpBarChart(_cmpDataA,_cmpDataB);
+    renderCmpDetailTable(_cmpDataA,_cmpDataB);
 }
 
 function toggleKpiTable() {
-    const wrap  = document.getElementById('kpiTableWrap');
-    const arrow = document.getElementById('kpiTableArrow');
-    const hidden = wrap.classList.toggle('hidden');
-    arrow.innerText = hidden ? '▶' : '▼';
+    const wrap=document.getElementById('kpiTableWrap'),arrow=document.getElementById('kpiTableArrow');
+    arrow.innerText=wrap.classList.toggle('hidden')?'▶':'▼';
 }
 
 function runComparison() {
-    const sDate = document.getElementById('dateStart').value;
-    const eDate = document.getElementById('dateEnd').value;
-    const sB    = document.getElementById('cmpStartB').value;
-    const eB    = document.getElementById('cmpEndB').value;
-    if (!sB || !eB) {
-        alert('Будь ласка, оберіть дати Періоду Б');
-        return;
+    const sDate=document.getElementById('dateStart').value, eDate=document.getElementById('dateEnd').value;
+    const sB=document.getElementById('cmpStartB').value, eB=document.getElementById('cmpEndB').value;
+    if(!sB||!eB){alert('Оберіть дати Періоду Б');return;}
+    document.getElementById('cmpPeriodALabel').innerText=sDate&&eDate?`${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}`:'—';
+    document.getElementById('cmpPeriodBLabel').innerText=`${formatDisplayDate(sB)} — ${formatDisplayDate(eB)}`;
+    const headA=document.getElementById('cmpHeadA'),headB=document.getElementById('cmpHeadB');
+    if(headA) headA.innerText=sDate&&eDate?`(${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)})`:'';
+    if(headB) headB.innerText=`(${formatDisplayDate(sB)} — ${formatDisplayDate(eB)})`;
+    const mgrs=getSelectedValues('mgr-cb');
+    let dataA=filterByDateRange(globalRawData,sDate,eDate);
+    let dataB=filterByDateRange(globalRawData,sB,eB);
+    if(!mgrs.includes("Всі")){
+        dataA=dataA.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
+        dataB=dataB.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
     }
-
-    // Оновити підписи дат
-    document.getElementById('cmpPeriodALabel').innerText =
-        sDate && eDate ? `${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}` : '—';
-    document.getElementById('cmpPeriodBLabel').innerText =
-        `${formatDisplayDate(sB)} — ${formatDisplayDate(eB)}`;
-
-    // Оновити підписи в шапці таблиці
-    const headA = document.getElementById('cmpHeadA');
-    const headB = document.getElementById('cmpHeadB');
-    if (headA) headA.innerText = sDate && eDate ? `(${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)})` : '';
-    if (headB) headB.innerText = `(${formatDisplayDate(sB)} — ${formatDisplayDate(eB)})`;
-
-    const mgrs = getSelectedValues('mgr-cb');
-
-    let dataA = filterByDateRange(globalRawData, sDate, eDate);
-    let dataB = filterByDateRange(globalRawData, sB, eB);
-
-    if (!mgrs.includes("Всі")) {
-        dataA = dataA.filter(r => mgrs.includes(r.manager ? String(r.manager).trim() : "Невідомий менеджер"));
-        dataB = dataB.filter(r => mgrs.includes(r.manager ? String(r.manager).trim() : "Невідомий менеджер"));
-    }
-
-    _cmpDataA = dataA;
-    _cmpDataB = dataB;
-
-    const mA = analyzeData(dataA);
-    const mB = analyzeData(dataB);
-
-    // ── KPI картки вгорі ──────────────────────────────────
-    const kpiItems = [
-        { label:'Всього лідів', aVal:mA.total,  bVal:mB.total,  type:'num' },
-        { label:'ЦА',           aVal:mA.target, bVal:mB.target, type:'num' },
-        { label:'% ЦА',         aVal:parseFloat(mA.convTarget), bVal:parseFloat(mB.convTarget), type:'perc' },
-        { label:'Неякісні',     aVal:mA.bad,    bVal:mB.bad,    type:'num', inv:true },
+    _cmpDataA=dataA; _cmpDataB=dataB;
+    const mA=analyzeData(dataA), mB=analyzeData(dataB);
+    const kpiItems=[
+        {label:'Всього лідів',aVal:mA.total, bVal:mB.total, type:'num'},
+        {label:'ЦА',          aVal:mA.target,bVal:mB.target,type:'num'},
+        {label:'% ЦА',        aVal:parseFloat(mA.convTarget),bVal:parseFloat(mB.convTarget),type:'perc'},
+        {label:'Неякісні',    aVal:mA.bad,   bVal:mB.bad,   type:'num',inv:true},
     ];
-    document.getElementById('cmpKpiCards').innerHTML = kpiItems.map(item => {
-        const diff = item.aVal - item.bVal;
-        const sf   = item.type==='perc'?'%':'';
-        let arrow='', cls='text-slate-400', bg='bg-slate-800/40', border='border-slate-700/50';
-        if (diff > 0 && !item.inv) { arrow='▲'; cls='text-emerald-400'; bg='bg-emerald-900/20'; border='border-emerald-800/50'; }
-        if (diff > 0 &&  item.inv) { arrow='▲'; cls='text-red-400';     bg='bg-red-900/20';     border='border-red-800/50'; }
-        if (diff < 0 && !item.inv) { arrow='▼'; cls='text-red-400';     bg='bg-red-900/20';     border='border-red-800/50'; }
-        if (diff < 0 &&  item.inv) { arrow='▼'; cls='text-emerald-400'; bg='bg-emerald-900/20'; border='border-emerald-800/50'; }
-        return `<div class="${bg} rounded-xl p-4 border ${border}">
-            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2">${item.label}</p>
-            <div class="flex items-end justify-between gap-2">
-                <div>
-                    <p class="text-[10px] text-blue-400 font-bold mb-0.5">А</p>
-                    <p class="text-2xl font-black text-white">${item.aVal}${sf}</p>
-                </div>
-                <div class="text-center pb-1">
-                    <p class="text-lg font-black ${cls}">${arrow}${Math.abs(diff).toFixed(item.type==='perc'?1:0)}${sf}</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] text-purple-400 font-bold mb-0.5">Б</p>
-                    <p class="text-2xl font-black text-slate-300">${item.bVal}${sf}</p>
-                </div>
-            </div>
-        </div>`;
+    document.getElementById('cmpKpiCards').innerHTML=kpiItems.map(item=>{
+        const diff=item.aVal-item.bVal,sf=item.type==='perc'?'%':'';
+        let arrow='',cls='text-slate-400',bg='bg-slate-800/40',border='border-slate-700/50';
+        if(diff>0&&!item.inv){arrow='▲';cls='text-emerald-400';bg='bg-emerald-900/20';border='border-emerald-800/50';}
+        if(diff>0&& item.inv){arrow='▲';cls='text-red-400';    bg='bg-red-900/20';    border='border-red-800/50';}
+        if(diff<0&&!item.inv){arrow='▼';cls='text-red-400';    bg='bg-red-900/20';    border='border-red-800/50';}
+        if(diff<0&& item.inv){arrow='▼';cls='text-emerald-400';bg='bg-emerald-900/20';border='border-emerald-800/50';}
+        return `<div class="${bg} rounded-xl p-4 border ${border}"><p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2">${item.label}</p><div class="flex items-end justify-between gap-2"><div><p class="text-[10px] text-blue-400 font-bold mb-0.5">А</p><p class="text-2xl font-black text-white">${item.aVal}${sf}</p></div><div class="text-center pb-1"><p class="text-lg font-black ${cls}">${arrow}${Math.abs(diff).toFixed(item.type==='perc'?1:0)}${sf}</p></div><div class="text-right"><p class="text-[10px] text-purple-400 font-bold mb-0.5">Б</p><p class="text-2xl font-black text-slate-300">${item.bVal}${sf}</p></div></div></div>`;
     }).join('');
-
-    // ── Загальна KPI таблиця ──────────────────────────────
-    const rows = [
-        { label:'📊 Всього лідів', a:mA.total,     b:mB.total,     type:'num' },
-        { label:'✅ Опрацьовано',  a:mA.processed, b:mB.processed, type:'num' },
-        { label:'📵 В черзі',      a:mA.pending,   b:mB.pending,   type:'num', inv:true },
-        { label:'📞 Додзвін',      a:mA.reached,   b:mB.reached,   type:'num' },
-        { label:'% Додзвін',       a:parseFloat(mA.convReached), b:parseFloat(mB.convReached), type:'perc' },
-        { label:'🏆 ЦА',           a:mA.target,    b:mB.target,    type:'num' },
-        { label:'% ЦА',            a:parseFloat(mA.convTarget),  b:parseFloat(mB.convTarget),  type:'perc' },
-        { label:'❌ Неякісні',     a:mA.bad,       b:mB.bad,       type:'num', inv:true },
-        { label:'% зливів',        a:parseFloat(mA.convBad),     b:parseFloat(mB.convBad),     type:'perc', inv:true },
+    const rows=[
+        {label:'📊 Всього лідів',a:mA.total,    b:mB.total,    type:'num'},
+        {label:'✅ Опрацьовано', a:mA.processed,b:mB.processed,type:'num'},
+        {label:'📵 В черзі',     a:mA.pending,  b:mB.pending,  type:'num',inv:true},
+        {label:'📞 Додзвін',     a:mA.reached,  b:mB.reached,  type:'num'},
+        {label:'% Додзвін',      a:parseFloat(mA.convReached),b:parseFloat(mB.convReached),type:'perc'},
+        {label:'🏆 ЦА',          a:mA.target,   b:mB.target,   type:'num'},
+        {label:'% ЦА',           a:parseFloat(mA.convTarget), b:parseFloat(mB.convTarget), type:'perc'},
+        {label:'❌ Неякісні',    a:mA.bad,      b:mB.bad,      type:'num',inv:true},
+        {label:'% зливів',       a:parseFloat(mA.convBad),   b:parseFloat(mB.convBad),    type:'perc',inv:true},
     ];
-    document.getElementById('comparisonTableBody').innerHTML = rows.map(row => {
-        const diff=row.a-row.b, dp=row.b>0?((diff/row.b)*100).toFixed(1):'—';
+    document.getElementById('comparisonTableBody').innerHTML=rows.map(row=>{
+        const diff=row.a-row.b,dp=row.b>0?((diff/row.b)*100).toFixed(1):'—';
         let arrow='',cls='kpi-same';
         if(diff>0){arrow='▲';cls=row.inv?'kpi-down':'kpi-up';}
         if(diff<0){arrow='▼';cls=row.inv?'kpi-up':'kpi-down';}
         const sf=row.type==='perc'?'%':'';
-        return `<tr class="hover:bg-slate-800/30 border-b border-purple-900/20">
-            <td class="px-5 py-3 font-medium text-slate-200">${row.label}</td>
-            <td class="px-5 py-3 text-center font-bold text-blue-300">${row.a}${sf}</td>
-            <td class="px-5 py-3 text-center font-bold text-purple-300">${row.b}${sf}</td>
-            <td class="px-5 py-3 text-center font-black ${cls}">${arrow} ${Math.abs(diff).toFixed(row.type==='perc'?1:0)}${sf}${dp!=='—'?` (${dp}%)`:''}
-            </td></tr>`;
+        return `<tr class="hover:bg-slate-800/30 border-b border-purple-900/20"><td class="px-5 py-3 font-medium text-slate-200">${row.label}</td><td class="px-5 py-3 text-center font-bold text-blue-300">${row.a}${sf}</td><td class="px-5 py-3 text-center font-bold text-purple-300">${row.b}${sf}</td><td class="px-5 py-3 text-center font-black ${cls}">${arrow} ${Math.abs(diff).toFixed(row.type==='perc'?1:0)}${sf}${dp!=='—'?` (${dp}%)`:''}
+        </td></tr>`;
     }).join('');
-
-    renderCmpBarChart(dataA, dataB);
-    renderCmpDetailTable(dataA, dataB);
-
-    // Показати блок результатів + прокрутити до нього
-    const results = document.getElementById('cmpResults');
+    renderCmpBarChart(dataA,dataB);
+    renderCmpDetailTable(dataA,dataB);
+    const results=document.getElementById('cmpResults');
     results.classList.remove('hidden');
-    setTimeout(() => results.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    setTimeout(()=>results.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
-// ── Grouped bar chart: А vs Б по джерелах або менеджерах ──
-function renderCmpBarChart(dataA, dataB) {
-    if (cmpBarInst) cmpBarInst.destroy();
-    const ctx = document.getElementById('cmpBarChart').getContext('2d');
-
-    const getKey = (l) => cmpView === 'source'
-        ? getParentGroup(l)
-        : (l.manager ? String(l.manager).trim() : "Невідомий");
-
-    const keysA = new Set(dataA.map(getKey));
-    const keysB = new Set(dataB.map(getKey));
-    const allKeys = [...new Set([...keysA, ...keysB])].sort();
-
-    const groupA = {}, groupB = {};
-    dataA.forEach(l => { const k=getKey(l); if(!groupA[k])groupA[k]=[]; groupA[k].push(l); });
-    dataB.forEach(l => { const k=getKey(l); if(!groupB[k])groupB[k]=[]; groupB[k].push(l); });
-
-    // Отримуємо дати для підписів
-    const sDate = document.getElementById('dateStart').value;
-    const eDate = document.getElementById('dateEnd').value;
-    const sB    = document.getElementById('cmpStartB').value;
-    const eB    = document.getElementById('cmpEndB').value;
-    const labelA = sDate && eDate ? `${formatDisplayDate(sDate)}–${formatDisplayDate(eDate)}` : 'Період А';
-    const labelB = sB && eB ? `${formatDisplayDate(sB)}–${formatDisplayDate(eB)}` : 'Період Б';
-
-    cmpBarInst = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: allKeys,
-            datasets: [
-                { label: `🔵 А — всього (${labelA})`, data: allKeys.map(k=>(groupA[k]||[]).length), backgroundColor:'rgba(59,130,246,0.75)', borderColor:'#3b82f6', borderWidth:1 },
-                { label: `🟢 А — ЦА (${labelA})`,     data: allKeys.map(k=>(groupA[k]||[]).filter(l=>normalizeStatus(l)===STATUS_TARGET).length), backgroundColor:'rgba(16,185,129,0.75)', borderColor:'#10b981', borderWidth:1 },
-                { label: `🟣 Б — всього (${labelB})`, data: allKeys.map(k=>(groupB[k]||[]).length), backgroundColor:'rgba(168,85,247,0.75)', borderColor:'#a855f7', borderWidth:1 },
-                { label: `🟠 Б — ЦА (${labelB})`,     data: allKeys.map(k=>(groupB[k]||[]).filter(l=>normalizeStatus(l)===STATUS_TARGET).length), backgroundColor:'rgba(245,158,11,0.75)', borderColor:'#f59e0b', borderWidth:1 },
-            ]
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: {
-                datalabels: { display: false },
-                legend: { display: false }, // легенда зроблена вручну над графіком
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        title: (items) => {
-                            const key = items[0]?.label || '';
-                            return `📍 ${key}`;
-                        },
-                        label: (ctx) => {
-                            const val   = ctx.parsed.y;
-                            const label = ctx.dataset.label;
-                            return ` ${label}: ${val}`;
-                        },
-                        afterBody: (items) => {
-                            // Показуємо різницю А - Б
-                            const aTotal = items.find(i=>i.datasetIndex===0)?.parsed.y ?? 0;
-                            const bTotal = items.find(i=>i.datasetIndex===2)?.parsed.y ?? 0;
-                            const aCA    = items.find(i=>i.datasetIndex===1)?.parsed.y ?? 0;
-                            const bCA    = items.find(i=>i.datasetIndex===3)?.parsed.y ?? 0;
-                            const dT = aTotal - bTotal;
-                            const dC = aCA - bCA;
-                            return [
-                                '─────────────────',
-                                ` Різниця лідів: ${dT >= 0 ? '+' : ''}${dT}`,
-                                ` Різниця ЦА:    ${dC >= 0 ? '+' : ''}${dC}`,
-                            ];
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { ticks:{color:'#94a3b8',font:{size:10},maxRotation:35}, grid:{color:'rgba(255,255,255,0.04)'} },
-                y: { ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.04)'}, beginAtZero:true }
-            }
-        }
-    });
-}
-
-// ── Детальна таблиця: А vs Б по кожному рядку ──
-function renderCmpDetailTable(dataA, dataB) {
-    const getKey = (l) => cmpView === 'source'
-        ? getParentGroup(l)
-        : (l.manager ? String(l.manager).trim() : "Невідомий");
-
-    const groupA={}, groupB={};
+function renderCmpBarChart(dataA,dataB) {
+    if(cmpBarInst)cmpBarInst.destroy();
+    const ctx=document.getElementById('cmpBarChart').getContext('2d');
+    const getKey=l=>cmpView==='source'?getParentGroup(l)||(l.source||"Інше"):(l.manager?String(l.manager).trim():"Невідомий");
+    const keysA=new Set(dataA.map(getKey)),keysB=new Set(dataB.map(getKey));
+    const allKeys=[...new Set([...keysA,...keysB])].filter(Boolean).sort();
+    const groupA={},groupB={};
     dataA.forEach(l=>{const k=getKey(l);if(!groupA[k])groupA[k]=[];groupA[k].push(l);});
     dataB.forEach(l=>{const k=getKey(l);if(!groupB[k])groupB[k]=[];groupB[k].push(l);});
+    const sDate=document.getElementById('dateStart').value,eDate=document.getElementById('dateEnd').value;
+    const sB=document.getElementById('cmpStartB').value,eB=document.getElementById('cmpEndB').value;
+    const labelA=sDate&&eDate?`${formatDisplayDate(sDate)}–${formatDisplayDate(eDate)}`:'Період А';
+    const labelB=sB&&eB?`${formatDisplayDate(sB)}–${formatDisplayDate(eB)}`:'Період Б';
+    cmpBarInst=new Chart(ctx,{type:'bar',data:{labels:allKeys,datasets:[
+        {label:`🔵 А — всього (${labelA})`,data:allKeys.map(k=>(groupA[k]||[]).length),backgroundColor:'rgba(59,130,246,0.75)',borderColor:'#3b82f6',borderWidth:1},
+        {label:`🟢 А — ЦА (${labelA})`,   data:allKeys.map(k=>(groupA[k]||[]).filter(l=>normalizeStatus(l)===STATUS_TARGET).length),backgroundColor:'rgba(16,185,129,0.75)',borderColor:'#10b981',borderWidth:1},
+        {label:`🟣 Б — всього (${labelB})`,data:allKeys.map(k=>(groupB[k]||[]).length),backgroundColor:'rgba(168,85,247,0.75)',borderColor:'#a855f7',borderWidth:1},
+        {label:`🟠 Б — ЦА (${labelB})`,   data:allKeys.map(k=>(groupB[k]||[]).filter(l=>normalizeStatus(l)===STATUS_TARGET).length),backgroundColor:'rgba(245,158,11,0.75)',borderColor:'#f59e0b',borderWidth:1},
+    ]},options:{maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#94a3b8',font:{size:10},maxRotation:35},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},beginAtZero:true}}}});
+}
 
-    const allKeys = [...new Set([...Object.keys(groupA),...Object.keys(groupB)])].sort();
-
-    document.getElementById('cmpDetailTable').innerHTML = allKeys.map(k => {
-        const stA = analyzeData(groupA[k]||[]);
-        const stB = analyzeData(groupB[k]||[]);
-
-        const dLeads = stA.total  - stB.total;
-        const dCA    = stA.target - stB.target;
-        const dPct   = parseFloat(stA.convTarget) - parseFloat(stB.convTarget);
-
-        const diffCell = (val, inv=false, suffix='') => {
-            if (val === 0) return `<span class="text-slate-500 text-xs">—</span>`;
-            const up   = val > 0;
-            const good = inv ? !up : up;
-            const cls  = good ? 'text-emerald-400' : 'text-red-400';
-            const arrow = up ? '▲' : '▼';
-            const absVal = Math.abs(val).toFixed(suffix ? 1 : 0);
-            const tip = up
-                ? `У Період А на ${absVal}${suffix} ${good ? 'більше ✅' : 'більше ⚠️'} ніж у Б`
-                : `У Період А на ${absVal}${suffix} ${good ? 'менше ✅' : 'менше ⚠️'} ніж у Б`;
-            return `<span class="${cls} font-bold cursor-help" title="${tip}">${arrow}${absVal}${suffix}</span>`;
+function renderCmpDetailTable(dataA,dataB) {
+    const getKey=l=>cmpView==='source'?getParentGroup(l)||(l.source||"Інше"):(l.manager?String(l.manager).trim():"Невідомий");
+    const groupA={},groupB={};
+    dataA.forEach(l=>{const k=getKey(l);if(!groupA[k])groupA[k]=[];groupA[k].push(l);});
+    dataB.forEach(l=>{const k=getKey(l);if(!groupB[k])groupB[k]=[];groupB[k].push(l);});
+    const allKeys=[...new Set([...Object.keys(groupA),...Object.keys(groupB)])].filter(Boolean).sort();
+    document.getElementById('cmpDetailTable').innerHTML=allKeys.map(k=>{
+        const stA=analyzeData(groupA[k]||[]),stB=analyzeData(groupB[k]||[]);
+        const dLeads=stA.total-stB.total,dCA=stA.target-stB.target,dPct=parseFloat(stA.convTarget)-parseFloat(stB.convTarget);
+        const diffCell=(val,inv=false,suffix='')=>{
+            if(val===0)return`<span class="text-slate-500 text-xs">—</span>`;
+            const up=val>0,good=inv?!up:up,cls=good?'text-emerald-400':'text-red-400',arrow=up?'▲':'▼';
+            return `<span class="${cls} font-bold">${arrow}${Math.abs(val).toFixed(suffix?1:0)}${suffix}</span>`;
         };
-
         return `<tr class="hover:bg-purple-900/10 border-b border-purple-900/20 text-sm">
             <td class="px-4 py-3 font-bold text-slate-200">${k}</td>
-            <!-- А — синій фон -->
             <td class="px-4 py-3 text-center text-blue-300 font-bold bg-blue-950/15 border-l-2 border-blue-700/30">${stA.total}</td>
             <td class="px-4 py-3 text-center text-emerald-300 font-bold bg-blue-950/15">${stA.target}</td>
             <td class="px-4 py-3 text-center text-blue-200 bg-blue-950/15">${stA.convTarget}%</td>
-            <!-- Зміни -->
             <td class="px-4 py-3 text-center border-l border-slate-700/40">${diffCell(dLeads)}</td>
             <td class="px-4 py-3 text-center">${diffCell(dCA)}</td>
-            <td class="px-4 py-3 text-center">${diffCell(dPct, false, '%')}</td>
-            <!-- Б — фіолетовий фон -->
+            <td class="px-4 py-3 text-center">${diffCell(dPct,false,'%')}</td>
             <td class="px-4 py-3 text-center text-purple-300 font-bold bg-purple-950/15 border-l-2 border-purple-700/30">${stB.total}</td>
             <td class="px-4 py-3 text-center text-purple-200 bg-purple-950/15">${stB.target}</td>
             <td class="px-4 py-3 text-center text-purple-200 bg-purple-950/15">${stB.convTarget}%</td>
         </tr>`;
-    }).join('') || '<tr><td colspan="10" class="p-6 text-center text-slate-500 text-xs">Немає даних</td></tr>';
-}
-
-function buildDateSeries(data, g) {
-    const map={};
-    data.forEach(r=>{const d=parseDate(r.dateUpdate);if(!d)return;const k=formatDateKey(d,g);if(!map[k])map[k]=[];map[k].push(r);});
-    return map;
+    }).join('')||'<tr><td colspan="10" class="p-6 text-center text-slate-500 text-xs">Немає даних</td></tr>';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1098,43 +1095,18 @@ function updateBadAnalysisCharts(type) {
     const val=document.getElementById(selId).value;
     let f=mainData;
     if(val!=="Всі") f=type==='source'?mainData.filter(l=>getParentGroup(l)===val):mainData.filter(l=>String(l.manager||"").trim()===val);
-
-    const total=f.length;
-    const target=f.filter(l=>normalizeStatus(l)===STATUS_TARGET).length;
-    const bad=f.filter(l=>normalizeStatus(l)===STATUS_BAD).length;
-    const noCall=f.filter(l=>normalizeStatus(l)===STATUS_NO_CALL).length;
-    const notWorked=f.filter(l=>INITIAL_STATUSES.has(normalizeStatus(l))).length;
+    const total=f.length,target=f.filter(l=>normalizeStatus(l)===STATUS_TARGET).length,bad=f.filter(l=>normalizeStatus(l)===STATUS_BAD).length,noCall=f.filter(l=>normalizeStatus(l)===STATUS_NO_CALL).length,notWorked=f.filter(l=>INITIAL_STATUSES.has(normalizeStatus(l))).length;
     const unknown=total-target-bad-noCall-notWorked;
     const convTarget=total>0?((target/total)*100).toFixed(1):"0.0";
-
     const labels=["Якісні","Неякісні","Не виходить на зв'язок","Не опрацьовані","Потребує уточнення !"];
     const counts=[target,bad,noCall,notWorked,unknown];
     const colors=["#10b981","#ef4444","#f59e0b","#3b82f6","#475569"];
     const icons=["✅","❌","📵","🔵","⚠️"];
-
     const statsId=type==='source'?'badSourceStats':'badMgrStats';
     const se=document.getElementById(statsId);
-    se.innerHTML=`
-        <div class="bg-slate-800/60 rounded-xl px-4 py-3 border border-slate-700/50 mb-1">
-            <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-0.5">Всього лідів</p>
-            <p class="text-2xl font-black text-white">${total}</p>
-        </div>
-        ${labels.map((lb,i)=>{
-            if(counts[i]===0)return'';
-            const perc=total>0?Math.round((counts[i]/total)*100):0;
-            const tc=['text-emerald-400','text-red-400','text-amber-400','text-blue-400','text-slate-400'][i];
-            const bc=['border-emerald-800','border-red-900','border-amber-800','border-blue-900','border-slate-700'][i];
-            const bg=['bg-emerald-900/20','bg-red-900/20','bg-amber-900/20','bg-blue-900/20','bg-slate-800/40'][i];
-            return `<div class="${bg} rounded-lg px-3 py-2 border ${bc} flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0"><span class="text-sm">${icons[i]}</span><span class="text-[11px] text-slate-300 font-medium truncate">${lb.replace(' !','')}</span></div>
-                <div class="flex items-baseline gap-1 flex-shrink-0"><span class="${tc} font-black text-lg">${counts[i]}</span><span class="${tc} text-[10px] font-bold opacity-70">${perc}%</span></div>
-            </div>`;
-        }).join('')}
-        <div class="bg-emerald-900/30 rounded-xl px-4 py-3 border border-emerald-800 mt-1">
-            <p class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold mb-0.5">🏆 Конверсія в ЦА</p>
-            <p class="text-2xl font-black text-emerald-400">${convTarget}%</p>
-        </div>`;
-
+    se.innerHTML=`<div class="bg-slate-800/60 rounded-xl px-4 py-3 border border-slate-700/50 mb-1"><p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-0.5">Всього лідів</p><p class="text-2xl font-black text-white">${total}</p></div>
+    ${labels.map((lb,i)=>{if(counts[i]===0)return'';const perc=total>0?Math.round((counts[i]/total)*100):0;const tc=['text-emerald-400','text-red-400','text-amber-400','text-blue-400','text-slate-400'][i];const bc=['border-emerald-800','border-red-900','border-amber-800','border-blue-900','border-slate-700'][i];const bg=['bg-emerald-900/20','bg-red-900/20','bg-amber-900/20','bg-blue-900/20','bg-slate-800/40'][i];return `<div class="${bg} rounded-lg px-3 py-2 border ${bc} flex items-center justify-between gap-2"><div class="flex items-center gap-2 min-w-0"><span class="text-sm">${icons[i]}</span><span class="text-[11px] text-slate-300 font-medium truncate">${lb.replace(' !','')}</span></div><div class="flex items-baseline gap-1 flex-shrink-0"><span class="${tc} font-black text-lg">${counts[i]}</span><span class="${tc} text-[10px] font-bold opacity-70">${perc}%</span></div></div>`;}).join('')}
+    <div class="bg-emerald-900/30 rounded-xl px-4 py-3 border border-emerald-800 mt-1"><p class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold mb-0.5">🏆 Конверсія в ЦА</p><p class="text-2xl font-black text-emerald-400">${convTarget}%</p></div>`;
     renderPie(type,labels,counts,colors,f);
 }
 
@@ -1144,31 +1116,7 @@ function renderPie(type,labels,counts,colors,fd) {
     let ci=type==='source'?badSourceChartInst:badMgrChartInst;
     if(ci)ci.destroy();
     const total=counts.reduce((a,b)=>a+b,0);
-    const ni=new Chart(ctx,{
-        type:'pie',
-        data:{labels,datasets:[{data:counts,backgroundColor:colors,borderColor:'#1e293b',borderWidth:2}]},
-        options:{
-            maintainAspectRatio:false,layout:{padding:10},
-            plugins:{
-                legend:{display:false},
-                tooltip:{callbacks:{label:(c)=>{
-                    const lb=c.label||'',v=c.parsed||0,p=total>0?((v/total)*100).toFixed(1):0;
-                    if(lb.includes('Потребує уточнення'))return[` ${v} лідів (${p}%)`,' ⚠️ Перегляньте базу ЛІДІВ.',' Потребує уточнення статусу!'];
-                    return ` ${lb}: ${v} (${p}%)`;
-                }}},
-                datalabels:{color:'#fff',font:{weight:'bold',size:11},formatter:(v,c)=>{
-                    if(v===0||total===0)return null;
-                    const p=Math.round((v/total)*100);
-                    const lb=c.chart.data.labels[c.dataIndex];
-                    if(lb.includes('Потребує уточнення'))return`!\n(${p}%)`;
-                    return`${p}%`;
-                }}
-            },
-            onClick:(evt,item)=>{
-                if(item.length>0){const idx=item[0].index;const lb=labels[idx];if(lb==='Неякісні'&&(type==='source'?badSourceMode:badMgrMode)==='main')showDrillDown(type,fd);}
-            }
-        }
-    });
+    const ni=new Chart(ctx,{type:'pie',data:{labels,datasets:[{data:counts,backgroundColor:colors,borderColor:'#1e293b',borderWidth:2}]},options:{maintainAspectRatio:false,layout:{padding:10},plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>{const lb=c.label||'',v=c.parsed||0,p=total>0?((v/total)*100).toFixed(1):0;if(lb.includes('Потребує уточнення'))return[` ${v} лідів (${p}%)`,' ⚠️ Перегляньте базу ЛІДІВ.',' Потребує уточнення статусу!'];return ` ${lb}: ${v} (${p}%)`;}}},datalabels:{color:'#fff',font:{weight:'bold',size:11},formatter:(v,c)=>{if(v===0||total===0)return null;const p=Math.round((v/total)*100);const lb=c.chart.data.labels[c.dataIndex];if(lb.includes('Потребує уточнення'))return`!\n(${p}%)`;return`${p}%`;}}},onClick:(evt,item)=>{if(item.length>0){const idx=item[0].index;const lb=labels[idx];if(lb==='Неякісні'&&(type==='source'?badSourceMode:badMgrMode)==='main')showDrillDown(type,fd);}}}});
     if(type==='source'){badSourceChartInst=ni;badSourceMode='main';document.getElementById('backBtnSource').classList.add('hidden');}
     else{badMgrChartInst=ni;badMgrMode='main';document.getElementById('backBtnMgr').classList.add('hidden');}
 }
@@ -1176,8 +1124,7 @@ function renderPie(type,labels,counts,colors,fd) {
 function showDrillDown(type,data) {
     const bl=data.filter(l=>normalizeStatus(l)===STATUS_BAD);
     const rm={};bl.forEach(l=>{const r=l.reason?String(l.reason).trim():"Не вказано";rm[r]=(rm[r]||0)+1;});
-    const labels=Object.keys(rm),counts=Object.values(rm);
-    const colors=['#ef4444','#f87171','#fca5a5','#fee2e2','#991b1b','#7f1d1d'];
+    const labels=Object.keys(rm),counts=Object.values(rm),colors=['#ef4444','#f87171','#fca5a5','#fee2e2','#991b1b','#7f1d1d'];
     const ci=type==='source'?badSourceChartInst:badMgrChartInst;
     ci.data.labels=labels.map(l=>"Причина: "+l);ci.data.datasets[0].data=counts;ci.data.datasets[0].backgroundColor=colors;ci.update();
     if(type==='source'){badSourceMode='drilldown';document.getElementById('backBtnSource').classList.remove('hidden');}
@@ -1203,9 +1150,7 @@ function renderBadLeadsList(data) {
     applyBadLeadsFilters();
 }
 function applyBadLeadsFilters() {
-    const mv=document.getElementById('badListMgrFilter').value;
-    const sv=document.getElementById('badListSrcFilter').value;
-    const rv=document.getElementById('badListReasonFilter').value;
+    const mv=document.getElementById('badListMgrFilter').value,sv=document.getElementById('badListSrcFilter').value,rv=document.getElementById('badListReasonFilter').value;
     let f=allBadLeads;
     if(mv!=="Всі")f=f.filter(l=>(l.manager?String(l.manager).trim():"Невідомий")===mv);
     if(sv!=="Всі")f=f.filter(l=>(l.source?String(l.source).trim():"Інше")===sv);
@@ -1225,12 +1170,7 @@ function renderBadLeadsTable(leads) {
     tb.innerHTML=leads.map(l=>{
         const lnk=l.link&&String(l.link).startsWith('http')?l.link:'#';
         const reason=l.reason?String(l.reason).trim():'---';
-        return `<tr class="hover:bg-red-500/5 transition">
-            <td class="px-5 py-3 font-medium text-slate-200">${l.manager||'---'}</td>
-            <td class="px-5 py-3 text-slate-400 text-xs">${l.source||'---'}</td>
-            <td class="px-5 py-3"><span class="text-red-400 font-bold text-xs px-2 py-0.5 bg-red-900/20 rounded">${reason}</span></td>
-            <td class="px-5 py-3 text-center"><a href="${lnk}" target="_blank" class="${lnk!=='#'?'bg-blue-600 hover:bg-blue-500':'bg-slate-700 opacity-30 cursor-not-allowed'} text-white text-[10px] font-bold px-3 py-1.5 rounded transition inline-block">${lnk!=='#'?'В CRM ➔':'Без лінка'}</a></td>
-        </tr>`;
+        return `<tr class="hover:bg-red-500/5 transition"><td class="px-5 py-3 font-medium text-slate-200">${l.manager||'---'}</td><td class="px-5 py-3 text-slate-400 text-xs">${l.source||'---'}</td><td class="px-5 py-3"><span class="text-red-400 font-bold text-xs px-2 py-0.5 bg-red-900/20 rounded">${reason}</span></td><td class="px-5 py-3 text-center"><a href="${lnk}" target="_blank" class="${lnk!=='#'?'bg-blue-600 hover:bg-blue-500':'bg-slate-700 opacity-30 cursor-not-allowed'} text-white text-[10px] font-bold px-3 py-1.5 rounded transition inline-block">${lnk!=='#'?'В CRM ➔':'Без лінка'}</a></td></tr>`;
     }).join('');
 }
 
