@@ -35,7 +35,6 @@
 <body class="bg-dark-bg p-4 md:p-8 font-sans text-dark-text antialiased">
 <div class="max-w-7xl mx-auto">
 
-    <!-- HEADER -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-dark-border pb-6 gap-4">
         <div>
             <h1 class="text-3xl font-extrabold text-white uppercase tracking-tight">Ecoforma <span class="text-blue-500">Analytics</span></h1>
@@ -50,7 +49,6 @@
         </div>
     </div>
 
-    <!-- ПАНЕЛЬ ПОРІВНЯННЯ -->
     <div id="comparePanel">
         <div class="bg-purple-950/30 rounded-2xl border border-purple-800/50 shadow-xl mb-8 overflow-hidden">
             <div class="bg-purple-950/60 p-5 border-b border-purple-800/40">
@@ -146,7 +144,6 @@
         </div>
     </div>
 
-    <!-- ФІЛЬТРИ -->
     <div class="bg-dark-card p-6 rounded-2xl border border-dark-border shadow-xl mb-8">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="grid grid-cols-2 gap-2 border-r border-dark-border pr-6">
@@ -182,7 +179,6 @@
 
     <div id="loader" class="hidden text-center text-blue-400 my-8 text-sm uppercase tracking-widest animate-pulse font-bold">⏳ Завантаження бази даних...</div>
 
-    <!-- KPI -->
     <div class="grid grid-cols-2 md:grid-cols-8 gap-4 mb-10">
         <div class="bg-dark-card p-4 rounded-xl border border-dark-border text-center shadow-lg">
             <p class="text-[10px] text-dark-subtle font-bold uppercase tracking-wider">Всього лідів</p>
@@ -214,7 +210,6 @@
             <p class="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">% в ЦА</p>
             <p id="kpiConvTarget" class="text-3xl font-black text-emerald-400 mt-1">0%</p>
         </div>
-        <!-- НОВІ KPI АВАНСІВ -->
         <div class="bg-orange-900/30 p-4 rounded-xl border border-orange-700 text-center shadow-lg">
             <p class="text-[10px] text-orange-300 font-bold uppercase tracking-wider">Авансів</p>
             <p class="mt-1 flex items-baseline justify-center gap-1.5">
@@ -228,7 +223,6 @@
         </div>
     </div>
 
-    <!-- ТРАФІК + ВОРОНКА -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
         <div class="bg-dark-card p-6 rounded-xl border border-dark-border shadow-xl">
             <h3 class="text-base font-bold text-white mb-6 uppercase tracking-wider text-center">Трафік (Згруповано)</h3>
@@ -258,7 +252,6 @@
         </div>
     </div>
 
-    <!-- ПОТРЕБУЄ УВАГИ + РЕЙТИНГ -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
         <div class="bg-dark-card rounded-xl border border-red-900/40 overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.05)] flex flex-col">
             <div class="bg-red-950/40 p-4 border-b border-red-900/40 flex justify-between items-center">
@@ -299,7 +292,6 @@
         </div>
     </div>
 
-    <!-- ПОВТОРНІ ПРОДАЖІ -->
     <div class="bg-dark-card rounded-xl border border-yellow-700/50 mb-10 overflow-hidden shadow-xl">
         <div class="bg-yellow-900/20 p-4 border-b border-yellow-700/40 flex justify-between items-center">
             <div>
@@ -331,7 +323,6 @@
         </div>
     </div>
 
-    <!-- ДЕТАЛІ МЕНЕДЖЕР → ДЖЕРЕЛО -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-10 overflow-visible shadow-xl">
         <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-t-xl">
             <h3 class="text-sm font-bold text-white uppercase tracking-widest">📊 Деталі (Менеджер ➔ Джерело Сире)</h3>
@@ -376,7 +367,6 @@
         </div>
     </div>
 
-    <!-- АНАЛІТИКА ДЖЕРЕЛ -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-10 shadow-xl overflow-hidden">
         <div class="bg-slate-800 p-4 border-b border-dark-border">
             <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
@@ -403,7 +393,6 @@
         </div>
     </div>
 
-    <!-- АНАЛІТИКА ЯКОСТІ ТА ЗЛИВІВ -->
     <div class="bg-dark-card rounded-xl border border-red-900/40 mb-10 overflow-visible shadow-xl">
         <div class="bg-red-950/40 p-4 border-b border-red-900/40 rounded-t-xl">
             <h3 class="text-sm font-bold text-red-400 uppercase tracking-widest">🗑️ Аналітика якості та зливів</h3>
@@ -466,7 +455,7 @@
 </div>
 <script>
 // ╔══════════════════════════════════════════════════════╗
-// ║  URLs                                               ║
+// ║  URLs                                                ║
 // ╚══════════════════════════════════════════════════════╝
 const API_URL     = "https://script.google.com/macros/s/AKfycbxASi2q5wK2aYZW2mbhm7Yi-DPqyoEu_QUKkbkh2CGXgtUWokk27Z_BjjpH_24TXtftGQ/exec";
 const API_ADV_URL = "https://script.google.com/macros/s/AKfycbxq4F8snb9kJFPil6q6zTfYvv8dLmQcE5Jiy7qCKhLoUhKVyXy3mPVlqWGp1ck_uFf_Vw/exec";
@@ -492,13 +481,21 @@ let badMgrMode         = 'main';
 
 // ─── ІНІЦІАЛІЗАЦІЯ ────────────────────────────────────
 window.onload = () => {
-    const today   = new Date();
-    const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
-    const twoW    = new Date(); twoW.setDate(today.getDate() - 14);
-    document.getElementById('dateStart').valueAsDate = today;
+    const today = new Date();
+    
+    // Встановлюємо період на останні 30 днів
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    const prevStart = new Date(thirtyDaysAgo);
+    prevStart.setDate(prevStart.getDate() - 30);
+    const prevEnd = new Date(thirtyDaysAgo);
+
+    document.getElementById('dateStart').valueAsDate = thirtyDaysAgo;
     document.getElementById('dateEnd').valueAsDate   = today;
-    document.getElementById('cmpStartB').valueAsDate = weekAgo;
-    document.getElementById('cmpEndB').valueAsDate   = twoW;
+    document.getElementById('cmpStartB').valueAsDate = prevStart;
+    document.getElementById('cmpEndB').valueAsDate   = prevEnd;
+    
     fetchAllData();
 };
 
@@ -511,13 +508,26 @@ async function fetchAllData() {
         ]);
         const rawLeads = await resLeads.json();
         const rawAdv   = await resAdv.json();
-        globalRawData = Array.isArray(rawLeads) ? rawLeads : (rawLeads.data || []);
-        globalAdvData = Array.isArray(rawAdv)   ? rawAdv   : (rawAdv.data  || []);
+        
+        // 🔥 БРОНЕБІЙНА ОЧИСТКА: видаляємо випадкові пробіли з назв стовпців і значень 🔥
+        const cleanData = (arr) => arr.map(obj => {
+            const cleanObj = {};
+            for (let k in obj) {
+                let val = obj[k];
+                if (typeof val === 'string') val = val.trim();
+                cleanObj[k.trim()] = val;
+            }
+            return cleanObj;
+        });
+
+        globalRawData = cleanData(Array.isArray(rawLeads) ? rawLeads : (rawLeads.data || []));
+        globalAdvData = cleanData(Array.isArray(rawAdv)   ? rawAdv   : (rawAdv.data  || []));
+
         populateFilters(globalRawData);
         applyLocalFiltersAndRender();
     } catch(e) {
         console.error(e);
-        alert("Помилка підключення: " + e.message);
+        alert("Помилка підключення до бази!\n\nПеревір у скрипті АВАНСІВ:\n1. Виконувати як: Я (Me)\n2. У кого є доступ: Усі (Anyone)");
     } finally {
         document.getElementById('loader').classList.add('hidden');
     }
@@ -529,12 +539,10 @@ function normalizeStatus(l) { return String(l.status||"").trim().toLowerCase(); 
 function getParentGroup(row) {
     let s  = row.source;
     const mgr = String(row.manager||"").toLowerCase();
-    if (!s || String(s).trim()===""||s==="undefined") return null; // фільтруємо Інше/пусте
+    if (!s || String(s).trim()===""||s==="undefined") return null; 
     s = String(s).trim();
     const ls = s.toLowerCase();
-    // Савчук: дзвінок = Сайт Wood Agency
     if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
-    // Дзвінок для інших — прибираємо з аналізу лідів
     if (ls==="дзвінок") return null;
     if (ls==="інше" || ls==="other") return null;
     if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
@@ -547,15 +555,14 @@ function getParentGroup(row) {
     return s;
 }
 
-// Групування авансів — аналогічна логіка але включає Інше → повторні продажі
 function getAdvGroup(adv) {
     let s = String(adv['Джерело']||adv.source||"").trim();
-    const mgr = String(adv['Відповідальний']||adv.manager||"").toLowerCase();
+    const mgr = String(adv['Відповідальний']||adv['Менеджер']||adv.manager||"").toLowerCase();
     if (!s||s==="undefined"||s==="") return "Інше";
     const ls = s.toLowerCase();
     if (ls==="інше"||ls==="other"||ls==="") return "Інше";
     if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
-    if (ls==="дзвінок") return "Дзвінок"; // загальний дзвінок у авансах залишаємо
+    if (ls==="дзвінок") return "Дзвінок"; 
     if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
     if (ls.includes("facebook")&&(ls.includes("wood")||ls.includes("вуд")))          return "Facebook Wood Agency";
     if (ls.includes("дзвінок")&&(ls.includes("ecoforma")||ls.includes("сайт")))      return "Сайт EcoForma";
@@ -567,9 +574,12 @@ function getAdvGroup(adv) {
 
 function parseDate(str) {
     if (!str) return null;
-    let d;
-    if (String(str).includes('.')) { const p=String(str).split(/[. :]/); d=new Date(+p[2],+p[1]-1,+p[0]); }
-    else d = new Date(str);
+    let s = String(str).trim();
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(s)) {
+        const p = s.split(/[. :]/);
+        return new Date(+p[2], +p[1]-1, +p[0]);
+    }
+    const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
 
@@ -580,7 +590,6 @@ function filterByDateRange(data, s, e) {
     return data.filter(r=>{const d=parseDate(r.dateUpdate||r['Дата авансу']||r['date']);return d&&d>=st&&d<=en;});
 }
 
-// Фільтруємо аванси по даті авансу
 function filterAdvByDate(data, s, e) {
     if (!s||!e) return data;
     const st=new Date(s); st.setHours(0,0,0,0);
@@ -592,24 +601,20 @@ function filterAdvByDate(data, s, e) {
     });
 }
 
-// Нечіткий матч по прізвищу
 function matchManager(advMgr, leadMgr) {
     if (!advMgr||!leadMgr) return false;
     const a = String(advMgr).trim().toLowerCase();
     const b = String(leadMgr).trim().toLowerCase();
     if (a===b) return true;
-    // Беремо перше слово кожного (прізвище)
     const surA = a.split(/\s+/)[0];
     const surB = b.split(/\s+/)[0];
     return surA && surB && surA===surB;
 }
 
-// Індекс авансів по менеджеру (прізвище) і джерелу
 function buildAdvIndex(advArr) {
-    // { surname_lower: { group: [adv,...] } }
     const idx = {};
     advArr.forEach(adv => {
-        const mgr  = String(adv['Відповідальний']||"").trim();
+        const mgr  = String(adv['Відповідальний']||adv['Менеджер']||adv.manager||"").trim();
         const sur  = mgr.toLowerCase().split(/\s+/)[0];
         const grp  = getAdvGroup(adv);
         if (!idx[sur]) idx[sur] = {};
@@ -620,7 +625,7 @@ function buildAdvIndex(advArr) {
 }
 
 function advSum(advArr) {
-    return advArr.reduce((s,a)=>s+parseFloat(String(a['Сума угоди']||a.dealAmount||0).replace(/\s/g,'')||0),0);
+    return advArr.reduce((s,a)=>s+parseFloat(String(a['Сума угоди']||a['Сума']||a.dealAmount||0).replace(/\s/g,'')||0),0);
 }
 
 function fmtMoney(n) {
@@ -679,12 +684,10 @@ function applyLocalFiltersAndRender() {
     if(!mgrs.includes("Всі")) mainData=mainData.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
     if(!srcs.includes("Всі")) mainData=mainData.filter(r=>srcs.includes(r.source?String(r.source).trim():"Інше"));
 
-    // Фільтруємо аванси по датах
     mainAdvData = filterAdvByDate(globalAdvData, sDate, eDate);
-    // Якщо обрані конкретні менеджери — фільтруємо і аванси
     if (!mgrs.includes("Всі")) {
         mainAdvData = mainAdvData.filter(a => {
-            const advMgr = String(a['Відповідальний']||"").trim();
+            const advMgr = String(a['Відповідальний']||a['Менеджер']||"").trim();
             return mgrs.some(m => matchManager(advMgr, m));
         });
     }
@@ -718,7 +721,6 @@ function renderMetrics(data, advData) {
     document.getElementById('kpiTarget').innerText=m.target;
     document.getElementById('kpiConvTarget').innerText=m.convTarget+"%";
 
-    // Аванси KPI — без повторних продажів
     const advMain = advData.filter(a=>getAdvGroup(a)!=="Інше");
     const advCount = advMain.length;
     const advTotal = advSum(advMain);
@@ -778,13 +780,12 @@ function renderRepeatSales(advData) {
     document.getElementById('repeatCount').innerText = totalCount;
     document.getElementById('repeatSum').innerText   = fmtMoney(totalSum);
 
-    // По менеджерах
     const byMgr = {};
     repeats.forEach(a=>{
-        const mgr = String(a['Відповідальний']||"Невідомий").trim();
+        const mgr = String(a['Відповідальний']||a['Менеджер']||"Невідомий").trim();
         if(!byMgr[mgr]) byMgr[mgr]={count:0,sum:0};
         byMgr[mgr].count++;
-        byMgr[mgr].sum += parseFloat(String(a['Сума угоди']||0).replace(/\s/g,'')||0);
+        byMgr[mgr].sum += parseFloat(String(a['Сума угоди']||a['Сума']||0).replace(/\s/g,'')||0);
     });
     const rows = Object.entries(byMgr).sort((a,b)=>b[1].sum-a[1].sum);
     document.getElementById('repeatTableBody').innerHTML = rows.length===0
@@ -874,7 +875,6 @@ function renderDetailTableHTML(data, advData) {
             const sub=mg[mgr][gn],sk=Object.keys(sub);
             let gl=[]; sk.forEach(k=>{gl.push(...sub[k]);all.push(...sub[k]);});
             const ps=analyzeData(gl);
-            // Аванси для цього менеджера + цієї групи
             const grpAdvArr = (advIdx[sur]&&advIdx[sur][gn]) ? advIdx[sur][gn] : [];
             const grpAdvCount = grpAdvArr.length;
             const grpAdvSum   = advSum(grpAdvArr);
@@ -889,7 +889,6 @@ function renderDetailTableHTML(data, advData) {
                 h+=`<tr class="hover:bg-slate-800 text-sm border-y border-slate-700/30"><td class="px-5 py-3 pl-8 text-slate-200">${sk[0]||gn}</td><td class="px-5 py-3 text-center text-slate-300 font-bold">${ps.total}</td><td class="px-5 py-3 text-center text-blue-300">${ps.processed}</td><td class="px-5 py-3 text-center text-amber-400">${ps.reached}</td><td class="px-5 py-3 text-center text-amber-400 font-bold">${ps.convReached}%</td><td class="px-5 py-3 text-center text-emerald-400">${ps.target}</td><td class="px-5 py-3 text-center text-emerald-400 font-bold">${ps.convTarget}%</td><td class="px-5 py-3 text-center text-orange-300 font-bold">${grpAdvCount||'—'}</td><td class="px-5 py-3 text-center text-orange-300 font-bold bg-orange-900/10">${fmtMoney(grpAdvSum)}</td></tr>`;
             }
         });
-        // Підсумок менеджера
         const ms=analyzeData(all);
         const mAdvAll = Object.values(advIdx[sur]||{}).flat();
         const mAdvCount=mAdvAll.length, mAdvSum=advSum(mAdvAll);
@@ -901,7 +900,6 @@ function renderDetailTableHTML(data, advData) {
 // ─── АНАЛІТИКА ДЖЕРЕЛ ────────────────────────────────
 function renderSourceTable(data, advData) {
     const advMainData = advData.filter(a=>getAdvGroup(a)!=="Інше");
-    // Будуємо індекс авансів по групі
     const advByGroup = {};
     advMainData.forEach(a=>{
         const g=getAdvGroup(a);
