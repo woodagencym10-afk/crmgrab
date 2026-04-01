@@ -956,8 +956,8 @@ function srcRowMain(rc, btnHtml, label, s, grpAdvCount, grpAdvSum, stars) {
     </tr>`;
 }
 
-function srcRowSub(label, ms, advC, advS) {
-    return `<tr class="bg-slate-900/50 text-xs border-b border-slate-800/60 hover:bg-slate-800/40 transition">
+function srcRowSub(parentId, label, ms, advC, advS) {
+    return `<tr data-parent="${parentId}" style="display:none" class="bg-slate-900/50 text-xs border-b border-slate-800/60 hover:bg-slate-800/40 transition">
         <td class="px-4 py-2"></td>
         <td class="px-4 py-2 pl-8 text-slate-400">↳ ${label}</td>
         <td class="px-4 py-2 text-center text-slate-400">${ms.total}</td>
@@ -1016,14 +1016,12 @@ function renderSourceTable(data, advData) {
             html+=srcRowMain(rc, btnHtml, (isTop?'🏆 ':'')+s.src, s, grpAdvCount, grpAdvSum, stars);
 
             if(hasSubs){
-                html+=`<tbody class="src-children" id="${childId}">`;
                 Object.keys(subs).sort().forEach(mgr=>{
                     const ms=analyzeData(subs[mgr]);
                     const sur=mgr.toLowerCase().split(' ')[0];
                     const mgrAdv=(advIdx2[sur]&&advIdx2[sur][s.src])?advIdx2[sur][s.src]:[];
-                    html+=srcRowSub(mgr, ms, mgrAdv.length, advSum(mgrAdv));
+                    html+=srcRowSub(childId, mgr, ms, mgrAdv.length, advSum(mgrAdv));
                 });
-                html+=`</tbody>`;
             }
         });
 
@@ -1061,13 +1059,11 @@ function renderSourceTable(data, advData) {
             html+=srcRowMain(rc, btnHtml, (isTop?'🏆 ':'')+'∑ '+s.src, s, grpAdvCount, grpAdvSum, stars);
 
             if(hasSubs){
-                html+=`<tbody class="src-children" id="${childId}">`;
                 rawKeys.forEach(raw=>{
                     const rs=analyzeData(smByRaw[s.src][raw]);
                     const rawAdv=advByRaw[raw]||[];
-                    html+=srcRowSub(raw, rs, rawAdv.length, advSum(rawAdv));
+                    html+=srcRowSub(childId, raw, rs, rawAdv.length, advSum(rawAdv));
                 });
-                html+=`</tbody>`;
             }
         });
     }
@@ -1076,21 +1072,21 @@ function renderSourceTable(data, advData) {
 }
 
 function toggleSrcChildren(id) {
-    const el=document.getElementById(id);
     const btn=document.getElementById('btn-'+id);
-    if(!el||!btn) return;
-    const isOpen=el.classList.toggle('open');
-    btn.classList.toggle('open', isOpen);
-    btn.textContent=isOpen?'−':'+';
+    const rows=document.querySelectorAll('[data-parent="'+id+'"]');
+    if(!rows.length||!btn) return;
+    const isOpen=btn.classList.toggle('open');
+    btn.textContent=isOpen?'\u2212':'+';
+    rows.forEach(r=>r.style.display=isOpen?'':'none');
 }
 
 function expandAllSrc(open) {
-    document.querySelectorAll('.src-children').forEach(el=>{
-        el.classList.toggle('open', open);
-    });
     document.querySelectorAll('.src-toggle-btn').forEach(btn=>{
+        const id=btn.id.replace('btn-','');
+        const rows=document.querySelectorAll('[data-parent="'+id+'"]');
         btn.classList.toggle('open', open);
-        btn.textContent=open?'−':'+';
+        btn.textContent=open?'\u2212':'+';
+        rows.forEach(r=>r.style.display=open?'':'none');
     });
 }
 
