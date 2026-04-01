@@ -929,88 +929,148 @@ function renderDetailTableHTML(data, advData) {
 }
 
 // ─── АНАЛІТИКА ДЖЕРЕЛ з розгортанням ─────────────────
+let srcViewMode = 'manager';
+
+function setSrcView(mode) {
+    srcViewMode = mode;
+    document.getElementById('btnSrcMgr').classList.toggle('active', mode==='manager');
+    document.getElementById('btnSrcSrc').classList.toggle('active', mode==='sources');
+    document.getElementById('srcExpandBtns').style.display = mode==='manager' ? 'flex' : 'none';
+    renderSourceTable(mainData, mainAdvData);
+}
+
+function srcRowMain(rc, btnHtml, label, s, grpAdvCount, grpAdvSum, stars) {
+    return `<tr class="${rc} border-b border-dark-border/40 text-sm transition hover:bg-slate-800/20">
+        <td class="px-4 py-3 text-center">${btnHtml}</td>
+        <td class="px-4 py-3 font-bold text-slate-200">${label}</td>
+        <td class="px-4 py-3 text-center text-slate-300">${s.total}</td>
+        <td class="px-4 py-3 text-center text-emerald-400 font-bold">${s.target}</td>
+        <td class="px-4 py-3 text-center font-extrabold ${parseFloat(s.convTarget)>=30?'text-emerald-400':'text-slate-400'}">${s.convTarget}%</td>
+        <td class="px-4 py-3 text-center font-bold text-orange-300">${grpAdvCount||'—'}</td>
+        <td class="px-4 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(grpAdvSum)}</td>
+        <td class="px-4 py-3 text-center font-bold text-yellow-400">${fmtAvg(grpAdvSum,grpAdvCount)}</td>
+        <td class="px-4 py-3 text-center text-amber-400">${s.noCall}</td>
+        <td class="px-4 py-3 text-center text-red-400 font-bold">${s.bad}</td>
+        <td class="px-4 py-3 text-center font-bold ${parseFloat(s.convBad)>=40?'text-red-400':'text-slate-400'}">${s.convBad}%</td>
+        <td class="px-4 py-3 text-center text-amber-300 text-xs tracking-widest">${stars}</td>
+    </tr>`;
+}
+
+function srcRowSub(label, ms, advC, advS) {
+    return `<tr class="bg-slate-900/50 text-xs border-b border-slate-800/60 hover:bg-slate-800/40 transition">
+        <td class="px-4 py-2"></td>
+        <td class="px-4 py-2 pl-8 text-slate-400">↳ ${label}</td>
+        <td class="px-4 py-2 text-center text-slate-400">${ms.total}</td>
+        <td class="px-4 py-2 text-center text-emerald-400/70">${ms.target}</td>
+        <td class="px-4 py-2 text-center text-slate-400">${ms.convTarget}%</td>
+        <td class="px-4 py-2 text-center text-orange-300/70">${advC||'—'}</td>
+        <td class="px-4 py-2 text-center text-orange-300/70 bg-orange-900/5">${fmtMoney(advS)}</td>
+        <td class="px-4 py-2 text-center text-yellow-400/70">${fmtAvg(advS,advC)}</td>
+        <td class="px-4 py-2 text-center text-amber-400/70">${ms.noCall}</td>
+        <td class="px-4 py-2 text-center text-red-400/70">${ms.bad}</td>
+        <td class="px-4 py-2 text-center text-slate-400">${ms.convBad}%</td>
+        <td class="px-4 py-2"></td>
+    </tr>`;
+}
+
 function renderSourceTable(data, advData) {
     const advMainData=advData.filter(a=>getAdvGroup(a)!=="Інше");
     const advByGroup={};
     advMainData.forEach(a=>{const g=getAdvGroup(a);if(!advByGroup[g])advByGroup[g]=[];advByGroup[g].push(a);});
 
-    // Групуємо ліди
     const sm={};
     data.forEach(l=>{const g=getParentGroup(l);if(g){if(!sm[g])sm[g]=[];sm[g].push(l);}});
-
-    // Підгрупи по менеджеру всередині кожного джерела
-    const smBySub={};
-    data.forEach(l=>{
-        const g=getParentGroup(l);
-        if(!g) return;
-        const mgr=l.manager?String(l.manager).trim():"Невідомий";
-        if(!smBySub[g])smBySub[g]={};
-        if(!smBySub[g][mgr])smBySub[g][mgr]=[];
-        smBySub[g][mgr].push(l);
-    });
 
     const stats=Object.keys(sm).map(s=>({src:s,...analyzeData(sm[s])})).sort((a,b)=>parseFloat(b.convTarget)-parseFloat(a.convTarget));
     const maxCT=Math.max(...stats.map(s=>parseFloat(s.convTarget)),0);
     const maxBad=Math.max(...stats.map(s=>parseFloat(s.convBad)),0);
 
+    const advIdx2=buildAdvIndex(advMainData);
     let html='';
-    stats.forEach((s,idx)=>{
-        const isTop=parseFloat(s.convTarget)===maxCT&&maxCT>0;
-        const isWorst=parseFloat(s.convBad)===maxBad&&maxBad>0&&stats.length>1;
-        const stars='★'.repeat(Math.min(5,Math.round(parseFloat(s.convTarget)/20)))+'☆'.repeat(5-Math.min(5,Math.round(parseFloat(s.convTarget)/20)));
-        const rc=isTop?'bg-emerald-900/10 border-l-4 border-l-emerald-500':isWorst?'bg-red-900/10 border-l-4 border-l-red-500':'';
-        const grpAdv=advByGroup[s.src]||[];
-        const grpAdvCount=grpAdv.length, grpAdvSum=advSum(grpAdv);
-        const childId=`src-children-${idx}`;
-        const hasSubs=smBySub[s.src]&&Object.keys(smBySub[s.src]).length>1;
 
-        // Головний рядок
-        html+=`<tr class="${rc} border-b border-dark-border/40 text-sm transition hover:bg-slate-800/20">
-            <td class="px-4 py-3 text-center">
-                ${hasSubs?`<button class="src-toggle-btn" id="btn-${childId}" onclick="toggleSrcChildren('${childId}')">+</button>`:'<span class="text-slate-700">·</span>'}
-            </td>
-            <td class="px-4 py-3 font-bold text-slate-200">${isTop?'🏆 ':''}${s.src}</td>
-            <td class="px-4 py-3 text-center text-slate-300">${s.total}</td>
-            <td class="px-4 py-3 text-center text-emerald-400 font-bold">${s.target}</td>
-            <td class="px-4 py-3 text-center font-extrabold ${parseFloat(s.convTarget)>=30?'text-emerald-400':'text-slate-400'}">${s.convTarget}%</td>
-            <td class="px-4 py-3 text-center font-bold text-orange-300">${grpAdvCount||'—'}</td>
-            <td class="px-4 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(grpAdvSum)}</td>
-            <td class="px-4 py-3 text-center font-bold text-yellow-400">${fmtAvg(grpAdvSum,grpAdvCount)}</td>
-            <td class="px-4 py-3 text-center text-amber-400">${s.noCall}</td>
-            <td class="px-4 py-3 text-center text-red-400 font-bold">${s.bad}</td>
-            <td class="px-4 py-3 text-center font-bold ${parseFloat(s.convBad)>=40?'text-red-400':'text-slate-400'}">${s.convBad}%</td>
-            <td class="px-4 py-3 text-center text-amber-300 text-xs tracking-widest">${stars}</td>
-        </tr>`;
+    if (srcViewMode === 'manager') {
+        // Підгрупи по менеджеру
+        const smBySub={};
+        data.forEach(l=>{
+            const g=getParentGroup(l); if(!g) return;
+            const mgr=l.manager?String(l.manager).trim():"Невідомий";
+            if(!smBySub[g])smBySub[g]={};
+            if(!smBySub[g][mgr])smBySub[g][mgr]=[];
+            smBySub[g][mgr].push(l);
+        });
 
-        // Підрядки по менеджерах
-        if(hasSubs){
-            const subs=smBySub[s.src];
-            html+=`<tbody class="src-children" id="${childId}">`;
-            Object.keys(subs).sort().forEach(mgr=>{
-                const ms=analyzeData(subs[mgr]);
-                const sur=mgr.toLowerCase().split(/\s+/)[0];
-                // Аванси цього менеджера по цьому джерелу
-                const advIdx2=buildAdvIndex(advMainData);
-                const mgrGrpAdv=(advIdx2[sur]&&advIdx2[sur][s.src])?advIdx2[sur][s.src]:[];
-                const mAdvC=mgrGrpAdv.length, mAdvS=advSum(mgrGrpAdv);
-                html+=`<tr class="bg-slate-900/50 text-xs border-b border-slate-800/60 hover:bg-slate-800/40 transition">
-                    <td class="px-4 py-2"></td>
-                    <td class="px-4 py-2 pl-8 text-slate-400">↳ ${mgr}</td>
-                    <td class="px-4 py-2 text-center text-slate-400">${ms.total}</td>
-                    <td class="px-4 py-2 text-center text-emerald-400/70">${ms.target}</td>
-                    <td class="px-4 py-2 text-center text-slate-400">${ms.convTarget}%</td>
-                    <td class="px-4 py-2 text-center text-orange-300/70">${mAdvC||'—'}</td>
-                    <td class="px-4 py-2 text-center text-orange-300/70 bg-orange-900/5">${fmtMoney(mAdvS)}</td>
-                    <td class="px-4 py-2 text-center text-yellow-400/70">${fmtAvg(mAdvS,mAdvC)}</td>
-                    <td class="px-4 py-2 text-center text-amber-400/70">${ms.noCall}</td>
-                    <td class="px-4 py-2 text-center text-red-400/70">${ms.bad}</td>
-                    <td class="px-4 py-2 text-center text-slate-400">${ms.convBad}%</td>
-                    <td class="px-4 py-2"></td>
-                </tr>`;
-            });
-            html+=`</tbody>`;
-        }
-    });
+        stats.forEach((s,idx)=>{
+            const isTop=parseFloat(s.convTarget)===maxCT&&maxCT>0;
+            const isWorst=parseFloat(s.convBad)===maxBad&&maxBad>0&&stats.length>1;
+            const stars='★'.repeat(Math.min(5,Math.round(parseFloat(s.convTarget)/20)))+'☆'.repeat(5-Math.min(5,Math.round(parseFloat(s.convTarget)/20)));
+            const rc=isTop?'bg-emerald-900/10 border-l-4 border-l-emerald-500':isWorst?'bg-red-900/10 border-l-4 border-l-red-500':'';
+            const grpAdv=advByGroup[s.src]||[];
+            const grpAdvCount=grpAdv.length, grpAdvSum=advSum(grpAdv);
+            const childId='src-m-'+idx;
+            const subs=smBySub[s.src]||{};
+            const hasSubs=Object.keys(subs).length>1;
+            const btnHtml=hasSubs
+                ? `<button class="src-toggle-btn" id="btn-${childId}" onclick="toggleSrcChildren('${childId}')">+</button>`
+                : '<span class="text-slate-700">·</span>';
+
+            html+=srcRowMain(rc, btnHtml, (isTop?'🏆 ':'')+s.src, s, grpAdvCount, grpAdvSum, stars);
+
+            if(hasSubs){
+                html+=`<tbody class="src-children" id="${childId}">`;
+                Object.keys(subs).sort().forEach(mgr=>{
+                    const ms=analyzeData(subs[mgr]);
+                    const sur=mgr.toLowerCase().split(' ')[0];
+                    const mgrAdv=(advIdx2[sur]&&advIdx2[sur][s.src])?advIdx2[sur][s.src]:[];
+                    html+=srcRowSub(mgr, ms, mgrAdv.length, advSum(mgrAdv));
+                });
+                html+=`</tbody>`;
+            }
+        });
+
+    } else {
+        // По джерелах: підрядки = сирі канали всередині групи
+        const smByRaw={};
+        data.forEach(l=>{
+            const g=getParentGroup(l); if(!g) return;
+            const raw=l.source?String(l.source).trim():"Інше";
+            if(!smByRaw[g])smByRaw[g]={};
+            if(!smByRaw[g][raw])smByRaw[g][raw]=[];
+            smByRaw[g][raw].push(l);
+        });
+        const advByRaw={};
+        advMainData.forEach(a=>{
+            const raw=String(a['Джерело']||a.source||'').trim();
+            if(!advByRaw[raw])advByRaw[raw]=[];
+            advByRaw[raw].push(a);
+        });
+
+        stats.forEach((s,idx)=>{
+            const isTop=parseFloat(s.convTarget)===maxCT&&maxCT>0;
+            const isWorst=parseFloat(s.convBad)===maxBad&&maxBad>0&&stats.length>1;
+            const stars='★'.repeat(Math.min(5,Math.round(parseFloat(s.convTarget)/20)))+'☆'.repeat(5-Math.min(5,Math.round(parseFloat(s.convTarget)/20)));
+            const rc=isTop?'bg-emerald-900/10 border-l-4 border-l-emerald-500':isWorst?'bg-red-900/10 border-l-4 border-l-red-500':'';
+            const grpAdv=advByGroup[s.src]||[];
+            const grpAdvCount=grpAdv.length, grpAdvSum=advSum(grpAdv);
+            const childId='src-s-'+idx;
+            const rawKeys=Object.keys(smByRaw[s.src]||{}).sort();
+            const hasSubs=rawKeys.length>1;
+            const btnHtml=hasSubs
+                ? `<button class="src-toggle-btn" id="btn-${childId}" onclick="toggleSrcChildren('${childId}')">+</button>`
+                : '<span class="text-slate-700">·</span>';
+
+            html+=srcRowMain(rc, btnHtml, (isTop?'🏆 ':'')+'∑ '+s.src, s, grpAdvCount, grpAdvSum, stars);
+
+            if(hasSubs){
+                html+=`<tbody class="src-children" id="${childId}">`;
+                rawKeys.forEach(raw=>{
+                    const rs=analyzeData(smByRaw[s.src][raw]);
+                    const rawAdv=advByRaw[raw]||[];
+                    html+=srcRowSub(raw, rs, rawAdv.length, advSum(rawAdv));
+                });
+                html+=`</tbody>`;
+            }
+        });
+    }
 
     document.getElementById('sourceTableBody').innerHTML=html||'<tr><td colspan="12" class="p-8 text-center text-slate-500">Дані відсутні</td></tr>';
 }
