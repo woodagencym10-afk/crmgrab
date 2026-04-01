@@ -413,11 +413,20 @@
 
     <!-- АНАЛІТИКА ДЖЕРЕЛ — з розгортанням підрядків -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-8 shadow-xl overflow-hidden">
-        <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
-            <div class="flex gap-2 text-xs">
-                <button onclick="expandAllSrc(true)"  class="bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">+ Розкрити всі</button>
-                <button onclick="expandAllSrc(false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">− Згорнути всі</button>
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Перемикач режиму -->
+                <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
+                    <button id="btnSrcMgr" onclick="setSrcView('manager')"
+                        class="tab-btn active px-4 py-1.5 text-xs font-bold text-slate-300">👤 По менеджерах</button>
+                    <button id="btnSrcSrc" onclick="setSrcView('sources')"
+                        class="tab-btn px-4 py-1.5 text-xs font-bold text-slate-300">📂 По джерелах</button>
+                </div>
+                <div class="flex gap-2 text-xs" id="srcExpandBtns">
+                    <button onclick="expandAllSrc(true)"  class="bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">+ Розкрити всі</button>
+                    <button onclick="expandAllSrc(false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">− Згорнути всі</button>
+                </div>
             </div>
         </div>
         <div class="overflow-x-auto">
