@@ -63,6 +63,8 @@
     .src-toggle-btn { cursor: pointer; user-select: none; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #334155; color: #94a3b8; border: 1px solid #475569; transition: all 0.15s; flex-shrink: 0; }
     .src-toggle-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
     .src-toggle-btn.open { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+    .src-quality-col { display: none; }
+    .src-quality-visible .src-quality-col { display: table-cell; }
 </style>
 </head>
 <body class="bg-dark-bg p-3 md:p-8 font-sans text-dark-text antialiased">
@@ -354,7 +356,7 @@
                             <th class="px-3 py-3 border-b border-dark-border text-center">ЦА</th>
                             <th class="px-3 py-3 border-b border-dark-border text-center text-emerald-400">% ЦА</th>
                             <th class="px-3 py-3 border-b border-dark-border text-center text-orange-400">Авансів</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center text-orange-400">% від ЦА</th>
+                            <th class="px-3 py-3 border-b border-dark-border text-center text-yellow-400">Конв. продаж</th>
                             <th class="px-3 py-3 border-b border-dark-border text-center text-orange-300">Сума угод</th>
                         </tr>
                     </thead>
@@ -416,7 +418,6 @@
         <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
             <div class="flex flex-wrap items-center gap-2">
-                <!-- Перемикач режиму -->
                 <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
                     <button id="btnSrcMgr" onclick="setSrcView('manager')"
                         class="tab-btn active px-4 py-1.5 text-xs font-bold text-slate-300">👤 По менеджерах</button>
@@ -427,6 +428,8 @@
                     <button onclick="expandAllSrc(true)"  class="bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">+ Розкрити всі</button>
                     <button onclick="expandAllSrc(false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">− Згорнути всі</button>
                 </div>
+                <button id="btnSrcQuality" onclick="toggleSrcQuality()"
+                    class="bg-slate-700 hover:bg-red-700 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold text-xs">📊 Якість</button>
             </div>
         </div>
         <div class="overflow-x-auto">
@@ -439,11 +442,12 @@
                         <th class="px-4 py-3 text-center text-emerald-400">ЦА</th>
                         <th class="px-4 py-3 text-center text-emerald-400">% ЦА</th>
                         <th class="px-4 py-3 text-center text-orange-400">Авансів</th>
+                        <th class="px-4 py-3 text-center text-yellow-400">Конв. продаж</th>
                         <th class="px-4 py-3 text-center text-orange-300">Сума угод</th>
                         <th class="px-4 py-3 text-center text-yellow-400">Сер. чек</th>
-                        <th class="px-4 py-3 text-center text-amber-400">Не дозвон</th>
-                        <th class="px-4 py-3 text-center text-red-400">Неякісні</th>
-                        <th class="px-4 py-3 text-center text-red-400">% неякісних</th>
+                        <th class="px-4 py-3 text-center text-amber-400 src-quality-col">Не дозвон</th>
+                        <th class="px-4 py-3 text-center text-red-400 src-quality-col">Неякісні</th>
+                        <th class="px-4 py-3 text-center text-red-400 src-quality-col">% неякісних</th>
                         <th class="px-4 py-3 text-center">Рейтинг</th>
                     </tr>
                 </thead>
@@ -856,7 +860,7 @@ function renderTables(data, advData) {
         const mAdvAll=Object.values(advIdx[sur]||{}).flat();
         const advCount=mAdvAll.length, advTotal=advSum(mAdvAll);
         // % від ЦА
-        const convAdv=m.target>0?((advCount/m.target)*100).toFixed(1):"0.0";
+        const convSale=m.target>0?((advCount/m.target)*100).toFixed(1):"0.0";
         return `<tr class="${parseFloat(m.convTarget)>=40?'bg-emerald-500/10 border-l-4 border-l-emerald-500':'hover:bg-slate-800/50'}">
             <td class="px-3 py-3 font-bold text-white">${i===0?'👑 ':''}${m.name}</td>
             <td class="px-3 py-3 text-center">${m.total}</td>
@@ -865,7 +869,7 @@ function renderTables(data, advData) {
             <td class="px-3 py-3 text-center font-bold text-emerald-400">${m.target}</td>
             <td class="px-3 py-3 text-center font-extrabold text-white bg-emerald-500/20">${m.convTarget}%</td>
             <td class="px-3 py-3 text-center font-bold text-orange-300">${advCount||'—'}</td>
-            <td class="px-3 py-3 text-center font-bold text-orange-400">${advCount>0?convAdv+'%':'—'}</td>
+            <td class="px-3 py-3 text-center font-bold text-yellow-400">${advCount>0?convSale+'%':'—'}</td>
             <td class="px-3 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(advTotal)}</td>
         </tr>`;
     }).join('');
@@ -930,6 +934,20 @@ function renderDetailTableHTML(data, advData) {
 
 // ─── АНАЛІТИКА ДЖЕРЕЛ з розгортанням ─────────────────
 let srcViewMode = 'manager';
+let srcQualityVisible = false;
+
+function toggleSrcQuality() {
+    srcQualityVisible = !srcQualityVisible;
+    const tbl = document.querySelector('.src-expand-tbl');
+    const btn = document.getElementById('btnSrcQuality');
+    if (tbl) tbl.classList.toggle('src-quality-visible', srcQualityVisible);
+    if (btn) {
+        btn.textContent = srcQualityVisible ? '📊 Сховати якість' : '📊 Якість';
+        btn.classList.toggle('bg-red-800', srcQualityVisible);
+        btn.classList.toggle('text-white', srcQualityVisible);
+        btn.classList.toggle('bg-slate-700', !srcQualityVisible);
+    }
+}
 
 function setSrcView(mode) {
     srcViewMode = mode;
@@ -940,6 +958,7 @@ function setSrcView(mode) {
 }
 
 function srcRowMain(rc, btnHtml, label, s, grpAdvCount, grpAdvSum, stars) {
+    const convSale = s.target>0 ? ((grpAdvCount/s.target)*100).toFixed(1)+'%' : '—';
     return `<tr class="${rc} border-b border-dark-border/40 text-sm transition hover:bg-slate-800/20">
         <td class="px-4 py-3 text-center">${btnHtml}</td>
         <td class="px-4 py-3 font-bold text-slate-200">${label}</td>
@@ -947,16 +966,18 @@ function srcRowMain(rc, btnHtml, label, s, grpAdvCount, grpAdvSum, stars) {
         <td class="px-4 py-3 text-center text-emerald-400 font-bold">${s.target}</td>
         <td class="px-4 py-3 text-center font-extrabold ${parseFloat(s.convTarget)>=30?'text-emerald-400':'text-slate-400'}">${s.convTarget}%</td>
         <td class="px-4 py-3 text-center font-bold text-orange-300">${grpAdvCount||'—'}</td>
+        <td class="px-4 py-3 text-center font-bold text-yellow-400">${convSale}</td>
         <td class="px-4 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(grpAdvSum)}</td>
         <td class="px-4 py-3 text-center font-bold text-yellow-400">${fmtAvg(grpAdvSum,grpAdvCount)}</td>
-        <td class="px-4 py-3 text-center text-amber-400">${s.noCall}</td>
-        <td class="px-4 py-3 text-center text-red-400 font-bold">${s.bad}</td>
-        <td class="px-4 py-3 text-center font-bold ${parseFloat(s.convBad)>=40?'text-red-400':'text-slate-400'}">${s.convBad}%</td>
+        <td class="px-4 py-3 text-center text-amber-400 src-quality-col">${s.noCall}</td>
+        <td class="px-4 py-3 text-center text-red-400 font-bold src-quality-col">${s.bad}</td>
+        <td class="px-4 py-3 text-center font-bold src-quality-col ${parseFloat(s.convBad)>=40?'text-red-400':'text-slate-400'}">${s.convBad}%</td>
         <td class="px-4 py-3 text-center text-amber-300 text-xs tracking-widest">${stars}</td>
     </tr>`;
 }
 
 function srcRowSub(parentId, label, ms, advC, advS) {
+    const convSale = ms.target>0 ? ((advC/ms.target)*100).toFixed(1)+'%' : '—';
     return `<tr data-parent="${parentId}" style="display:none" class="bg-slate-900/50 text-xs border-b border-slate-800/60 hover:bg-slate-800/40 transition">
         <td class="px-4 py-2"></td>
         <td class="px-4 py-2 pl-8 text-slate-400">↳ ${label}</td>
@@ -964,11 +985,12 @@ function srcRowSub(parentId, label, ms, advC, advS) {
         <td class="px-4 py-2 text-center text-emerald-400/70">${ms.target}</td>
         <td class="px-4 py-2 text-center text-slate-400">${ms.convTarget}%</td>
         <td class="px-4 py-2 text-center text-orange-300/70">${advC||'—'}</td>
+        <td class="px-4 py-2 text-center text-yellow-400/70">${convSale}</td>
         <td class="px-4 py-2 text-center text-orange-300/70 bg-orange-900/5">${fmtMoney(advS)}</td>
         <td class="px-4 py-2 text-center text-yellow-400/70">${fmtAvg(advS,advC)}</td>
-        <td class="px-4 py-2 text-center text-amber-400/70">${ms.noCall}</td>
-        <td class="px-4 py-2 text-center text-red-400/70">${ms.bad}</td>
-        <td class="px-4 py-2 text-center text-slate-400">${ms.convBad}%</td>
+        <td class="px-4 py-2 text-center text-amber-400/70 src-quality-col">${ms.noCall}</td>
+        <td class="px-4 py-2 text-center text-red-400/70 src-quality-col">${ms.bad}</td>
+        <td class="px-4 py-2 text-center text-slate-400 src-quality-col">${ms.convBad}%</td>
         <td class="px-4 py-2"></td>
     </tr>`;
 }
