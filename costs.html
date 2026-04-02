@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SD Marketing — Загальні витрати</title>
+<title>SD Marketing v2.1 — 063203</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
     tailwind.config = {
@@ -15,122 +15,269 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1e293b; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    tr.row-sub td { font-size: 11px; }
+    tr.row-group td { font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.03); }
+    
+    .hide-unproc .col-unproc { display: none; }
+    
     .tab-btn { transition: all 0.2s; }
-    .tab-active { background-color: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .tab-active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+
+    .spend-badge {
+        background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.08));
+        border: 1px solid rgba(168,85,247,0.3);
+    }
+    .spend-badge:hover { border-color: rgba(168,85,247,0.6); }
+
+    .metric-pill {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.25);
+        border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700;
+        color: #c084fc;
+    }
+    .metric-pill.green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: #34d399; }
 </style>
+
+<script>
+// AUTH GUARD — перевірка сесії
+(function() {
+    const role    = sessionStorage.getItem('sd_role');
+    const sources = sessionStorage.getItem('sd_sources');
+    const auth    = sessionStorage.getItem('sd_auth');
+    if (!auth || !role) {
+        window.location.href = 'index.html';
+        return;
+    }
+    // Зберігаємо для використання в дашборді
+    window.SD_ROLE    = role;
+    window.SD_SOURCES = sources ? sources.split(',') : ['all'];
+})();
+</script>
 </head>
-<body class="bg-dark-bg p-3 md:p-6 font-sans text-slate-100 antialiased">
-<div class="max-w-[1600px] mx-auto">
-
-    <!-- Шапка -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-700 pb-5 gap-4">
+<body class="bg-dark-bg p-3 md:p-6 font-sans text-dark-text antialiased">
+<div id="app-container" class="max-w-[1600px] mx-auto hide-unproc">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-dark-border pb-5 gap-4">
         <div>
-            <h1 class="text-2xl md:text-3xl font-extrabold text-white uppercase tracking-tight">
-                SD <span class="text-yellow-500">Витрати</span> <span class="text-slate-500 font-normal text-lg">/ загальний звіт</span>
-            </h1>
-            <p class="text-slate-500 mt-1 text-sm">Рекламний бюджет + інші маркетингові витрати по місяцях</p>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white uppercase tracking-tight">SD <span class="text-blue-500">Marketing</span> <span class="text-slate-500 font-normal text-lg">/ воронки</span></h1>
+            <p class="text-dark-subtle mt-1 text-sm">Інтерактивний дашборд конверсій та фінансів</p>
         </div>
-        <div class="flex gap-3 items-center">
-            <a href="marketing.html" class="text-slate-400 hover:text-white text-sm font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">← Маркетинг</a>
-            <button onclick="fetchAllData()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2 rounded-lg text-sm transition active:scale-95 shadow-md">🔄 Оновити</button>
-            <div id="diagBox" style="display:none" class="text-xs font-mono bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-emerald-400"></div>
+        <div class="flex flex-col gap-2 items-end">
+            <button onclick="fetchAllData()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg text-sm transition active:scale-95 shadow-md">🔄 Оновити дані</button>
+            <span id="costsLink" style="display:none">
+                <a href="costs.html" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition">💰 Загальні витрати</a>
+            </span>
+            <a href="index.html" onclick="sessionStorage.clear()" class="text-slate-500 hover:text-slate-300 text-xs font-bold px-3 py-2 rounded-lg hover:bg-slate-800 transition">Вийти</a>
+            <div id="diagBox" style="display:none" class="text-xs font-mono bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-emerald-400 max-w-xs text-right"></div>
         </div>
     </div>
 
-    <!-- Фільтри -->
-    <div class="bg-slate-800/50 rounded-2xl border border-slate-700 p-4 mb-6">
-        <div class="flex flex-wrap gap-6">
+    <div class="bg-dark-card p-4 rounded-2xl border border-dark-border shadow-xl mb-6 flex flex-wrap gap-4 items-end justify-between">
+        <div class="flex flex-wrap gap-6 items-end">
             <div>
-                <div class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest mb-2">Місяці:</div>
-                <div id="costsMonthFilter" class="flex flex-wrap gap-2"></div>
+                <div class="text-[10px] font-bold text-blue-400 mb-1 uppercase tracking-widest">Період звіту</div>
+                <div class="flex gap-2 items-center">
+                    <input type="date" id="dateStart" onchange="render()" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
+                    <span class="text-slate-500">—</span>
+                    <input type="date" id="dateEnd" onchange="render()" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
+                </div>
             </div>
-            <div>
-                <div class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest mb-2">Джерела:</div>
-                <div id="costsSourceFilter" class="flex flex-wrap gap-2"></div>
+            
+            <button id="toggleUnprocBtn" onclick="toggleUnproc()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-600 font-bold px-4 py-2 rounded-lg text-sm transition h-10 flex items-center gap-2">
+                👁 Показати неопрацьовані
+            </button>
+        </div>
+        <div id="loader" class="hidden text-blue-400 text-sm animate-pulse font-bold pb-2">⏳ Завантаження бази...</div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button id="tab_all" onclick="setTab('all')" class="tab-btn tab-active px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">📊 Всі джерела (Рекл+Орг)</button>
+        <button id="tab_ads" onclick="setTab('ads')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">📣 Платна реклама</button>
+        <button id="tab_org" onclick="setTab('org')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">🌱 Органіка</button>
+        <button id="tab_campaigns" onclick="setTab('campaigns')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">🔬 Детальний звіт</button>
+        <button id="tab_costs" onclick="setTab('costs')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">💰 Загальні витрати</button>
+    </div>
+
+    <div id="mainContainer" class="bg-dark-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8 transition-colors duration-300">
+        <div id="mainHeader" class="bg-[#131c2e] px-6 py-4 border-b border-slate-700 flex flex-wrap gap-4 justify-between items-center transition-colors duration-300">
+            <h2 id="mainTitle" class="text-lg font-black text-white uppercase tracking-wider">📊 Загальна картина</h2>
+            <div class="flex gap-4 sm:gap-6 flex-wrap">
+                <div class="text-center"><p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Лідів</p><p id="kpiTotal" class="text-2xl font-black text-blue-100">0</p></div>
+                <div class="text-center col-unproc"><p class="text-[10px] text-red-400 uppercase font-bold tracking-widest">Не опр.</p><p id="kpiUnproc" class="text-2xl font-black text-red-400">0</p></div>
+                <div class="text-center"><p class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest">ЦА</p><p id="kpiCA" class="text-2xl font-black text-emerald-300">0</p></div>
+                <div class="text-center"><p class="text-[10px] text-orange-400 uppercase font-bold tracking-widest">Продажів</p><p id="kpiSales" class="text-2xl font-black text-orange-400">0</p></div>
+                <div class="text-center"><p class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest">Сума</p><p id="kpiSum" class="text-2xl font-black text-yellow-400">0 ₴</p></div>
+                <!-- Spend KPI (тільки для реклами) -->
+                <div class="text-center" id="kpiSpendBlock">
+                    <p class="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Бюджет (реклама)</p>
+                    <p id="kpiSpend" class="text-2xl font-black text-purple-300">—</p>
+                </div>
+                <div class="text-center" id="kpiCPLBlock">
+                    <p class="text-[10px] text-purple-300 uppercase font-bold tracking-widest">Ціна ліда</p>
+                    <p id="kpiCPL" class="text-2xl font-black text-purple-200">—</p>
+                </div>
+                <div class="text-center" id="kpiCPCABlock">
+                    <p class="text-[10px] text-emerald-300 uppercase font-bold tracking-widest">Ціна ЦА</p>
+                    <p id="kpiCPCA" class="text-2xl font-black text-emerald-200">—</p>
+                </div>
             </div>
         </div>
-        <div id="loader" class="hidden text-yellow-400 text-sm animate-pulse font-bold mt-3">⏳ Завантаження...</div>
-    </div>
-
-    <!-- KPI -->
-    <div class="bg-slate-800/30 rounded-2xl border border-yellow-800/40 px-6 py-4 mb-6 flex flex-wrap gap-6 items-center">
-        <div id="costsKpiRow" class="flex gap-6 flex-wrap"></div>
-    </div>
-
-    <!-- Таблиця -->
-    <div class="bg-slate-800/20 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead id="costsTableHead" class="bg-slate-900/80 text-slate-400 text-[10px] font-bold uppercase tracking-wider sticky top-0"></thead>
-                <tbody id="costsTableBody" class="divide-y divide-slate-700/30"></tbody>
-            </table>
+        
+        <div class="flex flex-col xl:flex-row divide-y xl:divide-y-0 xl:divide-x divide-dark-border/40">
+            <div class="w-full xl:w-[60%] overflow-x-auto min-h-[300px] flex flex-col">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-900/50 text-dark-subtle text-[10px] font-bold uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-4 text-left">Джерело</th>
+                            <th class="px-2 py-4 text-center">Лід</th>
+                            <th class="px-2 py-4 text-center text-red-400 col-unproc border-x border-red-900/30 bg-red-900/10">Не опр.</th>
+                            <th class="px-2 py-4 text-center text-amber-400">Дзв</th>
+                            <th class="px-2 py-4 text-center text-emerald-400">ЦА</th>
+                            <th class="px-2 py-4 text-center text-orange-400">Прод</th>
+                            <th class="px-2 py-4 text-right text-yellow-400">Сума</th>
+                            <th class="px-2 py-4 text-right text-yellow-200">Сер. чек</th>
+                            <th class="px-2 py-4 text-right text-purple-400" id="thSpend">💸 Бюджет</th>
+                            <th class="px-2 py-4 text-right text-purple-300" id="thCPL">Ціна ліда</th>
+                            <th class="px-4 py-4 text-right text-emerald-300" id="thCPCA">Ціна ЦА</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainTableBody" class="divide-y divide-dark-border/20"></tbody>
+                </table>
+            </div>
+            <div class="w-full xl:w-[40%] p-6 bg-[#0b1120]">
+                <div class="mb-4">
+                    <select id="funnelFilter" onchange="renderFunnelView()" class="w-full bg-[#1e293b] border border-slate-700 rounded-lg p-3 text-sm text-white outline-none shadow-inner focus:border-blue-500 transition font-bold appearance-none cursor-pointer"></select>
+                </div>
+                <div id="unprocAlert" class="mb-5 hidden"></div>
+                <div id="mainFunnelLayout"></div>
+            </div>
         </div>
     </div>
 
 </div>
 
+<!-- ЗАГАЛЬНІ ВИТРАТИ -->
+<div id="costsContainer" style="display:none" class="bg-dark-card rounded-2xl border border-yellow-800/50 shadow-2xl overflow-hidden mb-8 max-w-[1600px] mx-auto px-3 md:px-6">
+    <div class="bg-yellow-950/30 px-6 py-4 border-b border-yellow-800/40 flex flex-wrap gap-4 justify-between items-center">
+        <h2 class="text-lg font-black text-white uppercase tracking-wider">💰 Загальні витрати по місяцях</h2>
+        <div id="costsKpiRow" class="flex gap-4 sm:gap-6 flex-wrap"></div>
+    </div>
+    <div class="p-4">
+        <!-- Фільтри -->
+        <div class="flex flex-wrap gap-4 mb-6 items-end">
+            <div>
+                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2">Місяці (оберіть один або кілька):</div>
+                <div id="costsMonthFilter" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div>
+                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2">Джерело:</div>
+                <div id="costsSourceFilter" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+        <!-- Таблиця порівняння -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm" id="costsTable">
+                <thead id="costsTableHead" class="bg-slate-900/50 text-dark-subtle text-[10px] font-bold uppercase tracking-wider"></thead>
+                <tbody id="costsTableBody" class="divide-y divide-dark-border/20"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ДЕТАЛЬНИЙ ЗВІТ ПО КАМПАНІЯМ -->
+<div id="campaignsContainer" style="display:none" class="bg-dark-card rounded-2xl border border-violet-800/50 shadow-2xl overflow-hidden mb-8 max-w-[1600px] mx-auto px-3 md:px-6">
+    <div class="bg-violet-950/50 px-6 py-4 border-b border-violet-800/40 flex flex-wrap gap-4 justify-between items-center">
+        <h2 class="text-lg font-black text-white uppercase tracking-wider">🔬 Детальний звіт по кампаніях</h2>
+        <div class="flex gap-4 sm:gap-6 flex-wrap" id="campKpiRow"></div>
+    </div>
+    <div class="p-4">
+        <div class="mb-4 flex flex-wrap gap-3 items-center">
+            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Джерело:</div>
+            <div id="campSourceFilter" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-slate-900/50 text-dark-subtle text-[10px] font-bold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Кампанія</th>
+                        <th class="px-2 py-3 text-center">Ліди</th>
+                        <th class="px-2 py-3 text-center text-amber-400">Дзв</th>
+                        <th class="px-2 py-3 text-center text-emerald-400">ЦА</th>
+                        <th class="px-2 py-3 text-center text-orange-400">Прод</th>
+                        <th class="px-2 py-3 text-right text-yellow-400">Сума угод</th>
+                        <th class="px-2 py-3 text-right text-purple-400">Витрачено ₴</th>
+                        <th class="px-2 py-3 text-right text-purple-300">Ціна ліда</th>
+                        <th class="px-4 py-3 text-right text-emerald-300">Ціна ЦА</th>
+                    </tr>
+                </thead>
+                <tbody id="campTableBody" class="divide-y divide-dark-border/20"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <script>
-const API_URL       = "https://script.google.com/macros/s/AKfycbztT7xbTXNHbcq-fJ3oU9swW0wHFob7qG8mhM5bufJo6EZ2aNjmV8nUYPN4aaeIMwOt/exec";
+// --- БАЗОВА ЛОГІКА ТА ЗОЛОТИЙ СТАНДАРТ АНАЛІЗУ ---
+const API_URL = "https://script.google.com/macros/s/AKfycbztT7xbTXNHbcq-fJ3oU9swW0wHFob7qG8mhM5bufJo6EZ2aNjmV8nUYPN4aaeIMwOt/exec";
+// ⬇️ ВСТАВТЕ URL вашого окремого Spend-скрипта
 const SPEND_API_URL = "https://script.google.com/macros/s/AKfycbzpHcCTz_3EV66bjHi-8w0sLRDhWYT9adQlxqo7QILh4UR8-X2jVsJvCazsB0SM2SWX/exec";
 const COSTS_API_URL = "https://script.google.com/macros/s/AKfycbzLD2hj3oNHUNajjghO-fNMYU8vVUZicA1DyJzPII6hBJoL3t2qfOnwwAfv56xr2yOQ/exec";
 
 const INITIAL_STATUSES = new Set(["новий","сайт","facebook|instagram|tik-tok"]);
 const STATUS_TARGET = "якісний";
+const STATUS_NO_CALL = "не виходить на зв'язок";
 
 let globalLeads = [], globalAdvs = [], globalSpend = [], globalCosts = [];
+let leadsIdx = {ads:{}, organic:{}}, advsIdx = {ads:{}, organic:{}, repeat:[]};
+
+// spendIdx[sourceKey][dateStr] = totalSpend
+// spendBySource[sourceKey] = totalSpend за вибраний період
+let spendBySource = {};
+
+let currentTab = 'all'; 
+let isUnprocHidden = true;
 
 const SOURCE_GROUPS = [
-    { key: 'fb_eco',   label: 'Facebook Ecoforma', children: [
-        { key: 'fb_eco_d',  match: (s,m) => s.includes('facebook') && (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('дзвінок') },
-        { key: 'fb_eco_c',  match: (s,m) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('ecoforma')||s.includes('екоформа')) },
+    { key: 'fb_eco', label: 'Facebook Ecoforma', children: [
+        { key: 'fb_eco_d', label: 'Facebook Ecoforma', match: (s,m) => s.includes('facebook') && (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('дзвінок') },
+        { key: 'fb_eco_c', label: 'Дзвінок Facebook Ecoforma', match: (s,m) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('ecoforma')||s.includes('екоформа')) },
     ]},
-    { key: 'fb_wood',  label: 'Facebook Wood Agency', children: [
-        { key: 'fb_wood_d', match: (s,m) => s.includes('facebook') && (s.includes('wood')||s.includes('вуд')) && !s.includes('дзвінок') },
-        { key: 'fb_wood_c', match: (s,m) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('wood')||s.includes('вуд')) },
+    { key: 'fb_wood', label: 'Facebook Wood Agency', children: [
+        { key: 'fb_wood_d', label: 'Facebook Wood Agency', match: (s,m) => s.includes('facebook') && (s.includes('wood')||s.includes('вуд')) && !s.includes('дзвінок') },
+        { key: 'fb_wood_c', label: 'Дзвінок Facebook Wood Agency', match: (s,m) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('wood')||s.includes('вуд')) },
     ]},
     { key: 'site_eco', label: 'Сайт EcoForma', children: [
-        { key: 'site_eco_d',match: (s,m) => (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') },
-        { key: 'site_eco_c',match: (s,m) => s.includes('дзвінок') && (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('facebook') },
+        { key: 'site_eco_d', label: 'Сайт EcoForma', match: (s,m) => (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') },
+        { key: 'site_eco_c', label: 'Дзвінок Сайт EcoForma', match: (s,m) => s.includes('дзвінок') && (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('facebook') },
     ]},
-    { key: 'site_wood',label: 'Сайт Wood Agency', children: [
-        { key: 'site_wood_d',match: (s,m) => (s.includes('wood')||s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') },
-        { key: 'site_wood_c',match: (s,m) => s.includes('дзвінок') && (s.includes('wood') || m.includes('савчук')) },
+    { key: 'site_wood', label: 'Сайт Wood Agency', children: [
+        { key: 'site_wood_d', label: 'Сайт Wood Agency', match: (s,m) => (s.includes('wood')||s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') },
+        { key: 'site_wood_c', label: 'Дзвінок (Сайт Wood Agency)', match: (s,m) => s.includes('дзвінок') && (s.includes('wood') || m.includes('савчук')) },
     ]},
-    { key: 'olx',      label: 'OLX', children: [{ key: 'olx_d', match: (s,m) => s.includes('olx') }]},
-    { key: 'other_src',label: 'Інші', children: [{ key: 'other_src_d', match: () => true }]}
+    { key: 'olx', label: 'OLX', children: [{ key: 'olx_d', label: 'OLX', match: (s,m) => s.includes('olx') }]},
+    { key: 'other_src', label: 'Інші джерела', children: [{ key: 'other_src_d', label: 'Різне', match: () => true }]}
 ];
 
+// Мапи джерел Spend → ключ SOURCE_GROUPS
+// Source у Spend: "Ecoforma 3", "Wood Agency 2", etc.
+// Маппінг: якщо source містить "ecoforma" → fb_eco + site_eco (реклама)
+//          якщо source містить "wood" → fb_wood + site_wood (реклама)
+// Але нам треба: Ecoforma 3 → fb_eco (тільки FB реклама), Wood Agency 2 → fb_wood
+// Оскільки Spend — це витрати FB-реклами, прив'язуємо до fb_* груп
+// Маппінг джерел Spend на групи SOURCE_GROUPS
+// FB реклама → fb_* групи
+// Google Ads → site_* групи (бо Google веде на сайт)
 const SPEND_SOURCE_MAP = [
+    // Facebook Ecoforma
     { match: s => s.toLowerCase().includes('ecoforma') && !s.toLowerCase().includes('google'), groupKeys: ['fb_eco'] },
-    { match: s => (s.toLowerCase().includes('wood')) && !s.toLowerCase().includes('google'), groupKeys: ['fb_wood'] },
+    // Facebook Wood Agency
+    { match: s => (s.toLowerCase().includes('wood') || s.toLowerCase().includes('wood agency')) && !s.toLowerCase().includes('google'), groupKeys: ['fb_wood'] },
+    // Google Ads Ecoforma
     { match: s => s.toLowerCase().includes('google') && s.toLowerCase().includes('ecoforma'), groupKeys: ['site_eco'] },
-    { match: s => s.toLowerCase().includes('google') && s.toLowerCase().includes('wood'), groupKeys: ['site_wood'] },
+    // Google Ads Wood Agency
+    { match: s => s.toLowerCase().includes('google') && (s.toLowerCase().includes('wood') || s.toLowerCase().includes('wood agency')), groupKeys: ['site_wood'] },
 ];
 
-const COSTS_SOURCE_MAP = {
-    'facebook ecoforma':   ['fb_eco'],
-    'facebook wood agency':['fb_wood'],
-    'сайт ecoforma':       ['site_eco'],
-    'сайт wood agency':    ['site_wood'],
-    'facebook':            ['fb_eco', 'fb_wood'],
-};
-
-const MONTH_NAMES = {
-    '01':'Січень','02':'Лютий','03':'Березень','04':'Квітень',
-    '05':'Травень','06':'Червень','07':'Липень','08':'Серпень',
-    '09':'Вересень','10':'Жовтень','11':'Листопад','12':'Грудень'
-};
-
-const COSTS_SOURCES = [
-    { key: 'fb_eco',    label: 'FB Ecoforma' },
-    { key: 'fb_wood',   label: 'FB Wood Agency' },
-    { key: 'site_eco',  label: 'Сайт EcoForma' },
-    { key: 'site_wood', label: 'Сайт Wood Agency' },
-];
-
-let selectedCostsMonths = [];
-let selectedCostsSources = ['fb_eco','fb_wood','site_eco','site_wood'];
-
+// 🛡 БРОНЕБІЙНИЙ ПАРСЕР ДАТ
 const parseDate = str => {
     if (!str) return new Date(0);
     const s = String(str).trim();
@@ -140,19 +287,58 @@ const parseDate = str => {
     return new Date(s);
 };
 
-function getMonthKey(str) {
-    const s = String(str).trim();
-    const m1 = s.match(/^(\d{2})[.\/-](\d{4})$/);
-    if (m1) return m1[2] + '-' + m1[1];
-    const m2 = s.match(/^(\d{4})[.\/-](\d{2})$/);
-    if (m2) return m2[1] + '-' + m2[2];
-    return s;
+// Нормалізація дати до рядка YYYY-MM-DD для порівняння
+const dateToStr = d => {
+    const dd = new Date(d);
+    return dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+};
+
+function getUTM(obj) {
+    for (const k of Object.keys(obj)) {
+        const kl = String(k).toLowerCase().replace(/[\s_\-]/g, '');
+        if (kl.includes('utm')) {
+            const v = String(obj[k] || '').trim();
+            if (v && v !== 'undefined' && v !== '—' && v !== '') return v;
+        }
+    }
+    return '';
 }
 
-function formatMonthLabel(key) {
-    const parts = key.split('-');
-    if (parts.length === 2) return (MONTH_NAMES[parts[1]] || parts[1]) + ' ' + parts[0];
-    return key;
+function extractData(row, type) {
+    const utmValue = getUTM(row);
+    if (type === 'lead') {
+        return {
+            date: String(row['Дата створення'] || row.date || '').trim(),
+            source: String(row['Джерело'] || row.source || '').trim(),
+            utm: utmValue,
+            manager: String(row['Відповідальний'] || row.manager || '').trim(),
+            status: String(row['Якість ліда'] || row.status || '').trim(),
+            reason: String(row['Причина відмови'] || row.reason || '').trim()
+        };
+    } else if (type === 'adv') {
+        return {
+            date: String(row['Дата авансу'] || row.date || '').trim(),
+            source: String(row['Джерело'] || row.source || '').trim(),
+            utm: utmValue,
+            manager: String(row['Відповідальний'] || row.manager || '').trim(),
+            amount: parseFloat(String(row['Сума угоди'] || 0).replace(/\s/g,'')) || 0
+        };
+    } else { // spend
+        return {
+            date: String(row['Date'] || row.date || '').trim(),
+            source: String(row['Source'] || row.source || '').trim(),
+            campaign: String(row['Campaign Name'] || row.campaign || '').trim(),
+            spend: parseFloat(String(row['Spend'] || 0).replace(/\s/g,'')) || 0
+        };
+    }
+}
+
+function classify(srcRaw, utm) {
+    const s = String(srcRaw).toLowerCase().trim();
+    if (!s || s === 'undefined') return null;
+    if (s === 'інше' || s === 'other') return 'repeat';
+    if (utm || s.includes('дзвінок') || s.includes('olx')) return 'ads';
+    return 'organic';
 }
 
 function findChild(srcRaw, mgrRaw) {
@@ -160,10 +346,10 @@ function findChild(srcRaw, mgrRaw) {
     const m = String(mgrRaw).toLowerCase().trim();
     for (const grp of SOURCE_GROUPS) {
         for (const ch of grp.children) {
-            if (ch.match(s, m)) return { gk: grp.key };
+            if (ch.match(s, m)) return { gk: grp.key, gl: grp.label, ck: ch.key };
         }
     }
-    return { gk: 'other_src' };
+    return { gk: 'other_src', gl: 'Інші', ck: 'other_src_d' }; 
 }
 
 function fmtMoney(n) {
@@ -171,11 +357,772 @@ function fmtMoney(n) {
     return Math.round(n).toLocaleString('uk-UA') + ' ₴';
 }
 
+function fmtMoneyUSD(n) {
+    if (!n || n === 0) return '—';
+    return n.toLocaleString('uk-UA', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₴';
+}
+
 function pct(a, b) {
     if (!b || b === 0) return '—';
     return (a / b * 100).toFixed(1) + '%';
 }
 
+function analyze(leads) {
+    const total = leads.length;
+    const proc = leads.filter(l => l.status !== '' && !INITIAL_STATUSES.has(l.status.toLowerCase())).length;
+    const unproc = total - proc;
+    const reached = leads.filter(l => {
+        const s = l.status.toLowerCase();
+        return s !== '' && !INITIAL_STATUSES.has(s) && s !== STATUS_NO_CALL && l.reason.toLowerCase() !== "не вийшов на зв'язок";
+    }).length;
+    const target = leads.filter(l => l.status.toLowerCase() === STATUS_TARGET).length;
+    return {total, proc, unproc, reached, target};
+}
+
+// --- Обрахунок Spend за вибраний період та Source ---
+function buildSpendIndex(dStart, dEnd) {
+    // spendBySource: { groupKey: totalUSD }
+    const result = {};
+    
+    globalSpend.forEach(s => {
+        const d = parseDate(s.date);
+        if (d < dStart || d > dEnd) return;
+        
+        // Знаходимо відповідну групу
+        for (const mapping of SPEND_SOURCE_MAP) {
+            if (mapping.match(s.source)) {
+                mapping.groupKeys.forEach(gk => {
+                    result[gk] = (result[gk] || 0) + s.spend;
+                });
+                break;
+            }
+        }
+    });
+    
+    return result;
+}
+
+async function fetchAllData() {
+    document.getElementById('loader').classList.remove('hidden');
+    try {
+        const clean = arr => (arr || []).map(o => {const c = {}; for (let k in o) c[k.trim()] = o[k]; return c;});
+
+        // 1. Основні дані — завжди завантажуємо першочергово
+        const mainRes = await fetch(API_URL);
+        const data = await mainRes.json();
+        globalLeads = clean(data.leads || []).map(row => extractData(row, 'lead'));
+        globalAdvs  = clean(data.advs  || []).map(row => extractData(row, 'adv'));
+
+        // 2. Spend — окремий скрипт, лише якщо URL вказаний (не заглушка)
+        globalSpend = [];
+        const spendUrlValid = SPEND_API_URL && !SPEND_API_URL.includes('ВСТАВТЕ');
+        if (spendUrlValid) {
+            try {
+                const spendRes = await fetch(SPEND_API_URL);
+                const spendData = await spendRes.json();
+                const spendArr = Array.isArray(spendData) ? spendData : [];
+                globalSpend = clean(spendArr)
+                    .filter(row => !String(row['Campaign Name'] || row.campaign || '').toLowerCase().includes('вакансі'))
+                    .map(row => extractData(row, 'spend'));
+                console.log('Spend завантажено:', globalSpend.length, 'рядків');
+            } catch(e) {
+                console.warn('Spend API: помилка завантаження', e);
+            }
+        } else {
+            console.info('Spend API URL не налаштований — витрати не відображаються');
+        }
+
+        // Діагностика
+        const diagEl = document.getElementById('diagBox');
+        diagEl.innerHTML = `✅ Ліди: <b>${globalLeads.length}</b> | Аванси: <b>${globalAdvs.length}</b> | Spend: <b>${globalSpend.length}</b> рядків`;
+        diagEl.style.display = 'block';
+        setTimeout(() => { diagEl.style.display = 'none'; }, 6000);
+
+        // 3. Інші витрати
+        globalCosts = [];
+        try {
+            const costsRes = await fetch(COSTS_API_URL);
+            const costsData = await costsRes.json();
+            globalCosts = Array.isArray(costsData) ? costsData : [];
+            console.log('Costs завантажено:', globalCosts.length, 'рядків');
+        } catch(e) {
+            console.warn('Costs API: помилка завантаження', e);
+        }
+
+        render();
+    } catch(e) {
+        document.getElementById('diagBox').textContent = '❌ Помилка: ' + e.message;
+        document.getElementById('diagBox').style.display = 'block';
+        alert("Помилка завантаження бази! " + e.message); 
+    } finally { 
+        document.getElementById('loader').classList.add('hidden'); 
+    }
+}
+
+function render() {
+    const s = document.getElementById('dateStart').value, e = document.getElementById('dateEnd').value;
+    if(!s || !e) return;
+
+    const dStart = new Date(s); dStart.setHours(0,0,0,0);
+    const dEnd = new Date(e); dEnd.setHours(23,59,59,999);
+
+    const leads = globalLeads.filter(l => {
+        const d = parseDate(l.date);
+        return d >= dStart && d <= dEnd;
+    });
+    const advs = globalAdvs.filter(a => {
+        const d = parseDate(a.date);
+        return d >= dStart && d <= dEnd;
+    });
+
+    // Будуємо Spend індекс
+    spendBySource = buildSpendIndex(dStart, dEnd);
+
+    leadsIdx = {ads:{}, organic:{}};
+    leads.forEach(l => {
+        const cat = classify(l.source, l.utm);
+        if(!cat || cat === 'repeat') return;
+        const f = findChild(l.source, l.manager);
+        if(!leadsIdx[cat][f.gk]) leadsIdx[cat][f.gk] = { label: f.gl, children: {} };
+        if(!leadsIdx[cat][f.gk].children[f.ck]) leadsIdx[cat][f.gk].children[f.ck] = [];
+        leadsIdx[cat][f.gk].children[f.ck].push(l);
+    });
+
+    advsIdx = {ads:{}, organic:{}, repeat:[]};
+    advs.forEach(a => {
+        const cat = classify(a.source, a.utm);
+        if(cat === 'repeat') { advsIdx.repeat.push(a); return; }
+        if(!cat) return;
+        const f = findChild(a.source, a.manager);
+        if(!advsIdx[cat][f.gk]) advsIdx[cat][f.gk] = { children: {} };
+        if(!advsIdx[cat][f.gk].children[f.ck]) advsIdx[cat][f.gk].children[f.ck] = [];
+        advsIdx[cat][f.gk].children[f.ck].push(a);
+    });
+
+    renderActiveView();
+    if (currentTab === 'campaigns') renderCampaignsView();
+}
+
+// --- ІНТЕРФЕЙС ТА ПЕРЕМИКАННЯ ---
+function toggleUnproc() {
+    isUnprocHidden = !isUnprocHidden;
+    const container = document.getElementById('app-container');
+    const btn = document.getElementById('toggleUnprocBtn');
+    
+    if(isUnprocHidden) {
+        container.classList.add('hide-unproc');
+        btn.innerHTML = '👁 Показати неопрацьовані';
+        btn.classList.replace('bg-red-900/40', 'bg-slate-800');
+        btn.classList.replace('text-red-400', 'text-slate-400');
+        btn.classList.replace('border-red-800/50', 'border-slate-600');
+    } else {
+        container.classList.remove('hide-unproc');
+        btn.innerHTML = '🙈 Сховати неопрацьовані';
+        btn.classList.replace('bg-slate-800', 'bg-red-900/40');
+        btn.classList.replace('text-slate-400', 'text-red-400');
+        btn.classList.replace('border-slate-600', 'border-red-800/50');
+    }
+}
+
+function setTab(tabName) {
+    currentTab = tabName;
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
+    document.getElementById('tab_' + tabName).classList.add('tab-active');
+    
+    const titles = {
+        'all': '📊 Загальна картина (Всі джерела)',
+        'ads': '📣 Платна реклама',
+        'org': '🌱 Органіка та інше',
+        'campaigns': '🔬 Детальний звіт по кампаніях',
+        'costs': '💰 Загальні витрати по місяцях'
+    };
+    
+    // Перемикаємо видимість сторінок
+    const isCampaigns = tabName === 'campaigns';
+    const isCosts = tabName === 'costs';
+    document.getElementById('costsContainer').style.display = isCosts ? '' : 'none';
+    document.getElementById('mainContainer').style.display = (isCampaigns || isCosts) ? 'none' : '';
+    document.getElementById('campaignsContainer').style.display = isCampaigns ? '' : 'none';
+
+    if (!isCampaigns) {
+        document.getElementById('mainTitle').textContent = titles[tabName];
+        
+        const mainContainer = document.getElementById('mainContainer');
+        const mainHeader = document.getElementById('mainHeader');
+        
+        mainContainer.classList.remove('border-blue-800/50', 'border-emerald-800/50', 'border-slate-700');
+        mainHeader.classList.remove('bg-blue-950/50', 'bg-emerald-950/50', 'bg-[#131c2e]');
+        
+        if(tabName === 'ads') {
+            mainContainer.classList.add('border-blue-800/50');
+            mainHeader.classList.add('bg-blue-950/50');
+        } else if (tabName === 'org') {
+            mainContainer.classList.add('border-emerald-800/50');
+            mainHeader.classList.add('bg-emerald-950/50');
+        } else {
+            mainContainer.classList.add('border-slate-700');
+            mainHeader.classList.add('bg-[#131c2e]');
+        }
+        renderActiveView();
+    } else if (isCosts) {
+        renderCostsView();
+    } else {
+        renderCampaignsView();
+    }
+}
+
+// Чи показувати spend-колонки (тільки для реклами або загального табу)
+function isAdsContext() {
+    return currentTab === 'ads' || currentTab === 'all';
+}
+
+function renderActiveView() {
+    let html = '';
+    let tL=0, tU=0, tD=0, tCA=0, tP=0, tSum=0, tSpend=0;
+    let hasData = false;
+    
+    let activeGroups = [];
+    let allLeadsCurrentTab = [];
+    let allAdvsCurrentTab = [];
+    let totalAdsLeads = 0, totalAdsCA = 0;
+
+    // Показ колонок spend
+    const showSpend = isAdsContext();
+    ['thSpend','thCPL','thCPCA'].forEach(id => {
+        document.getElementById(id).style.display = showSpend ? '' : 'none';
+    });
+
+    SOURCE_GROUPS.forEach(grp => {
+        let gL = [], gA = [];
+        let isAdsGroup = false;
+        
+        if (currentTab === 'all' || currentTab === 'ads') {
+            if (leadsIdx.ads[grp.key]) { gL.push(...Object.values(leadsIdx.ads[grp.key].children).flat()); isAdsGroup = true; }
+            if (advsIdx.ads[grp.key]) gA.push(...Object.values(advsIdx.ads[grp.key].children).flat());
+        }
+        if (currentTab === 'all' || currentTab === 'org') {
+            if (leadsIdx.organic[grp.key]) gL.push(...Object.values(leadsIdx.organic[grp.key].children).flat());
+            if (advsIdx.organic[grp.key]) gA.push(...Object.values(advsIdx.organic[grp.key].children).flat());
+        }
+
+        if (gL.length === 0 && gA.length === 0) return;
+        
+        hasData = true;
+        activeGroups.push({ key: grp.key, label: grp.label });
+        allLeadsCurrentTab.push(...gL);
+        allAdvsCurrentTab.push(...gA);
+
+        const m = analyze(gL);
+        const gSum = gA.reduce((s, a) => s + a.amount, 0);
+        const gAvg = gA.length ? gSum / gA.length : 0;
+        
+        // Spend для цієї групи (тільки якщо реклама)
+        const grpSpend = spendBySource[grp.key] || 0;
+        const grpCPL = (grpSpend && m.total) ? grpSpend / m.total : 0;
+        const grpCPCA = (grpSpend && m.target) ? grpSpend / m.target : 0;
+        
+        tL+=m.total; tU+=m.unproc; tD+=m.reached; tCA+=m.target; tP+=gA.length; tSum+=gSum;
+        if (grpSpend > 0) { tSpend += grpSpend; totalAdsLeads += m.total; totalAdsCA += m.target; }
+
+        const uColorGrp = m.unproc > 0 ? 'text-red-400 font-bold' : 'text-slate-600';
+        const spendCols = showSpend ? `
+            <td class="px-2 py-3 text-right text-purple-400 font-bold">${grpSpend ? fmtMoneyUSD(grpSpend) : '—'}</td>
+            <td class="px-2 py-3 text-right text-purple-300">${grpCPL ? fmtMoneyUSD(grpCPL) : '—'}</td>
+            <td class="px-4 py-3 text-right text-emerald-300">${grpCPCA ? fmtMoneyUSD(grpCPCA) : '—'}</td>
+        ` : '';
+
+        html += `<tr class="row-group">
+            <td class="px-4 py-3 text-slate-200">${grp.label}</td>
+            <td class="text-center">${m.total}</td>
+            <td class="text-center col-unproc border-x border-red-900/20 bg-red-900/5 ${uColorGrp}">${m.unproc || '—'}</td>
+            <td class="text-center">${m.reached}</td>
+            <td class="text-center">${m.target}</td>
+            <td class="text-center text-orange-300 font-bold">${gA.length||'—'}</td>
+            <td class="px-2 py-3 text-right text-yellow-500 font-black">${fmtMoney(gSum)}</td>
+            <td class="px-4 py-3 text-right text-yellow-300/60">${fmtMoney(gAvg)}</td>
+            ${spendCols}
+        </tr>`;
+        
+        grp.children.forEach(ch => {
+            let cL = [], childAdvs = [];
+            
+            if (currentTab === 'all' || currentTab === 'ads') {
+                if (leadsIdx.ads[grp.key] && leadsIdx.ads[grp.key].children[ch.key]) cL.push(...leadsIdx.ads[grp.key].children[ch.key]);
+                if (advsIdx.ads[grp.key] && advsIdx.ads[grp.key].children[ch.key]) childAdvs.push(...advsIdx.ads[grp.key].children[ch.key]);
+            }
+            if (currentTab === 'all' || currentTab === 'org') {
+                if (leadsIdx.organic[grp.key] && leadsIdx.organic[grp.key].children[ch.key]) cL.push(...leadsIdx.organic[grp.key].children[ch.key]);
+                if (advsIdx.organic[grp.key] && advsIdx.organic[grp.key].children[ch.key]) childAdvs.push(...advsIdx.organic[grp.key].children[ch.key]);
+            }
+
+            if(cL.length === 0 && childAdvs.length === 0) return;
+            
+            const cm = analyze(cL);
+            const cA = childAdvs.length;
+            const cSum = childAdvs.reduce((s, a) => s + a.amount, 0);
+            const cAvg = cA ? cSum / cA : 0;
+
+            const uColorSub = cm.unproc > 0 ? 'text-red-400/80' : 'text-slate-600/40';
+            const subSpendCols = showSpend ? `<td class="px-2 py-2 text-right text-slate-600">—</td><td class="px-2 py-2 text-right text-slate-600">—</td><td class="px-4 py-2 text-right text-slate-600">—</td>` : '';
+
+            html += `<tr class="row-sub text-slate-400 hover:bg-slate-800/40 transition">
+                <td class="px-4 py-2 pl-8">↳ ${ch.label}</td>
+                <td class="text-center">${cm.total}</td>
+                <td class="text-center col-unproc border-x border-red-900/10 bg-red-900/5 ${uColorSub}">${cm.unproc || '—'}</td>
+                <td class="text-center">${cm.reached}</td>
+                <td class="text-center">${cm.target}</td>
+                <td class="text-center text-orange-400/60">${cA||'—'}</td>
+                <td class="px-2 py-2 text-right text-yellow-500/80">${fmtMoney(cSum)}</td>
+                <td class="px-4 py-2 text-right text-yellow-200/40">${fmtMoney(cAvg)}</td>
+                ${subSpendCols}
+            </tr>`;
+        });
+    });
+
+    if (!hasData) {
+        html = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-bold bg-slate-800/20 border-b border-slate-700/50">📭 Немає даних за вибраний період</td></tr>`;
+    }
+
+    document.getElementById('mainTableBody').innerHTML = html;
+    
+    // KPI
+    document.getElementById('kpiTotal').textContent = tL;
+    document.getElementById('kpiUnproc').textContent = tU;
+    
+    if(tU === 0) {
+        document.getElementById('kpiUnproc').classList.remove('animate-pulse', 'text-red-400');
+        document.getElementById('kpiUnproc').classList.add('text-slate-500');
+    } else {
+        document.getElementById('kpiUnproc').classList.add('animate-pulse', 'text-red-400');
+        document.getElementById('kpiUnproc').classList.remove('text-slate-500');
+    }
+
+    document.getElementById('kpiCA').textContent = tCA;
+    document.getElementById('kpiSales').textContent = tP;
+    document.getElementById('kpiSum').textContent = fmtMoney(tSum);
+
+    // Spend KPI — показуємо тільки якщо є дані реклами
+    const spendVisible = showSpend && tSpend > 0;
+    ['kpiSpendBlock','kpiCPLBlock','kpiCPCABlock'].forEach(id => {
+        document.getElementById(id).style.display = spendVisible ? '' : 'none';
+    });
+    if (spendVisible) {
+        document.getElementById('kpiSpend').textContent = fmtMoneyUSD(tSpend);
+        document.getElementById('kpiCPL').textContent = totalAdsLeads ? fmtMoneyUSD(tSpend / totalAdsLeads) : '—';
+        document.getElementById('kpiCPCA').textContent = totalAdsCA ? fmtMoneyUSD(tSpend / totalAdsCA) : '—';
+    }
+
+    // Фільтр воронки
+    const sel = document.getElementById('funnelFilter');
+    const currentFilter = sel.value;
+    let h = '<option value="all">🎯 Воронка: Всі вибрані джерела</option>';
+    activeGroups.forEach(g => {
+        h += `<option value="${g.key}">⚙️ Воронка: ${g.label}</option>`;
+    });
+    sel.innerHTML = h;
+    if(activeGroups.some(g => g.key === currentFilter)) sel.value = currentFilter;
+    else sel.value = 'all';
+
+    renderFunnelView(allLeadsCurrentTab, allAdvsCurrentTab, tU);
+}
+
+function renderFunnelView(allLeads, allAdvs, globalUnproc) {
+    const filter = document.getElementById('funnelFilter').value;
+    let fL = [], fA = [];
+    let funnelGroupKey = null; // ключ групи для Spend
+    
+    if (filter === 'all') {
+        if (allLeads && allAdvs) {
+            fL = allLeads;
+            fA = allAdvs;
+        } else {
+            SOURCE_GROUPS.forEach(grp => {
+                if (currentTab === 'all' || currentTab === 'ads') {
+                    if (leadsIdx.ads[grp.key]) fL.push(...Object.values(leadsIdx.ads[grp.key].children).flat());
+                    if (advsIdx.ads[grp.key]) fA.push(...Object.values(advsIdx.ads[grp.key].children).flat());
+                }
+                if (currentTab === 'all' || currentTab === 'org') {
+                    if (leadsIdx.organic[grp.key]) fL.push(...Object.values(leadsIdx.organic[grp.key].children).flat());
+                    if (advsIdx.organic[grp.key]) fA.push(...Object.values(advsIdx.organic[grp.key].children).flat());
+                }
+            });
+        }
+        // Загальний бюджет — сума всіх рекламних джерел
+    } else {
+        funnelGroupKey = filter;
+        if (currentTab === 'all' || currentTab === 'ads') {
+            if (leadsIdx.ads[filter]) fL.push(...Object.values(leadsIdx.ads[filter].children).flat());
+            if (advsIdx.ads[filter]) fA.push(...Object.values(advsIdx.ads[filter].children).flat());
+        }
+        if (currentTab === 'all' || currentTab === 'org') {
+            if (leadsIdx.organic[filter]) fL.push(...Object.values(leadsIdx.organic[filter].children).flat());
+            if (advsIdx.organic[filter]) fA.push(...Object.values(advsIdx.organic[filter].children).flat());
+        }
+    }
+
+    const m = analyze(fL);
+    const fA_len = fA.length;
+    const fSum = fA.reduce((s, a) => s + a.amount, 0);
+
+    // Spend для воронки
+    let funnelSpend = 0;
+    const showSpendFunnel = isAdsContext();
+
+    if (showSpendFunnel) {
+        if (filter === 'all') {
+            // Сума всіх рекламних груп
+            funnelSpend = Object.values(spendBySource).reduce((s, v) => s + v, 0);
+        } else if (funnelGroupKey && spendBySource[funnelGroupKey]) {
+            funnelSpend = spendBySource[funnelGroupKey];
+        }
+    }
+
+    const cpl = (funnelSpend && m.total) ? funnelSpend / m.total : 0;
+    const cpca = (funnelSpend && m.target) ? funnelSpend / m.target : 0;
+
+    const pctReach = pct(m.reached, m.proc || 1); 
+    const pctCA_oprac = pct(m.target, m.proc || 1); 
+    const pctCA_total = pct(m.target, m.total || 1); 
+    const pctSales = pct(fA_len, m.target || 1); 
+
+    const alertBox = document.getElementById('unprocAlert');
+    if (m.unproc > 0 && !isUnprocHidden) {
+        alertBox.classList.remove('hidden');
+        alertBox.className = "mb-5 bg-red-900/30 border border-red-800/50 rounded-lg p-2 text-center text-[11px] text-red-400 font-bold animate-pulse flex justify-center items-center gap-2 shadow-inner";
+        alertBox.innerHTML = `⚠️ ЧЕКАЮТЬ ОБРОБКИ: ${m.unproc} ЛІДІВ`;
+    } else if (!isUnprocHidden) {
+        alertBox.classList.remove('hidden');
+        alertBox.className = "mb-5 bg-emerald-900/10 border border-emerald-800/30 rounded-lg p-2 text-center text-[11px] text-emerald-500 font-bold flex justify-center items-center gap-2 shadow-inner";
+        alertBox.innerHTML = `✅ Всі ліди взяті в роботу`;
+    } else {
+        alertBox.classList.add('hidden');
+    }
+
+    // Блок Spend у воронці (тільки для реклами)
+    const spendBlock = (showSpendFunnel && funnelSpend > 0) ? `
+        <div class="mt-5 p-4 rounded-xl spend-badge">
+            <p class="text-[10px] text-purple-400 uppercase font-black tracking-widest mb-3 text-center">💸 Рекламний бюджет</p>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-[#1a1040]/60 rounded-lg p-3 flex flex-col items-center justify-center border border-purple-900/30">
+                    <span class="text-[9px] text-purple-400 uppercase font-bold tracking-wider mb-1">Витрачено</span>
+                    <span class="text-base font-black text-purple-200">${fmtMoneyUSD(funnelSpend)}</span>
+                </div>
+                <div class="bg-[#1a1040]/60 rounded-lg p-3 flex flex-col items-center justify-center border border-purple-900/30 ${!cpl ? 'opacity-40' : ''}">
+                    <span class="text-[9px] text-purple-300 uppercase font-bold tracking-wider mb-1">Ціна ліда</span>
+                    <span class="text-base font-black text-purple-100">${cpl ? fmtMoneyUSD(cpl) : '—'}</span>
+                </div>
+                <div class="bg-[#0f2a1a]/60 rounded-lg p-3 flex flex-col items-center justify-center border border-emerald-900/30 ${!cpca ? 'opacity-40' : ''}">
+                    <span class="text-[9px] text-emerald-400 uppercase font-bold tracking-wider mb-1">Ціна ЦА</span>
+                    <span class="text-base font-black text-emerald-200">${cpca ? fmtMoneyUSD(cpca) : '—'}</span>
+                </div>
+            </div>
+        </div>
+    ` : '';
+
+    let html = `
+        <div class="flex items-center justify-between w-full relative">
+            <div class="relative w-[45%] h-[275px]">
+                <svg viewBox="0 0 200 275" class="absolute inset-0 w-full h-full drop-shadow-xl" preserveAspectRatio="none">
+                    <polygon points="0,0 200,0 180,65 20,65" fill="#2563eb" />
+                    <polygon points="22,70 178,70 158,135 42,135" fill="#f59e0b" />
+                    <polygon points="44,140 156,140 136,205 64,205" fill="#10b981" />
+                    <polygon points="66,210 134,210 114,275 86,275" fill="#ea580c" />
+                </svg>
+                <div class="absolute top-0 w-full h-[65px] flex items-center justify-center text-white font-bold sm:text-lg drop-shadow-md">Ліди: ${m.total}</div>
+                <div class="absolute top-[70px] w-full h-[65px] flex items-center justify-center text-white font-bold sm:text-lg drop-shadow-md">Додзвін: ${m.reached}</div>
+                <div class="absolute top-[140px] w-full h-[65px] flex items-center justify-center text-white font-bold sm:text-lg drop-shadow-md">ЦА: ${m.target}</div>
+                <div class="absolute top-[210px] w-full h-[65px] flex items-center justify-center text-white font-bold sm:text-lg drop-shadow-md">💰 ${fA_len}</div>
+            </div>
+
+            <div class="flex flex-col justify-between h-[275px] py-[32px] w-[10%]">
+                <div class="w-full border-t border-dashed border-slate-500"></div>
+                <div class="w-full border-t border-dashed border-slate-500"></div>
+                <div class="w-full border-t border-dashed border-emerald-800"></div>
+                <div class="w-full border-t border-dashed border-orange-800"></div>
+            </div>
+
+            <div class="flex flex-col justify-between h-[275px] w-[45%]">
+                <div class="h-[60px] bg-[#1e293b]/80 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg hover:border-blue-500/50 transition">
+                    <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider text-center px-1">Додзвін (з опрац.)</span>
+                    <span class="text-xl font-black text-blue-400">${pctReach}</span>
+                </div>
+                <div class="h-[60px] bg-[#1e293b]/80 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg hover:border-amber-500/50 transition">
+                    <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider text-center px-1">В ЦА (з опрац.)</span>
+                    <span class="text-xl font-black text-amber-400">${pctCA_oprac}</span>
+                </div>
+                <div class="h-[60px] bg-emerald-900/10 rounded-lg border border-emerald-800/40 flex flex-col items-center justify-center shadow-lg hover:border-emerald-500/50 transition">
+                    <span class="text-[9px] text-emerald-500 uppercase font-bold tracking-wider text-center px-1">🏆 Загальна в ЦА</span>
+                    <span class="text-xl font-black text-emerald-400">${pctCA_total}</span>
+                </div>
+                <div class="h-[60px] bg-orange-900/10 rounded-lg border border-orange-800/40 flex flex-col items-center justify-center shadow-lg hover:border-orange-500/50 transition">
+                    <span class="text-[9px] text-orange-500 uppercase font-bold tracking-wider text-center px-1">💰 ЦА → Аванс</span>
+                    <span class="text-xl font-black text-orange-400">${pctSales}</span>
+                </div>
+            </div>
+        </div>
+        
+        ${spendBlock}
+        
+        <div class="mt-5 flex justify-center gap-4 pt-5 border-t border-slate-700/50">
+            <div class="w-1/2 bg-[#1e293b] py-3.5 px-4 rounded-xl border border-slate-700 shadow-xl hover:bg-slate-800 transition">
+                 <p class="text-[10px] text-emerald-500 uppercase font-black mb-1.5 flex justify-center">💸 Сума угод</p>
+                 <p class="text-xl text-center font-black text-yellow-500">${fmtMoney(fSum)}</p>
+            </div>
+             <div class="w-1/2 bg-[#1e293b] py-3.5 px-4 rounded-xl border border-slate-700 shadow-xl hover:bg-slate-800 transition">
+                 <p class="text-[10px] text-slate-400 uppercase font-black mb-1.5 flex justify-center">🧾 Середній чек</p>
+                 <p class="text-xl text-center font-black text-yellow-100">${fA_len ? fmtMoney(fSum / fA_len) : '0 ₴'}</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('mainFunnelLayout').innerHTML = html;
+}
+
+// ============================================================
+// ДЕТАЛЬНИЙ ЗВІТ ПО КАМПАНІЯХ
+// Логіка зіставлення: utm_campaign (ліди) <-> Campaign Name (Spend)
+// Приклад: lead_saite_zakarpatska <-> KP | Lead Saite | ADV | Закарпатська | 18.01.26
+// Алгоритм: токенізуємо обидва рядки, рахуємо кількість спільних токенів
+// ============================================================
+
+// Токенізація рядка для порівняння
+function tokenize(str) {
+    return String(str || '')
+        .toLowerCase()
+        .replace(/[|_\-\s\.\,]+/g, ' ')  // замінюємо роздільники на пробіл
+        .split(' ')
+        .map(t => t.trim())
+        .filter(t => t.length > 2);       // ігноруємо дуже короткі токени
+}
+
+// Рахуємо схожість між utm_campaign і Campaign Name
+// Повертає число від 0 до 1
+function campaignSimilarity(utm, campaignName) {
+    if (!utm || !campaignName) return 0;
+    const utmTokens = new Set(tokenize(utm));
+    const campTokens = tokenize(campaignName);
+    if (utmTokens.size === 0 || campTokens.length === 0) return 0;
+    const matches = campTokens.filter(t => utmTokens.has(t)).length;
+    return matches / Math.max(utmTokens.size, campTokens.length);
+}
+
+// Знаходимо найкращу кампанію для utm
+function matchUtmToCampaign(utm, campaigns) {
+    if (!utm) return null;
+    let best = null, bestScore = 0;
+    campaigns.forEach(c => {
+        const score = campaignSimilarity(utm, c);
+        if (score > bestScore && score >= 0.25) { // поріг схожості 25%
+            bestScore = score;
+            best = c;
+        }
+    });
+    return best;
+}
+
+// Будуємо індекс: campaignName -> { leads[], advs[], spend }
+function buildCampaignIndex(dStart, dEnd) {
+    const idx = {}; // { campaignKey: { displayName, utms:Set, leads[], advs[], spend } }
+
+    // Збираємо всі унікальні Campaign Name зі Spend за період
+    const spendByCampaign = {};
+    globalSpend.forEach(s => {
+        const d = parseDate(s.date);
+        if (d < dStart || d > dEnd) return;
+        const key = s.campaign;
+        if (!key) return;
+        if (!spendByCampaign[key]) spendByCampaign[key] = 0;
+        spendByCampaign[key] += s.spend;
+    });
+
+    const allCampaignNames = Object.keys(spendByCampaign);
+
+    // Додаємо кампанії зі Spend
+    allCampaignNames.forEach(name => {
+        if (!idx[name]) idx[name] = { displayName: name, source: '', utms: new Set(), leads: [], advs: [], spend: 0 };
+        idx[name].spend += spendByCampaign[name];
+    });
+
+    // Фільтруємо ліди за датою
+    const leads = globalLeads.filter(l => {
+        const d = parseDate(l.date);
+        return d >= dStart && d <= dEnd;
+    });
+
+    // Зіставляємо ліди з кампаніями через utm_campaign
+    leads.forEach(l => {
+        if (!l.utm) return;
+        // Пробуємо точний збіг спочатку (якщо utm == campaign name)
+        let matched = allCampaignNames.find(c => c.toLowerCase() === l.utm.toLowerCase());
+        // Якщо не знайшли — шукаємо за схожістю токенів
+        if (!matched) matched = matchUtmToCampaign(l.utm, allCampaignNames);
+        
+        const key = matched || ('utm:' + l.utm); // якщо не знайшли — окрема група
+        if (!idx[key]) idx[key] = { displayName: l.utm, source: '', utms: new Set(), leads: [], advs: [], spend: 0 };
+        idx[key].utms.add(l.utm);
+        idx[key].leads.push(l);
+        
+        // Визначаємо джерело (ecoforma / wood / інше)
+        const src = String(l.source || '').toLowerCase();
+        if (src.includes('ecoforma') || src.includes('екоформа')) idx[key].source = 'eco';
+        else if (src.includes('wood') || src.includes('вуд')) idx[key].source = 'wood';
+    });
+
+    // Фільтруємо аванси за датою і зіставляємо
+    const advs = globalAdvs.filter(a => {
+        const d = parseDate(a.date);
+        return d >= dStart && d <= dEnd;
+    });
+
+    advs.forEach(a => {
+        if (!a.utm) return;
+        let matched = allCampaignNames.find(c => c.toLowerCase() === a.utm.toLowerCase());
+        if (!matched) matched = matchUtmToCampaign(a.utm, allCampaignNames);
+        const key = matched || ('utm:' + a.utm);
+        if (idx[key]) idx[key].advs.push(a);
+    });
+
+    return idx;
+}
+
+let currentCampSource = 'all';
+
+function renderCampaignsView() {
+    const s = document.getElementById('dateStart').value;
+    const e = document.getElementById('dateEnd').value;
+    if (!s || !e) return;
+
+    const dStart = new Date(s); dStart.setHours(0,0,0,0);
+    const dEnd = new Date(e); dEnd.setHours(23,59,59,999);
+
+    const campIdx = buildCampaignIndex(dStart, dEnd);
+    const entries = Object.values(campIdx);
+
+    // Фільтр по джерелу
+    const filtered = currentCampSource === 'all' ? entries :
+        entries.filter(e => e.source === currentCampSource);
+
+    // Source filter buttons
+    const sources = [
+        { key: 'all', label: '🌐 Всі' },
+        { key: 'eco', label: '🌿 Ecoforma' },
+        { key: 'wood', label: '🪵 Wood Agency' },
+    ];
+    document.getElementById('campSourceFilter').innerHTML = sources.map(src =>
+        `<button onclick="setCampSource('${src.key}')" class="tab-btn px-4 py-1.5 font-bold text-xs rounded-lg border border-transparent ${currentCampSource === src.key ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">${src.label}</button>`
+    ).join('');
+
+    // Сортуємо за кількістю лідів
+    filtered.sort((a, b) => b.leads.length - a.leads.length);
+
+    let html = '';
+    let totL = 0, totCA = 0, totSales = 0, totSum = 0, totSpend = 0;
+
+    filtered.forEach(camp => {
+        if (camp.leads.length === 0 && camp.spend === 0) return;
+
+        const m = analyze(camp.leads);
+        const sales = camp.advs.length;
+        const sum = camp.advs.reduce((s, a) => s + a.amount, 0);
+        const cpl = (camp.spend && m.total) ? camp.spend / m.total : 0;
+        const cpca = (camp.spend && m.target) ? camp.spend / m.target : 0;
+
+        totL += m.total; totCA += m.target; totSales += sales; totSum += sum; totSpend += camp.spend;
+
+        // Відображувана назва: пробуємо зробити читабельною
+        const displayName = camp.displayName;
+        const utmList = camp.utms.size > 0 
+            ? `<div class="text-[9px] text-slate-500 mt-0.5">${[...camp.utms].join(', ')}</div>` 
+            : '';
+
+        const srcBadge = camp.source === 'eco' 
+            ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>'
+            : camp.source === 'wood' 
+            ? '<span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1"></span>'
+            : '';
+
+        html += `<tr class="hover:bg-slate-800/30 transition">
+            <td class="px-4 py-2.5">
+                <div class="text-slate-200 text-xs font-semibold flex items-center">${srcBadge}${displayName}</div>
+                ${utmList}
+            </td>
+            <td class="px-2 py-2.5 text-center text-sm font-bold ${m.total > 0 ? 'text-blue-300' : 'text-slate-600'}">${m.total || '—'}</td>
+            <td class="px-2 py-2.5 text-center text-sm ${m.reached > 0 ? 'text-amber-300' : 'text-slate-600'}">${m.reached || '—'}</td>
+            <td class="px-2 py-2.5 text-center text-sm font-bold ${m.target > 0 ? 'text-emerald-400' : 'text-slate-600'}">${m.target || '—'}</td>
+            <td class="px-2 py-2.5 text-center text-sm ${sales > 0 ? 'text-orange-400' : 'text-slate-600'}">${sales || '—'}</td>
+            <td class="px-2 py-2.5 text-right text-sm ${sum > 0 ? 'text-yellow-500' : 'text-slate-600'}">${fmtMoney(sum)}</td>
+            <td class="px-2 py-2.5 text-right text-sm font-bold ${camp.spend > 0 ? 'text-purple-400' : 'text-slate-600'}">${camp.spend ? fmtMoneyUSD(camp.spend) : '—'}</td>
+            <td class="px-2 py-2.5 text-right text-sm ${cpl > 0 ? 'text-purple-300' : 'text-slate-600'}">${cpl ? fmtMoneyUSD(cpl) : '—'}</td>
+            <td class="px-4 py-2.5 text-right text-sm ${cpca > 0 ? 'text-emerald-300' : 'text-slate-600'}">${cpca ? fmtMoneyUSD(cpca) : '—'}</td>
+        </tr>`;
+    });
+
+    if (!html) {
+        html = `<tr><td colspan="9" class="p-8 text-center text-slate-400 font-bold">📭 Немає даних за вибраний період</td></tr>`;
+    }
+
+    document.getElementById('campTableBody').innerHTML = html;
+
+    // KPI рядок
+    const totCpl = (totSpend && totL) ? totSpend / totL : 0;
+    const totCpca = (totSpend && totCA) ? totSpend / totCA : 0;
+    document.getElementById('campKpiRow').innerHTML = `
+        <div class="text-center"><p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Лідів</p><p class="text-2xl font-black text-blue-100">${totL}</p></div>
+        <div class="text-center"><p class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest">ЦА</p><p class="text-2xl font-black text-emerald-300">${totCA}</p></div>
+        <div class="text-center"><p class="text-[10px] text-orange-400 uppercase font-bold tracking-widest">Продажів</p><p class="text-2xl font-black text-orange-400">${totSales}</p></div>
+        <div class="text-center"><p class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest">Сума</p><p class="text-2xl font-black text-yellow-400">${fmtMoney(totSum)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Бюджет</p><p class="text-2xl font-black text-purple-300">${fmtMoneyUSD(totSpend)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-purple-300 uppercase font-bold tracking-widest">Ціна ліда</p><p class="text-2xl font-black text-purple-200">${totCpl ? fmtMoneyUSD(totCpl) : '—'}</p></div>
+        <div class="text-center"><p class="text-[10px] text-emerald-300 uppercase font-bold tracking-widest">Ціна ЦА</p><p class="text-2xl font-black text-emerald-200">${totCpca ? fmtMoneyUSD(totCpca) : '—'}</p></div>
+    `;
+}
+
+function setCampSource(src) {
+    currentCampSource = src;
+    renderCampaignsView();
+}
+
+// ============================================================
+// ЗАГАЛЬНІ ВИТРАТИ ПО МІСЯЦЯХ
+// ============================================================
+
+// Маппінг джерел з листа "Інші витрати" на ключі SOURCE_GROUPS
+const COSTS_SOURCE_MAP = {
+    'facebook ecoforma': ['fb_eco'],
+    'facebook wood agency': ['fb_wood'],
+    'сайт ecoforma': ['site_eco'],
+    'сайт wood agency': ['site_wood'],
+    'facebook': ['fb_eco', 'fb_wood'], // спільне — ділиться
+};
+
+// Назви місяців українською
+const MONTH_NAMES = {
+    '01': 'Січень', '02': 'Лютий', '03': 'Березень',
+    '04': 'Квітень', '05': 'Травень', '06': 'Червень',
+    '07': 'Липень', '08': 'Серпень', '09': 'Вересень',
+    '10': 'Жовтень', '11': 'Листопад', '12': 'Грудень'
+};
+
+function getMonthKey(str) {
+    // Підтримує формати: "03.2026", "2026-03", "03/2026"
+    const s = String(str).trim();
+    const m1 = s.match(/^(\d{2})[.\/-](\d{4})$/);
+    if (m1) return m1[2] + '-' + m1[1];
+    const m2 = s.match(/^(\d{4})[.\/-](\d{2})$/);
+    if (m2) return m1 ? m1[2]+'-'+m1[1] : m2[1]+'-'+m2[2];
+    return s;
+}
+
+function formatMonthLabel(key) {
+    const parts = key.split('-');
+    if (parts.length === 2) {
+        const mName = MONTH_NAMES[parts[1]] || parts[1];
+        return mName + ' ' + parts[0];
+    }
+    return key;
+}
+
+// Визначаємо які FB джерела активні в даному місяці
 function getActiveFbSources(monthKey) {
     const active = new Set();
     globalLeads.forEach(l => {
@@ -183,99 +1130,133 @@ function getActiveFbSources(monthKey) {
         const lm = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
         if (lm !== monthKey) return;
         const src = String(l.source || '').toLowerCase();
-        if (src.includes('facebook') && (src.includes('ecoforma')||src.includes('екоформа'))) active.add('fb_eco');
-        if (src.includes('facebook') && (src.includes('wood')||src.includes('вуд'))) active.add('fb_wood');
+        if (src.includes('facebook') && (src.includes('ecoforma') || src.includes('екоформа'))) active.add('fb_eco');
+        if (src.includes('facebook') && (src.includes('wood') || src.includes('вуд'))) active.add('fb_wood');
     });
     return active;
 }
 
+// Будуємо дані витрат по місяцях і джерелах
 function buildCostsData(selectedMonths, selectedSources) {
+    // { monthKey: { sourceKey: { adBudget, zpMarketing, zpOutsource, services, other, leads, ca, sales, salesSum } } }
     const data = {};
+
+    // Ініціалізуємо структуру для вибраних місяців і джерел
     selectedMonths.forEach(m => {
         data[m] = {};
         selectedSources.forEach(src => {
-            data[m][src] = { adBudget:0, zpMarketing:0, zpOutsource:0, services:0, other:0, leads:0, ca:0, sales:0, salesSum:0 };
+            data[m][src] = {
+                adBudget: 0, zpMarketing: 0, zpOutsource: 0,
+                services: 0, other: 0,
+                leads: 0, ca: 0, sales: 0, salesSum: 0
+            };
         });
     });
 
-    // Рекламний бюджет
+    // 1. Рекламний бюджет зі Spend
     globalSpend.forEach(s => {
         const d = parseDate(s.date);
-        const mk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-        if (!selectedMonths.includes(mk)) return;
+        const monthKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (!selectedMonths.includes(monthKey)) return;
+
         for (const mapping of SPEND_SOURCE_MAP) {
             if (mapping.match(s.source)) {
                 mapping.groupKeys.forEach(gk => {
-                    if (selectedSources.includes(gk) && data[mk][gk]) data[mk][gk].adBudget += s.spend;
+                    if (selectedSources.includes(gk) && data[monthKey][gk]) {
+                        data[monthKey][gk].adBudget += s.spend;
+                    }
                 });
                 break;
             }
         }
     });
 
-    // Інші витрати
+    // 2. Інші витрати
     globalCosts.forEach(c => {
-        const mk = getMonthKey(c.Month);
-        if (!selectedMonths.includes(mk)) return;
+        const monthKey = getMonthKey(c.Month);
+        if (!selectedMonths.includes(monthKey)) return;
+
         const srcRaw = String(c.Source || '').toLowerCase().trim();
         const type = String(c.Type || '').toLowerCase().trim();
         const amount = c.Amount || 0;
 
+        // Визначаємо до яких джерел відноситься витрата
         let targets = [];
         const mapped = COSTS_SOURCE_MAP[srcRaw];
+
         if (mapped) {
             if (mapped.length === 1) {
+                // Конкретне джерело
                 targets = mapped;
             } else {
-                const active = getActiveFbSources(mk);
+                // Спільне (Facebook) — ділимо між активними
+                const active = getActiveFbSources(monthKey);
                 const activeMapped = mapped.filter(k => active.has(k));
                 targets = activeMapped.length > 0 ? activeMapped : mapped;
             }
         } else {
+            // Невідоме джерело — до всіх вибраних
             targets = selectedSources;
         }
 
         const share = amount / targets.length;
+
         targets.forEach(gk => {
-            if (!selectedSources.includes(gk) || !data[mk]?.[gk]) return;
-            if (type.includes('зп') && !type.includes('аутсорс')) {
-                data[mk][gk].zpMarketing += share;
+            if (!selectedSources.includes(gk) || !data[monthKey] || !data[monthKey][gk]) return;
+
+            if (type.includes('зп маркетинг') || type.includes('зп') && !type.includes('аутсорс')) {
+                data[monthKey][gk].zpMarketing += share;
             } else if (type.includes('аутсорс') || type.includes('підрядник')) {
-                data[mk][gk].zpOutsource += share;
-            } else if (type.includes('сервіс')||type.includes('програм')||type.includes('кепшн')||type.includes('домен')) {
-                data[mk][gk].services += share;
+                data[monthKey][gk].zpOutsource += share;
+            } else if (type.includes('сервіс') || type.includes('програм') || type.includes('кепшн') || type.includes('домен')) {
+                data[monthKey][gk].services += share;
             } else {
-                data[mk][gk].other += share;
+                data[monthKey][gk].other += share;
             }
         });
     });
 
-    // Ліди і ЦА
+    // 3. Ліди, ЦА, продажі по місяцях і джерелах
     globalLeads.forEach(l => {
         const d = parseDate(l.date);
-        const mk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-        if (!selectedMonths.includes(mk)) return;
-        const f = findChild(l.source, l.manager || '');
-        if (!selectedSources.includes(f.gk) || !data[mk]?.[f.gk]) return;
-        data[mk][f.gk].leads++;
-        if (l.status.toLowerCase() === STATUS_TARGET) data[mk][f.gk].ca++;
+        const monthKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (!selectedMonths.includes(monthKey)) return;
+
+        const f = findChild(l.source, l.manager);
+        if (!selectedSources.includes(f.gk) || !data[monthKey][f.gk]) return;
+
+        data[monthKey][f.gk].leads++;
+        if (l.status.toLowerCase() === STATUS_TARGET) data[monthKey][f.gk].ca++;
     });
 
-    // Продажі
     globalAdvs.forEach(a => {
         const d = parseDate(a.date);
-        const mk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-        if (!selectedMonths.includes(mk)) return;
-        const f = findChild(a.source, a.manager || '');
-        if (!selectedSources.includes(f.gk) || !data[mk]?.[f.gk]) return;
-        data[mk][f.gk].sales++;
-        data[mk][f.gk].salesSum += a.amount;
+        const monthKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (!selectedMonths.includes(monthKey)) return;
+
+        const f = findChild(a.source, a.manager);
+        if (!selectedSources.includes(f.gk) || !data[monthKey][f.gk]) return;
+
+        data[monthKey][f.gk].sales++;
+        data[monthKey][f.gk].salesSum += a.amount;
     });
 
     return data;
 }
 
+// Джерела для сторінки витрат
+const COSTS_SOURCES = [
+    { key: 'fb_eco',   label: 'FB Ecoforma' },
+    { key: 'fb_wood',  label: 'FB Wood Agency' },
+    { key: 'site_eco', label: 'Сайт EcoForma' },
+    { key: 'site_wood',label: 'Сайт Wood Agency' },
+];
+
+let selectedCostsMonths = [];
+let selectedCostsSources = ['fb_eco', 'fb_wood', 'site_eco', 'site_wood'];
+
 function initCostsFilters() {
+    // Збираємо унікальні місяці з лідів і витрат
     const monthsSet = new Set();
     globalLeads.forEach(l => {
         const d = parseDate(l.date);
@@ -287,29 +1268,37 @@ function initCostsFilters() {
         monthsSet.add(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
     });
 
-    const months = [...monthsSet].filter(m => m && m.includes('-')).sort();
-    if (selectedCostsMonths.length === 0) selectedCostsMonths = months.slice(-3);
+    const months = [...monthsSet].sort();
+    // За замовчуванням — останні 3 місяці
+    if (selectedCostsMonths.length === 0) {
+        selectedCostsMonths = months.slice(-3);
+    }
 
+    // Рендеримо кнопки місяців
     document.getElementById('costsMonthFilter').innerHTML = months.map(m => `
-        <button onclick="toggleCostsMonth('${m}')"
+        <button onclick="toggleCostsMonth('${m}')" 
             class="tab-btn px-3 py-1.5 font-bold text-xs rounded-lg border border-transparent transition
             ${selectedCostsMonths.includes(m) ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">
             ${formatMonthLabel(m)}
-        </button>`).join('');
+        </button>
+    `).join('');
 
+    // Рендеримо кнопки джерел
     document.getElementById('costsSourceFilter').innerHTML = COSTS_SOURCES.map(src => `
         <button onclick="toggleCostsSource('${src.key}')"
             class="tab-btn px-3 py-1.5 font-bold text-xs rounded-lg border border-transparent transition
             ${selectedCostsSources.includes(src.key) ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">
             ${src.label}
-        </button>`).join('');
+        </button>
+    `).join('');
 }
 
 function toggleCostsMonth(m) {
     if (selectedCostsMonths.includes(m)) {
         if (selectedCostsMonths.length > 1) selectedCostsMonths = selectedCostsMonths.filter(x => x !== m);
     } else {
-        selectedCostsMonths.push(m); selectedCostsMonths.sort();
+        selectedCostsMonths.push(m);
+        selectedCostsMonths.sort();
     }
     renderCostsView();
 }
@@ -325,11 +1314,11 @@ function toggleCostsSource(src) {
 
 function renderCostsView() {
     initCostsFilters();
-    if (!selectedCostsMonths.length || !selectedCostsSources.length) return;
+    if (selectedCostsMonths.length === 0 || selectedCostsSources.length === 0) return;
 
     const data = buildCostsData(selectedCostsMonths, selectedCostsSources);
 
-    // Колонки: місяць × джерело
+    // Визначаємо колонки — місяць + джерело
     const cols = [];
     selectedCostsMonths.forEach(m => {
         selectedCostsSources.forEach(src => {
@@ -338,146 +1327,105 @@ function renderCostsView() {
         });
     });
 
-    // Заголовок
-    document.getElementById('costsTableHead').innerHTML = `<tr>
-        <th class="px-4 py-3 text-left sticky left-0 bg-slate-900">Показник</th>
-        ${cols.map(c => `<th class="px-3 py-3 text-right text-yellow-300 min-w-[150px] whitespace-nowrap">${c.label}</th>`).join('')}
-    </tr>`;
+    // Якщо вибрано 1 місяць і кілька джерел — колонки = джерела
+    // Якщо вибрано кілька місяців — колонки = місяці×джерела
 
-    // Рядки
-    const ROWS = [
-        { label: '💸 Рекламний бюджет',       key: 'adBudget',    cls: 'text-purple-300 font-bold' },
-        { label: '👤 ЗП маркетинг',            key: 'zpMarketing', cls: 'text-blue-300' },
-        { label: '🤝 ЗП аутсорс',              key: 'zpOutsource', cls: 'text-blue-300' },
-        { label: '🛠 Сервіси',                  key: 'services',    cls: 'text-slate-300' },
-        { label: '📦 Інше',                     key: 'other',       cls: 'text-slate-400' },
-        { label: '━ ЗАГАЛЬНІ ВИТРАТИ',          key: '_total',      cls: 'text-yellow-400 font-black', sep: true },
-        { label: '👥 Ліди',                     key: 'leads',       cls: 'text-blue-300 font-bold' },
-        { label: '🎯 ЦА',                       key: 'ca',          cls: 'text-emerald-400 font-bold' },
-        { label: '📈 Конверсія в ЦА',           key: '_conv_ca',    cls: 'text-emerald-300' },
-        { label: '💰 Ціна ліда (реклама)',      key: '_cpl_ad',     cls: 'text-purple-300' },
-        { label: '💰 Ціна ліда (загальна)',     key: '_cpl_tot',    cls: 'text-yellow-300' },
-        { label: '🎯 Ціна ЦА (реклама)',        key: '_cpca_ad',    cls: 'text-purple-300' },
-        { label: '🎯 Ціна ЦА (загальна)',       key: '_cpca_tot',   cls: 'text-yellow-300' },
-        { label: '━ ПРОДАЖІ',                   key: '_sep2',       cls: 'text-orange-400 font-black', sep: true },
-        { label: '🛒 Кількість продажів',       key: 'sales',       cls: 'text-orange-400 font-bold' },
-        { label: '📊 Конверсія (ЦА→Продаж)',   key: '_conv_s',     cls: 'text-orange-300' },
-        { label: '💵 Сума продажів',            key: 'salesSum',    cls: 'text-yellow-500 font-bold' },
-        { label: '🧾 Середній чек',             key: '_avg',        cls: 'text-yellow-300' },
-        { label: '👤 Ціна клієнта (реклама)',   key: '_cpc_ad',     cls: 'text-purple-300' },
-        { label: '👤 Ціна клієнта (загальна)',  key: '_cpc_tot',    cls: 'text-yellow-300' },
+    // Заголовок таблиці
+    const thead = `<tr>
+        <th class="px-4 py-3 text-left text-slate-400 sticky left-0 bg-slate-900/80">Показник</th>
+        ${cols.map(c => `<th class="px-3 py-3 text-right text-yellow-300 min-w-[140px]">${c.label}</th>`).join('')}
+    </tr>`;
+    document.getElementById('costsTableHead').innerHTML = thead;
+
+    // Рядки таблиці
+    const rows = [
+        { label: '💸 Рекламний бюджет', key: 'adBudget', fmt: fmtMoney, cls: 'text-purple-300 font-bold' },
+        { label: '👤 ЗП маркетинг', key: 'zpMarketing', fmt: fmtMoney, cls: 'text-blue-300' },
+        { label: '🤝 ЗП аутсорс', key: 'zpOutsource', fmt: fmtMoney, cls: 'text-blue-300' },
+        { label: '🛠 Сервіси/Інше', key: 'services', fmt: fmtMoney, cls: 'text-slate-300' },
+        { label: '📦 Інше', key: 'other', fmt: fmtMoney, cls: 'text-slate-400', hide: true },
+        { label: '━━ ЗАГАЛЬНІ ВИТРАТИ', key: '_total', fmt: fmtMoney, cls: 'text-yellow-400 font-black', sep: true },
+        { label: '👥 Ліди', key: 'leads', fmt: n => n || '—', cls: 'text-blue-300 font-bold' },
+        { label: '🎯 ЦА', key: 'ca', fmt: n => n || '—', cls: 'text-emerald-400 font-bold' },
+        { label: '📈 Конверсія в ЦА', key: '_conv_ca', fmt: n => n, cls: 'text-emerald-300' },
+        { label: '💰 Ціна ліда (реклама)', key: '_cpl_ad', fmt: fmtMoney, cls: 'text-purple-300' },
+        { label: '💰 Ціна ліда (загальна)', key: '_cpl_total', fmt: fmtMoney, cls: 'text-yellow-300' },
+        { label: '🎯 Ціна ЦА (реклама)', key: '_cpca_ad', fmt: fmtMoney, cls: 'text-purple-300' },
+        { label: '🎯 Ціна ЦА (загальна)', key: '_cpca_total', fmt: fmtMoney, cls: 'text-yellow-300' },
+        { label: '🛒 Продажі', key: 'sales', fmt: n => n || '—', cls: 'text-orange-400 font-bold' },
+        { label: '📊 Конверсія в продажі', key: '_conv_sales', fmt: n => n, cls: 'text-orange-300' },
+        { label: '💵 Сума продажів', key: 'salesSum', fmt: fmtMoney, cls: 'text-yellow-500 font-bold' },
+        { label: '🧾 Середній чек', key: '_avg_check', fmt: fmtMoney, cls: 'text-yellow-300' },
+        { label: '👤 Ціна клієнта (реклама)', key: '_cpc_ad', fmt: fmtMoney, cls: 'text-purple-300' },
+        { label: '👤 Ціна клієнта (загальна)', key: '_cpc_total', fmt: fmtMoney, cls: 'text-yellow-300' },
     ];
 
-    const tbody = ROWS.map(r => {
+    const tbody = rows.filter(r => !r.hide).map(r => {
+        const isSep = r.sep;
         const vals = cols.map(c => {
             const d = data[c.monthKey]?.[c.srcKey] || {};
-            const tot = (d.adBudget||0)+(d.zpMarketing||0)+(d.zpOutsource||0)+(d.services||0)+(d.other||0);
-            let v;
+            const total = (d.adBudget||0) + (d.zpMarketing||0) + (d.zpOutsource||0) + (d.services||0) + (d.other||0);
+            let val;
             switch(r.key) {
-                case '_total':    v = fmtMoney(tot); break;
-                case '_sep2':     v = ''; break;
-                case '_conv_ca':  v = pct(d.ca, d.leads); break;
-                case '_conv_s':   v = pct(d.sales, d.ca); break;
-                case '_cpl_ad':   v = (d.adBudget&&d.leads) ? fmtMoney(d.adBudget/d.leads) : '—'; break;
-                case '_cpl_tot':  v = (tot&&d.leads) ? fmtMoney(tot/d.leads) : '—'; break;
-                case '_cpca_ad':  v = (d.adBudget&&d.ca) ? fmtMoney(d.adBudget/d.ca) : '—'; break;
-                case '_cpca_tot': v = (tot&&d.ca) ? fmtMoney(tot/d.ca) : '—'; break;
-                case '_avg':      v = (d.sales&&d.salesSum) ? fmtMoney(d.salesSum/d.sales) : '—'; break;
-                case '_cpc_ad':   v = (d.adBudget&&d.sales) ? fmtMoney(d.adBudget/d.sales) : '—'; break;
-                case '_cpc_tot':  v = (tot&&d.sales) ? fmtMoney(tot/d.sales) : '—'; break;
-                default:
-                    const raw = d[r.key] || 0;
-                    v = (typeof raw === 'number' && raw > 100) ? fmtMoney(raw) : (raw || '—');
+                case '_total': val = total; break;
+                case '_conv_ca': val = d.leads ? pct(d.ca, d.leads) : '—'; break;
+                case '_conv_sales': val = d.ca ? pct(d.sales, d.ca) : '—'; break;
+                case '_cpl_ad': val = (d.adBudget && d.leads) ? fmtMoney(d.adBudget/d.leads) : '—'; break;
+                case '_cpl_total': val = (total && d.leads) ? fmtMoney(total/d.leads) : '—'; break;
+                case '_cpca_ad': val = (d.adBudget && d.ca) ? fmtMoney(d.adBudget/d.ca) : '—'; break;
+                case '_cpca_total': val = (total && d.ca) ? fmtMoney(total/d.ca) : '—'; break;
+                case '_avg_check': val = (d.sales && d.salesSum) ? fmtMoney(d.salesSum/d.sales) : '—'; break;
+                case '_cpc_ad': val = (d.adBudget && d.sales) ? fmtMoney(d.adBudget/d.sales) : '—'; break;
+                case '_cpc_total': val = (total && d.sales) ? fmtMoney(total/d.sales) : '—'; break;
+                default: val = r.fmt(d[r.key] || 0);
             }
-            return `<td class="px-3 py-2.5 text-right ${r.cls}">${v}</td>`;
+            if (typeof val === 'number') val = r.fmt(val);
+            return `<td class="px-3 py-2 text-right ${r.cls}">${val}</td>`;
         }).join('');
 
-        const rowBg = r.sep ? 'bg-yellow-900/10 border-t-2 border-yellow-800/40' : 'hover:bg-slate-800/20';
-        return `<tr class="${rowBg} transition">
-            <td class="px-4 py-2.5 text-xs font-bold sticky left-0 bg-slate-900/90 ${r.sep ? 'text-yellow-400' : 'text-slate-300'}">${r.label}</td>
+        return `<tr class="${isSep ? 'bg-yellow-900/10 border-t-2 border-yellow-800/40' : 'hover:bg-slate-800/20'} transition">
+            <td class="px-4 py-2 text-slate-300 font-bold text-xs sticky left-0 bg-dark-card/90 ${isSep ? 'text-yellow-400' : ''}">${r.label}</td>
             ${vals}
         </tr>`;
     }).join('');
 
     document.getElementById('costsTableBody').innerHTML = tbody;
 
-    // KPI підсумок
-    let totAd=0, totAll=0, totL=0, totCA=0, totS=0, totSSum=0;
+    // KPI — підсумок по всіх вибраних
+    let totAdBudget=0, totTotal=0, totLeads=0, totCA=0, totSales=0, totSalesSum=0;
     cols.forEach(c => {
         const d = data[c.monthKey]?.[c.srcKey] || {};
-        totAd += d.adBudget||0;
-        totAll += (d.adBudget||0)+(d.zpMarketing||0)+(d.zpOutsource||0)+(d.services||0)+(d.other||0);
-        totL += d.leads||0; totCA += d.ca||0; totS += d.sales||0; totSSum += d.salesSum||0;
+        totAdBudget += d.adBudget||0;
+        totTotal += (d.adBudget||0)+(d.zpMarketing||0)+(d.zpOutsource||0)+(d.services||0)+(d.other||0);
+        totLeads += d.leads||0;
+        totCA += d.ca||0;
+        totSales += d.sales||0;
+        totSalesSum += d.salesSum||0;
     });
+    // Ділимо на к-сть місяців щоб не дублювати
+    const mCount = selectedCostsMonths.length;
     document.getElementById('costsKpiRow').innerHTML = `
-        <div class="text-center"><p class="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Реклама</p><p class="text-xl font-black text-purple-300">${fmtMoney(totAd)}</p></div>
-        <div class="text-center"><p class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest">Всього витрат</p><p class="text-xl font-black text-yellow-300">${fmtMoney(totAll)}</p></div>
-        <div class="text-center"><p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Ліди</p><p class="text-xl font-black text-blue-100">${totL}</p></div>
+        <div class="text-center"><p class="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Реклама</p><p class="text-xl font-black text-purple-300">${fmtMoney(totAdBudget)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest">Всього витрат</p><p class="text-xl font-black text-yellow-300">${fmtMoney(totTotal)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Ліди</p><p class="text-xl font-black text-blue-100">${totLeads}</p></div>
         <div class="text-center"><p class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest">ЦА</p><p class="text-xl font-black text-emerald-300">${totCA}</p></div>
-        <div class="text-center"><p class="text-[10px] text-orange-400 uppercase font-bold tracking-widest">Продажі</p><p class="text-xl font-black text-orange-400">${totS}</p></div>
-        <div class="text-center"><p class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest">Сума продажів</p><p class="text-xl font-black text-yellow-500">${fmtMoney(totSSum)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-orange-400 uppercase font-bold tracking-widest">Продажі</p><p class="text-xl font-black text-orange-400">${totSales}</p></div>
+        <div class="text-center"><p class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest">Сума</p><p class="text-xl font-black text-yellow-500">${fmtMoney(totSalesSum)}</p></div>
     `;
 }
 
-async function fetchAllData() {
-    document.getElementById('loader').classList.remove('hidden');
-    try {
-        const clean = arr => (arr||[]).map(o => { const c={}; for(let k in o) c[k.trim()]=o[k]; return c; });
-
-        const mainRes = await fetch(API_URL);
-        const data = await mainRes.json();
-        globalLeads = clean(data.leads||[]).map(r => ({
-            date:   String(r['Дата створення']||'').trim(),
-            source: String(r['Джерело']||'').trim(),
-            manager:String(r['Відповідальний']||'').trim(),
-            status: String(r['Якість ліда']||'').trim(),
-        }));
-        globalAdvs = clean(data.advs||[]).map(r => ({
-            date:   String(r['Дата авансу']||'').trim(),
-            source: String(r['Джерело']||'').trim(),
-            manager:String(r['Відповідальний']||'').trim(),
-            amount: parseFloat(String(r['Сума угоди']||0).replace(/\s/g,''))||0,
-        }));
-
-        globalSpend = [];
-        try {
-            const sr = await fetch(SPEND_API_URL);
-            const sd = await sr.json();
-            globalSpend = clean(Array.isArray(sd)?sd:[])
-                .filter(r => !String(r['Campaign Name']||'').toLowerCase().includes('вакансі'))
-                .map(r => ({
-                    date:   String(r['Date']||'').trim(),
-                    source: String(r['Source']||'').trim(),
-                    spend:  parseFloat(String(r['Spend']||0))||0,
-                }));
-        } catch(e) { console.warn('Spend error', e); }
-
-        globalCosts = [];
-        try {
-            const cr = await fetch(COSTS_API_URL);
-            const cd = await cr.json();
-            globalCosts = clean(Array.isArray(cd)?cd:[]).map(r => ({
-                Month:  String(r['Month']||'').trim(),
-                Type:   String(r['Type']||'').trim(),
-                Source: String(r['Source']||'').trim(),
-                Amount: parseFloat(String(r['Amount']||0).replace(/\s/g,''))||0,
-            }));
-        } catch(e) { console.warn('Costs error', e); }
-
-        const diagEl = document.getElementById('diagBox');
-        diagEl.innerHTML = `✅ Ліди: <b>${globalLeads.length}</b> | Spend: <b>${globalSpend.length}</b> | Витрати: <b>${globalCosts.length}</b>`;
-        diagEl.style.display = 'block';
-        setTimeout(() => { diagEl.style.display='none'; }, 5000);
-
-        renderCostsView();
-    } catch(e) {
-        alert('Помилка: ' + e.message);
-    } finally {
-        document.getElementById('loader').classList.add('hidden');
+window.onload = () => {
+    const today = new Date(), ago = new Date();
+    ago.setDate(today.getDate()-30);
+    document.getElementById('dateStart').valueAsDate = ago;
+    document.getElementById('dateEnd').valueAsDate = today;
+    // Показуємо кнопку витрат тільки власнику
+    if (window.SD_ROLE === 'owner') {
+        const cl = document.getElementById('costsLink');
+        if (cl) cl.style.display = '';
     }
-}
-
-window.onload = () => { fetchAllData(); };
+    fetchAllData();
+};
 </script>
 </body>
 </html>
