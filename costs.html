@@ -80,6 +80,7 @@ tr.total-row td{background:rgba(250,204,21,.06);border-top:2px solid rgba(250,20
                 <tbody id="compareBody" class="divide-y divide-slate-700/40"></tbody>
             </table>
         </div>
+        <div id="compareEfficiency"></div>
     </div>
 </div>
 
@@ -389,48 +390,184 @@ function openCompare(){
         <th class="px-4 py-3 text-left text-slate-400 min-w-[260px]">Показник</th>${thM}
     </tr>`;
 
-    // Рядки
-    const tbody=COMPARE_METRICS.map(metric=>{
-        // Загальний по всіх джерелах для кожного місяця
-        const vals=selectedMonths.map(m=>{
-            const raw=sumObjs(SOURCES.map(s=>data[m]?.[s.key]||{}));
-            return calc(raw);
-        });
+    // Функція отримання числа з відформатованого значення
+    const getNum=v=>parseFloat(String(v).replace(/[^\d.]/g,''))||0;
 
-        const cells=vals.map((r,i)=>{
-            const val=metric.fn(r);
-            // Підсвічуємо зміни якщо 2+ місяці
-            let arrow='';
-            if(i>0){
-                const prev=vals[i-1];
-                const cur=metric.fn(r);
-                // Числове порівняння
-                const pRaw=sumObjs(SOURCES.map(s=>data[selectedMonths[i-1]]?.[s.key]||{}));
-                const pCalc=calc(pRaw);
-                // Беремо числові значення для порівняння
-                const getNum=r2=>{
-                    const v=metric.fn(r2);
-                    return parseFloat(String(v).replace(/[^\d.]/g,''))||0;
-                };
-                const n1=getNum(pCalc),n2=getNum(r);
-                if(n1&&n2&&n1!==n2){
-                    const pct=((n2-n1)/n1*100);
-                    const up=pct>0;
-                    // inv=true означає що ріст = погано (витрати)
-                    const good=metric.inv?!up:up;
-                    arrow=` <span class="text-[10px] ${good?'text-emerald-400':'text-red-400'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}%</span>`;
-                }
+    // Функція клітинки зі стрілкою
+    const mkCell=(r,prev,metric)=>{
+        const val=metric.fn(r);
+        let arrow='';
+        if(prev){
+            const n1=getNum(metric.fn(prev)),n2=getNum(val);
+            if(n1&&n2&&n1!==n2){
+                const p=((n2-n1)/n1*100),up=p>0,good=metric.inv?!up:up;
+                arrow=` <span class="text-[10px] ${good?'text-emerald-400':'text-red-400'}">${up?'▲':'▼'}${Math.abs(p).toFixed(1)}%</span>`;
             }
-            return `<td class="px-4 py-2.5 text-right font-bold">${val}${arrow}</td>`;
-        }).join('');
+        }
+        return `${val}${arrow}`;
+    };
 
-        return `<tr class="hover:bg-slate-800/20 border-b border-slate-700/30 transition">
-            <td class="px-4 py-2.5 text-slate-300 text-xs font-bold">${metric.label}</td>
-            ${cells}
-        </tr>`;
-    }).join('');
+    // Секція загального підсумку
+    let tbody=`<tr><td colspan="${selectedMonths.length+1}" class="px-4 py-2 text-[10px] text-yellow-400 font-black uppercase tracking-widest bg-yellow-900/10">📊 Загальний підсумок (всі джерела)</td></tr>`;
+
+    COMPARE_METRICS.forEach(metric=>{
+        const vals=selectedMonths.map(m=>calc(sumObjs(SOURCES.map(s=>data[m]?.[s.key]||{}))));
+        const cells=vals.map((r,i)=>`<td class="px-4 py-2 text-right font-bold text-xs">${mkCell(r,i>0?vals[i-1]:null,metric)}</td>`).join('');
+        tbody+=`<tr class="hover:bg-slate-800/20 border-b border-slate-700/20 transition">
+            <td class="px-4 py-2 text-slate-300 text-xs font-bold">${metric.label}</td>${cells}</tr>`;
+    });
+
+    // Секції по кожному джерелу
+    SOURCES.forEach(src=>{
+        // Перевіряємо чи є взагалі дані по джерелу
+        const hasData=selectedMonths.some(m=>{
+            const d2=data[m]?.[src.key];
+            return d2&&(d2.leads>0||d2.ad>0||d2.sales>0);
+        });
+        if(!hasData)return;
+
+        tbody+=`<tr><td colspan="${selectedMonths.length+1}" class="px-4 py-3 text-[10px] text-slate-300 font-black uppercase tracking-widest bg-slate-800/40 border-t border-slate-600/50">${src.label}</td></tr>`;
+
+        COMPARE_METRICS.forEach(metric=>{
+            const vals=selectedMonths.map(m=>calc(data[m]?.[src.key]||{ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0}));
+            const cells=vals.map((r,i)=>`<td class="px-4 py-2 text-right text-xs">${mkCell(r,i>0?vals[i-1]:null,metric)}</td>`).join('');
+            tbody+=`<tr class="hover:bg-slate-800/20 border-b border-slate-700/10 transition">
+                <td class="px-4 py-1.5 text-slate-400 text-[11px] pl-8">${metric.label}</td>${cells}</tr>`;
+        });
+    });
 
     document.getElementById('compareBody').innerHTML=tbody;
+
+    // ---- БЛОК ЕФЕКТИВНОСТІ ----
+    // Рахуємо по загальному підсумку для кожного місяця
+    const effVals=selectedMonths.map(m=>calc(sumObjs(SOURCES.map(s=>data[m]?.[s.key]||{}))));
+
+    // Показники ефективності
+    const effMetrics=[
+        {
+            label:'💹 ROAS (від рекл. бюджету)',
+            desc:'Скільки ₴ продажів на 1 ₴ реклами',
+            fn:r=>r.ad&&r.sum?(r.sum/r.ad).toFixed(2)+'x':'—',
+            inv:false, // більше = краще
+        },
+        {
+            label:'📊 ROI маркетингу (від заг. витрат)',
+            desc:'Скільки ₴ продажів на 1 ₴ всіх витрат',
+            fn:r=>r.tot&&r.sum?(r.sum/r.tot).toFixed(2)+'x':'—',
+            inv:false,
+        },
+        {
+            label:'💰 Ефективність витрат на ліда',
+            desc:'Ціна ліда від загальних витрат',
+            fn:r=>r.cplTot?fmtM(r.cplTot):'—',
+            inv:true, // менше = краще
+        },
+        {
+            label:'🎯 Ефективність витрат на ЦА',
+            desc:'Ціна ЦА від загальних витрат',
+            fn:r=>r.cpcaTot?fmtM(r.cpcaTot):'—',
+            inv:true,
+        },
+        {
+            label:'🏆 Вартість клієнта (загальна)',
+            desc:'Скільки коштує залучення 1 покупця',
+            fn:r=>r.cpcTot?fmtM(r.cpcTot):'—',
+            inv:true,
+        },
+    ];
+
+    // Будуємо рядки ефективності
+    let effRows='';
+    effMetrics.forEach(metric=>{
+        const cells=effVals.map((r,i)=>{
+            const val=metric.fn(r);
+            let arrow='';
+            if(i>0){
+                const n1=getNum(metric.fn(effVals[i-1])),n2=getNum(val);
+                if(n1&&n2&&n1!==n2){
+                    const p=((n2-n1)/n1*100),up=p>0,good=metric.inv?!up:up;
+                    arrow=` <span class="text-[11px] font-black ${good?'text-emerald-400':'text-red-400'}">${up?'▲':'▼'}${Math.abs(p).toFixed(1)}%</span>`;
+                }
+            }
+            return `<td class="px-4 py-3 text-right font-black text-sm">${val}${arrow}</td>`;
+        }).join('');
+        effRows+=`<tr class="border-b border-slate-700/30 hover:bg-slate-800/20 transition">
+            <td class="px-4 py-3">
+                <div class="text-slate-200 font-bold text-xs">${metric.label}</div>
+                <div class="text-slate-500 text-[10px]">${metric.desc}</div>
+            </td>${cells}</tr>`;
+    });
+
+    // Автоматичний текстовий висновок (тільки якщо 2 місяці)
+    let conclusion='';
+    if(effVals.length>=2){
+        const prev=effVals[0],cur=effVals[effVals.length-1];
+        const prevM=fmtMK(selectedMonths[0]),curM=fmtMK(selectedMonths[selectedMonths.length-1]);
+        const lines=[];
+
+        // ROAS
+        if(prev.ad&&cur.ad){
+            const r1=prev.sum/prev.ad,r2=cur.sum/cur.ad;
+            if(r1&&r2){
+                const better=r2>r1;
+                lines.push(`${better?'✅':'⚠️'} ROAS ${better?'покращився':'погіршився'} з <b>${r1.toFixed(2)}x</b> до <b>${r2.toFixed(2)}x</b> — на 1 ₴ реклами стало ${better?'більше':'менше'} продажів.`);
+            }
+        }
+        // ROI загальний
+        if(prev.tot&&cur.tot){
+            const r1=prev.sum/prev.tot,r2=cur.sum/cur.tot;
+            if(r1&&r2){
+                const better=r2>r1;
+                lines.push(`${better?'✅':'⚠️'} ROI від загальних витрат ${better?'зріс':'впав'} з <b>${r1.toFixed(2)}x</b> до <b>${r2.toFixed(2)}x</b>.`);
+            }
+        }
+        // Ціна клієнта
+        if(prev.cpcTot&&cur.cpcTot){
+            const better=cur.cpcTot<prev.cpcTot;
+            const pctD=((cur.cpcTot-prev.cpcTot)/prev.cpcTot*100);
+            lines.push(`${better?'✅':'⚠️'} Ціна клієнта (від загальних витрат) ${better?'знизилась':'зросла'} на <b>${Math.abs(pctD).toFixed(1)}%</b>: ${fmtM(prev.cpcTot)} → ${fmtM(cur.cpcTot)}.`);
+        }
+        // Конверсія
+        if(prev.leads&&cur.leads){
+            const c1=prev.ca/prev.leads,c2=cur.ca/cur.leads;
+            if(c1&&c2){
+                const better=c2>c1;
+                lines.push(`${better?'✅':'⚠️'} Конверсія в ЦА ${better?'покращилась':'погіршилась'}: ${(c1*100).toFixed(1)}% → ${(c2*100).toFixed(1)}%.`);
+            }
+        }
+        // Загальний вердикт
+        const roasOk=cur.ad&&cur.sum&&(cur.sum/cur.ad)>(prev.sum/prev.ad||0);
+        const roiOk=cur.tot&&cur.sum&&(cur.sum/cur.tot)>(prev.sum/prev.tot||0);
+        const verdict=roasOk&&roiOk
+            ? `🏆 <b>${curM} ефективніший за ${prevM}</b> — і ROAS і ROI покращились попри зміни у витратах.`
+            : !roasOk&&!roiOk
+            ? `📉 <b>${curM} менш ефективний за ${prevM}</b> — обидва показники погіршились.`
+            : `⚖️ <b>Змішана картина:</b> один показник покращився, інший погіршився — варто аналізувати детальніше.`;
+
+        conclusion=`<div class="mt-4 p-4 rounded-xl bg-slate-800/60 border border-slate-600">
+            <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-3">🤖 Автоматичний аналіз: ${prevM} → ${curM}</p>
+            <div class="space-y-2">${lines.map(l=>`<p class="text-slate-300 text-xs">${l}</p>`).join('')}</div>
+            <div class="mt-3 pt-3 border-t border-slate-700">
+                <p class="text-sm font-bold text-white">${verdict}</p>
+            </div>
+        </div>`;
+    }
+
+    document.getElementById('compareEfficiency').innerHTML=`
+        <div class="px-6 pb-2 pt-4 border-t border-slate-700">
+            <p class="text-[10px] text-blue-400 uppercase font-black tracking-widest mb-3">📈 Аналіз ефективності витрат</p>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead><tr>
+                        <th class="px-4 py-2 text-left text-slate-400 text-[10px] uppercase min-w-[250px]">Показник</th>
+                        ${selectedMonths.map(m=>`<th class="px-4 py-2 text-right text-yellow-300 text-[10px] uppercase min-w-[130px]">${fmtMK(m)}</th>`).join('')}
+                    </tr></thead>
+                    <tbody class="divide-y divide-slate-700/30">${effRows}</tbody>
+                </table>
+            </div>
+            ${conclusion}
+        </div>`;
+
     document.getElementById('compareModal').classList.add('open');
 }
 
