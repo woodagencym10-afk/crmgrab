@@ -340,9 +340,9 @@ function renderMonthBlock(mk,data){
         {l:'💵 Сума продажів',           v:fmtM(totKpi.sum),    c:'text-yellow-500'},
         {l:'📊 Конверсія ЦА→Продаж',   v:pct(totKpi.sales,totKpi.ca), c:'text-orange-300'},
         {l:'👤 Ціна клієнта (загальна)',v:totKpi.cpcTot?fmtM(totKpi.cpcTot):'—', c:'text-yellow-200'},
-    ].map(k=>`<div class="bg-slate-900/60 rounded-xl border border-slate-700/60 px-3 py-2.5 text-center min-w-[120px]">
-        <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1 leading-tight">${k.l}</p>
-        <p class="text-sm font-black ${k.c}">${k.v}</p>
+    ].map(k=>`<div class="bg-slate-900/60 rounded-lg border border-slate-700/60 px-2 py-1.5 text-center flex-1 min-w-0">
+        <p class="text-[8px] text-slate-500 uppercase font-bold tracking-wide mb-0.5 leading-tight truncate">${k.l}</p>
+        <p class="text-xs font-black ${k.c} truncate">${k.v}</p>
     </div>`).join('');
 
     // Міні-бейджі ефективності по джерелах (ROAS і конверсія)
@@ -351,7 +351,7 @@ function renderMonthBlock(mk,data){
     <div class="bg-slate-800/20 rounded-2xl border border-slate-700 shadow-xl overflow-hidden mb-6">
         <div class="bg-yellow-950/20 px-6 py-3 border-b border-yellow-800/30">
             <h3 class="text-base font-black text-yellow-300 uppercase tracking-wider mb-3">${fmtMK(mk)}</h3>
-            <div class="flex flex-wrap gap-2">${kpiCards}</div>
+            <div class="flex gap-1.5 overflow-x-auto">${kpiCards}</div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-xs border-collapse">
