@@ -346,15 +346,7 @@ function renderMonthBlock(mk,data){
     </div>`).join('');
 
     // Міні-бейджі ефективності по джерелах (ROAS і конверсія)
-    const effBadge=(srcKey)=>{
-        const r=calc(d?.[srcKey]||{ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0});
-        if(!r.leads&&!r.ad) return '';
-        const items=[];
-        if(r.ad&&r.sum) items.push(`<span class="text-[9px] text-purple-300">ROAS: ${(r.sum/r.ad).toFixed(1)}x</span>`);
-        if(r.leads) items.push(`<span class="text-[9px] text-emerald-300">ЦА: ${pct(r.ca,r.leads)}</span>`);
-        return items.length?`<div class="flex gap-2 mt-1">${items.join('')}</div>`:'';
-    };
-
+    
     return `
     <div class="bg-slate-800/20 rounded-2xl border border-slate-700 shadow-xl overflow-hidden mb-6">
         <div class="bg-yellow-950/20 px-6 py-3 border-b border-yellow-800/30">
