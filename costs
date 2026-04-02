@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD Marketing — Загальні витрати</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { colors: { dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f1f5f9', subtle: '#94a3b8' } } } }
+    }
+</script>
+<style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    .tab-btn { transition: all 0.2s; }
+    .tab-active { background-color: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+</style>
+</head>
+<body class="bg-dark-bg p-3 md:p-6 font-sans text-slate-100 antialiased">
+<div class="max-w-[1600px] mx-auto">
+
+    <!-- Шапка -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-700 pb-5 gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white uppercase tracking-tight">
+                SD <span class="text-yellow-500">Витрати</span> <span class="text-slate-500 font-normal text-lg">/ загальний звіт</span>
+            </h1>
+            <p class="text-slate-500 mt-1 text-sm">Рекламний бюджет + інші маркетингові витрати по місяцях</p>
+        </div>
+        <div class="flex gap-3 items-center">
+            <a href="marketing.html" class="text-slate-400 hover:text-white text-sm font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">← Маркетинг</a>
+            <button onclick="fetchAllData()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2 rounded-lg text-sm transition active:scale-95 shadow-md">🔄 Оновити</button>
+            <div id="diagBox" style="display:none" class="text-xs font-mono bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-emerald-400"></div>
+        </div>
+    </div>
+
+    <!-- Фільтри -->
+    <div class="bg-slate-800/50 rounded-2xl border border-slate-700 p-4 mb-6">
+        <div class="flex flex-wrap gap-6">
+            <div>
+                <div class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest mb-2">Місяці:</div>
+                <div id="costsMonthFilter" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div>
+                <div class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest mb-2">Джерела:</div>
+                <div id="costsSourceFilter" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+        <div id="loader" class="hidden text-yellow-400 text-sm animate-pulse font-bold mt-3">⏳ Завантаження...</div>
+    </div>
+
+    <!-- KPI -->
+    <div class="bg-slate-800/30 rounded-2xl border border-yellow-800/40 px-6 py-4 mb-6 flex flex-wrap gap-6 items-center">
+        <div id="costsKpiRow" class="flex gap-6 flex-wrap"></div>
+    </div>
+
+    <!-- Таблиця -->
+    <div class="bg-slate-800/20 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead id="costsTableHead" class="bg-slate-900/80 text-slate-400 text-[10px] font-bold uppercase tracking-wider sticky top-0"></thead>
+                <tbody id="costsTableBody" class="divide-y divide-slate-700/30"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const API_URL       = "https://script.google.com/macros/s/AKfycbztT7xbTXNHbcq-fJ3oU9swW0wHFob7qG8mhM5bufJo6EZ2aNjmV8nUYPN4aaeIMwOt/exec";
+const SPEND_API_URL = "https://script.google.com/macros/s/AKfycbzpHcCTz_3EV66bjHi-8w0sLRDhWYT9adQlxqo7QILh4UR8-X2jVsJvCazsB0SM2SWX/exec";
+const COSTS_API_URL = "https://script.google.com/macros/s/AKfycbzLD2hj3oNHUNajjghO-fNMYU8vVUZicA1DyJzPII6hBJoL3t2qfOnwwAfv56xr2yOQ/exec";
+
+const INITIAL_STATUSES = new Set(["новий","сайт","facebook|instagram|tik-tok"]);
+const STATUS_TARGET = "якісний";
+
+let globalLeads = [], globalAdvs = [], globalSpend = [], globalCosts = [];
+
+const SOURCE_GROUPS = [
+    { key: 'fb_eco',   label: 'Facebook Ecoforma', children: [
+        { key: 'fb_eco_d',  match: (s,m) => s.includes('facebook') && (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('дзвінок') },
+        { key: 'fb_eco_c',  match: (s,m) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('ecoforma')||s.includes('екоформа')) },
+    ]},
+    { key: 'fb_wood',  label: 'Facebook Wood Agency', children: [
+        { key: 'fb_wood_d', match: (s,m) => s.includes('facebook') && (s.includes('wood')||s.includes('вуд')) && !s.includes('дзвінок') },
+        { key: 'fb_wood_c', match: (s,m) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('wood')||s.includes('вуд')) },
+    ]},
+    { key: 'site_eco', label: 'Сайт EcoForma', children: [
+        { key: 'site_eco_d',match: (s,m) => (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') },
+        { key: 'site_eco_c',match: (s,m) => s.includes('дзвінок') && (s.includes('ecoforma')||s.includes('екоформа')) && !s.includes('facebook') },
+    ]},
+    { key: 'site_wood',label: 'Сайт Wood Agency', children: [
+        { key: 'site_wood_d',match: (s,m) => (s.includes('wood')||s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') },
+        { key: 'site_wood_c',match: (s,m) => s.includes('дзвінок') && (s.includes('wood') || m.includes('савчук')) },
+    ]},
+    { key: 'olx',      label: 'OLX', children: [{ key: 'olx_d', match: (s,m) => s.includes('olx') }]},
+    { key: 'other_src',label: 'Інші', children: [{ key: 'other_src_d', match: () => true }]}
+];
+
+const SPEND_SOURCE_MAP = [
+    { match: s => s.toLowerCase().includes('ecoforma') && !s.toLowerCase().includes('google'), groupKeys: ['fb_eco'] },
+    { match: s => (s.toLowerCase().includes('wood')) && !s.toLowerCase().includes('google'), groupKeys: ['fb_wood'] },
+    { match: s => s.toLowerCase().includes('google') && s.toLowerCase().includes('ecoforma'), groupKeys: ['site_eco'] },
+    { match: s => s.toLowerCase().includes('google') && s.toLowerCase().includes('wood'), groupKeys: ['site_wood'] },
+];
+
+const COSTS_SOURCE_MAP = {
+    'facebook ecoforma':   ['fb_eco'],
+    'facebook wood agency':['fb_wood'],
+    'сайт ecoforma':       ['site_eco'],
+    'сайт wood agency':    ['site_wood'],
+    'facebook':            ['fb_eco', 'fb_wood'],
+};
+
+const MONTH_NAMES = {
+    '01':'Січень','02':'Лютий','03':'Березень','04':'Квітень',
+    '05':'Травень','06':'Червень','07':'Липень','08':'Серпень',
+    '09':'Вересень','10':'Жовтень','11':'Листопад','12':'Грудень'
+};
+
+const COSTS_SOURCES = [
+    { key: 'fb_eco',    label: 'FB Ecoforma' },
+    { key: 'fb_wood',   label: 'FB Wood Agency' },
+    { key: 'site_eco',  label: 'Сайт EcoForma' },
+    { key: 'site_wood', label: 'Сайт Wood Agency' },
+];
+
+let selectedCostsMonths = [];
+let selectedCostsSources = ['fb_eco','fb_wood','site_eco','site_wood'];
+
+const parseDate = str => {
+    if (!str) return new Date(0);
+    const s = String(str).trim();
+    if (s.includes('T') || s.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(s);
+    const p = s.split(/[. :]/);
+    if (p.length >= 3) return new Date(+p[2], +p[1]-1, +p[0]);
+    return new Date(s);
+};
+
+function getMonthKey(str) {
+    const s = String(str).trim();
+    const m1 = s.match(/^(\d{2})[.\/-](\d{4})$/);
+    if (m1) return m1[2] + '-' + m1[1];
+    const m2 = s.match(/^(\d{4})[.\/-](\d{2})$/);
+    if (m2) return m2[1] + '-' + m2[2];
+    return s;
+}
+
+function formatMonthLabel(key) {
+    const parts = key.split('-');
+    if (parts.length === 2) return (MONTH_NAMES[parts[1]] || parts[1]) + ' ' + parts[0];
+    return key;
+}
+
+function findChild(srcRaw, mgrRaw) {
+    const s = String(srcRaw).toLowerCase().trim();
+    const m = String(mgrRaw).toLowerCase().trim();
+    for (const grp of SOURCE_GROUPS) {
+        for (const ch of grp.children) {
+            if (ch.match(s, m)) return { gk: grp.key };
+        }
+    }
+    return { gk: 'other_src' };
+}
+
+function fmtMoney(n) {
+    if (!n || n === 0) return '—';
+    return Math.round(n).toLocaleString('uk-UA') + ' ₴';
+}
+
+function pct(a, b) {
+    if (!b || b === 0) return '—';
+    return (a / b * 100).toFixed(1) + '%';
+}
+
+function getActiveFbSources(monthKey) {
+    const active = new Set();
+    globalLeads.forEach(l => {
+        const d = parseDate(l.date);
+        const lm = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (lm !== monthKey) return;
+        const src = String(l.source || '').toLowerCase();
+        if (src.includes('facebook') && (src.includes('ecoforma')||src.includes('екоформа'))) active.add('fb_eco');
+        if (src.includes('facebook') && (src.includes('wood')||src.includes('вуд'))) active.add('fb_wood');
+    });
+    return active;
+}
+
+function buildCostsData(selectedMonths, selectedSources) {
+    const data = {};
+    selectedMonths.forEach(m => {
+        data[m] = {};
+        selectedSources.forEach(src => {
+            data[m][src] = { adBudget:0, zpMarketing:0, zpOutsource:0, services:0, other:0, leads:0, ca:0, sales:0, salesSum:0 };
+        });
+    });
+
+    // Рекламний бюджет
+    globalSpend.forEach(s => {
+        const d = parseDate(s.date);
+        const mk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (!selectedMonths.includes(mk)) return;
+        for (const mapping of SPEND_SOURCE_MAP) {
+            if (mapping.match(s.source)) {
+                mapping.groupKeys.forEach(gk => {
+                    if (selectedSources.includes(gk) && data[mk][gk]) data[mk][gk].adBudget += s.spend;
+                });
+                break;
+            }
+        }
+    });
+
+    // Інші витрати
+    globalCosts.forEach(c => {
+        const mk = getMonthKey(c.Month);
+        if (!selectedMonths.includes(mk)) return;
+        const srcRaw = String(c.Source || '').toLowerCase().trim();
+        const type = String(c.Type || '').toLowerCase().trim();
+        const amount = c.Amount || 0;
+
+        let targets = [];
+        const mapped = COSTS_SOURCE_MAP[srcRaw];
+        if (mapped) {
+            if (mapped.length === 1) {
+                targets = mapped;
+            } else {
+                const active = getActiveFbSources(mk);
+                const activeMapped = mapped.filter(k => active.has(k));
+                targets = activeMapped.length > 0 ? activeMapped : mapped;
+            }
+        } else {
+            targets = selectedSources;
+        }
+
+        const share = amount / targets.length;
+        targets.forEach(gk => {
+            if (!selectedSources.includes(gk) || !data[mk]?.[gk]) return;
+            if (type.includes('зп') && !type.includes('аутсорс')) {
+                data[mk][gk].zpMarketing += share;
+            } else if (type.includes('аутсорс') || type.includes('підрядник')) {
+                data[mk][gk].zpOutsource += share;
+            } else if (type.includes('сервіс')||type.includes('програм')||type.includes('кепшн')||type.includes('домен')) {
+                data[mk][gk].services += share;
+            } else {
+                data[mk][gk].other += share;
+            }
+        });
+    });
+
+    // Ліди і ЦА
+    globalLeads.forEach(l => {
+        const d = parseDate(l.date);
+        const mk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (!selectedMonths.includes(mk)) return;
+        const f = findChild(l.source, l.manager || '');
+        if (!selectedSources.includes(f.gk) || !data[mk]?.[f.gk]) return;
+        data[mk][f.gk].leads++;
+        if (l.status.toLowerCase() === STATUS_TARGET) data[mk][f.gk].ca++;
+    });
+
+    // Продажі
+    globalAdvs.forEach(a => {
+        const d = parseDate(a.date);
+        const mk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if (!selectedMonths.includes(mk)) return;
+        const f = findChild(a.source, a.manager || '');
+        if (!selectedSources.includes(f.gk) || !data[mk]?.[f.gk]) return;
+        data[mk][f.gk].sales++;
+        data[mk][f.gk].salesSum += a.amount;
+    });
+
+    return data;
+}
+
+function initCostsFilters() {
+    const monthsSet = new Set();
+    globalLeads.forEach(l => {
+        const d = parseDate(l.date);
+        monthsSet.add(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+    });
+    globalCosts.forEach(c => monthsSet.add(getMonthKey(c.Month)));
+    globalSpend.forEach(s => {
+        const d = parseDate(s.date);
+        monthsSet.add(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+    });
+
+    const months = [...monthsSet].filter(m => m && m.includes('-')).sort();
+    if (selectedCostsMonths.length === 0) selectedCostsMonths = months.slice(-3);
+
+    document.getElementById('costsMonthFilter').innerHTML = months.map(m => `
+        <button onclick="toggleCostsMonth('${m}')"
+            class="tab-btn px-3 py-1.5 font-bold text-xs rounded-lg border border-transparent transition
+            ${selectedCostsMonths.includes(m) ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">
+            ${formatMonthLabel(m)}
+        </button>`).join('');
+
+    document.getElementById('costsSourceFilter').innerHTML = COSTS_SOURCES.map(src => `
+        <button onclick="toggleCostsSource('${src.key}')"
+            class="tab-btn px-3 py-1.5 font-bold text-xs rounded-lg border border-transparent transition
+            ${selectedCostsSources.includes(src.key) ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">
+            ${src.label}
+        </button>`).join('');
+}
+
+function toggleCostsMonth(m) {
+    if (selectedCostsMonths.includes(m)) {
+        if (selectedCostsMonths.length > 1) selectedCostsMonths = selectedCostsMonths.filter(x => x !== m);
+    } else {
+        selectedCostsMonths.push(m); selectedCostsMonths.sort();
+    }
+    renderCostsView();
+}
+
+function toggleCostsSource(src) {
+    if (selectedCostsSources.includes(src)) {
+        if (selectedCostsSources.length > 1) selectedCostsSources = selectedCostsSources.filter(x => x !== src);
+    } else {
+        selectedCostsSources.push(src);
+    }
+    renderCostsView();
+}
+
+function renderCostsView() {
+    initCostsFilters();
+    if (!selectedCostsMonths.length || !selectedCostsSources.length) return;
+
+    const data = buildCostsData(selectedCostsMonths, selectedCostsSources);
+
+    // Колонки: місяць × джерело
+    const cols = [];
+    selectedCostsMonths.forEach(m => {
+        selectedCostsSources.forEach(src => {
+            const srcLabel = COSTS_SOURCES.find(s => s.key === src)?.label || src;
+            cols.push({ monthKey: m, srcKey: src, label: formatMonthLabel(m) + ' / ' + srcLabel });
+        });
+    });
+
+    // Заголовок
+    document.getElementById('costsTableHead').innerHTML = `<tr>
+        <th class="px-4 py-3 text-left sticky left-0 bg-slate-900">Показник</th>
+        ${cols.map(c => `<th class="px-3 py-3 text-right text-yellow-300 min-w-[150px] whitespace-nowrap">${c.label}</th>`).join('')}
+    </tr>`;
+
+    // Рядки
+    const ROWS = [
+        { label: '💸 Рекламний бюджет',       key: 'adBudget',    cls: 'text-purple-300 font-bold' },
+        { label: '👤 ЗП маркетинг',            key: 'zpMarketing', cls: 'text-blue-300' },
+        { label: '🤝 ЗП аутсорс',              key: 'zpOutsource', cls: 'text-blue-300' },
+        { label: '🛠 Сервіси',                  key: 'services',    cls: 'text-slate-300' },
+        { label: '📦 Інше',                     key: 'other',       cls: 'text-slate-400' },
+        { label: '━ ЗАГАЛЬНІ ВИТРАТИ',          key: '_total',      cls: 'text-yellow-400 font-black', sep: true },
+        { label: '👥 Ліди',                     key: 'leads',       cls: 'text-blue-300 font-bold' },
+        { label: '🎯 ЦА',                       key: 'ca',          cls: 'text-emerald-400 font-bold' },
+        { label: '📈 Конверсія в ЦА',           key: '_conv_ca',    cls: 'text-emerald-300' },
+        { label: '💰 Ціна ліда (реклама)',      key: '_cpl_ad',     cls: 'text-purple-300' },
+        { label: '💰 Ціна ліда (загальна)',     key: '_cpl_tot',    cls: 'text-yellow-300' },
+        { label: '🎯 Ціна ЦА (реклама)',        key: '_cpca_ad',    cls: 'text-purple-300' },
+        { label: '🎯 Ціна ЦА (загальна)',       key: '_cpca_tot',   cls: 'text-yellow-300' },
+        { label: '━ ПРОДАЖІ',                   key: '_sep2',       cls: 'text-orange-400 font-black', sep: true },
+        { label: '🛒 Кількість продажів',       key: 'sales',       cls: 'text-orange-400 font-bold' },
+        { label: '📊 Конверсія (ЦА→Продаж)',   key: '_conv_s',     cls: 'text-orange-300' },
+        { label: '💵 Сума продажів',            key: 'salesSum',    cls: 'text-yellow-500 font-bold' },
+        { label: '🧾 Середній чек',             key: '_avg',        cls: 'text-yellow-300' },
+        { label: '👤 Ціна клієнта (реклама)',   key: '_cpc_ad',     cls: 'text-purple-300' },
+        { label: '👤 Ціна клієнта (загальна)',  key: '_cpc_tot',    cls: 'text-yellow-300' },
+    ];
+
+    const tbody = ROWS.map(r => {
+        const vals = cols.map(c => {
+            const d = data[c.monthKey]?.[c.srcKey] || {};
+            const tot = (d.adBudget||0)+(d.zpMarketing||0)+(d.zpOutsource||0)+(d.services||0)+(d.other||0);
+            let v;
+            switch(r.key) {
+                case '_total':    v = fmtMoney(tot); break;
+                case '_sep2':     v = ''; break;
+                case '_conv_ca':  v = pct(d.ca, d.leads); break;
+                case '_conv_s':   v = pct(d.sales, d.ca); break;
+                case '_cpl_ad':   v = (d.adBudget&&d.leads) ? fmtMoney(d.adBudget/d.leads) : '—'; break;
+                case '_cpl_tot':  v = (tot&&d.leads) ? fmtMoney(tot/d.leads) : '—'; break;
+                case '_cpca_ad':  v = (d.adBudget&&d.ca) ? fmtMoney(d.adBudget/d.ca) : '—'; break;
+                case '_cpca_tot': v = (tot&&d.ca) ? fmtMoney(tot/d.ca) : '—'; break;
+                case '_avg':      v = (d.sales&&d.salesSum) ? fmtMoney(d.salesSum/d.sales) : '—'; break;
+                case '_cpc_ad':   v = (d.adBudget&&d.sales) ? fmtMoney(d.adBudget/d.sales) : '—'; break;
+                case '_cpc_tot':  v = (tot&&d.sales) ? fmtMoney(tot/d.sales) : '—'; break;
+                default:
+                    const raw = d[r.key] || 0;
+                    v = (typeof raw === 'number' && raw > 100) ? fmtMoney(raw) : (raw || '—');
+            }
+            return `<td class="px-3 py-2.5 text-right ${r.cls}">${v}</td>`;
+        }).join('');
+
+        const rowBg = r.sep ? 'bg-yellow-900/10 border-t-2 border-yellow-800/40' : 'hover:bg-slate-800/20';
+        return `<tr class="${rowBg} transition">
+            <td class="px-4 py-2.5 text-xs font-bold sticky left-0 bg-slate-900/90 ${r.sep ? 'text-yellow-400' : 'text-slate-300'}">${r.label}</td>
+            ${vals}
+        </tr>`;
+    }).join('');
+
+    document.getElementById('costsTableBody').innerHTML = tbody;
+
+    // KPI підсумок
+    let totAd=0, totAll=0, totL=0, totCA=0, totS=0, totSSum=0;
+    cols.forEach(c => {
+        const d = data[c.monthKey]?.[c.srcKey] || {};
+        totAd += d.adBudget||0;
+        totAll += (d.adBudget||0)+(d.zpMarketing||0)+(d.zpOutsource||0)+(d.services||0)+(d.other||0);
+        totL += d.leads||0; totCA += d.ca||0; totS += d.sales||0; totSSum += d.salesSum||0;
+    });
+    document.getElementById('costsKpiRow').innerHTML = `
+        <div class="text-center"><p class="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Реклама</p><p class="text-xl font-black text-purple-300">${fmtMoney(totAd)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest">Всього витрат</p><p class="text-xl font-black text-yellow-300">${fmtMoney(totAll)}</p></div>
+        <div class="text-center"><p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Ліди</p><p class="text-xl font-black text-blue-100">${totL}</p></div>
+        <div class="text-center"><p class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest">ЦА</p><p class="text-xl font-black text-emerald-300">${totCA}</p></div>
+        <div class="text-center"><p class="text-[10px] text-orange-400 uppercase font-bold tracking-widest">Продажі</p><p class="text-xl font-black text-orange-400">${totS}</p></div>
+        <div class="text-center"><p class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest">Сума продажів</p><p class="text-xl font-black text-yellow-500">${fmtMoney(totSSum)}</p></div>
+    `;
+}
+
+async function fetchAllData() {
+    document.getElementById('loader').classList.remove('hidden');
+    try {
+        const clean = arr => (arr||[]).map(o => { const c={}; for(let k in o) c[k.trim()]=o[k]; return c; });
+
+        const mainRes = await fetch(API_URL);
+        const data = await mainRes.json();
+        globalLeads = clean(data.leads||[]).map(r => ({
+            date:   String(r['Дата створення']||'').trim(),
+            source: String(r['Джерело']||'').trim(),
+            manager:String(r['Відповідальний']||'').trim(),
+            status: String(r['Якість ліда']||'').trim(),
+        }));
+        globalAdvs = clean(data.advs||[]).map(r => ({
+            date:   String(r['Дата авансу']||'').trim(),
+            source: String(r['Джерело']||'').trim(),
+            manager:String(r['Відповідальний']||'').trim(),
+            amount: parseFloat(String(r['Сума угоди']||0).replace(/\s/g,''))||0,
+        }));
+
+        globalSpend = [];
+        try {
+            const sr = await fetch(SPEND_API_URL);
+            const sd = await sr.json();
+            globalSpend = clean(Array.isArray(sd)?sd:[])
+                .filter(r => !String(r['Campaign Name']||'').toLowerCase().includes('вакансі'))
+                .map(r => ({
+                    date:   String(r['Date']||'').trim(),
+                    source: String(r['Source']||'').trim(),
+                    spend:  parseFloat(String(r['Spend']||0))||0,
+                }));
+        } catch(e) { console.warn('Spend error', e); }
+
+        globalCosts = [];
+        try {
+            const cr = await fetch(COSTS_API_URL);
+            const cd = await cr.json();
+            globalCosts = clean(Array.isArray(cd)?cd:[]).map(r => ({
+                Month:  String(r['Month']||'').trim(),
+                Type:   String(r['Type']||'').trim(),
+                Source: String(r['Source']||'').trim(),
+                Amount: parseFloat(String(r['Amount']||0).replace(/\s/g,''))||0,
+            }));
+        } catch(e) { console.warn('Costs error', e); }
+
+        const diagEl = document.getElementById('diagBox');
+        diagEl.innerHTML = `✅ Ліди: <b>${globalLeads.length}</b> | Spend: <b>${globalSpend.length}</b> | Витрати: <b>${globalCosts.length}</b>`;
+        diagEl.style.display = 'block';
+        setTimeout(() => { diagEl.style.display='none'; }, 5000);
+
+        renderCostsView();
+    } catch(e) {
+        alert('Помилка: ' + e.message);
+    } finally {
+        document.getElementById('loader').classList.add('hidden');
+    }
+}
+
+window.onload = () => { fetchAllData(); };
+</script>
+</body>
+</html>
