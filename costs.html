@@ -5,32 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SD Marketing — Загальні витрати</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-    tailwind.config = {
-        darkMode: 'class',
-        theme: { extend: { colors: { dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f1f5f9', subtle: '#94a3b8' } } } }
-    }
-</script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{dark:{bg:'#0f172a',card:'#1e293b',border:'#334155',text:'#f1f5f9',subtle:'#94a3b8'}}}}}</script>
 <style>
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #1e293b; }
-    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-    .tab-btn { transition: all 0.2s; }
-    .tab-active { background-color: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
-    th, td { white-space: nowrap; }
-    .sub-cost-row { display: none; }
-    .sub-cost-row.open { display: table-row; }
-    tr.src-header td { background: rgba(255,255,255,0.04); border-top: 2px solid rgba(100,116,139,0.4); }
-    tr.total-section td { background: rgba(250,204,21,0.06); border-top: 3px solid rgba(250,204,21,0.4); }
-    .sticky-col { position: sticky; left: 0; z-index: 10; }
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#1e293b}
+::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
+.tab-btn{transition:all .2s}
+.tab-active{background-color:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.3)}
+th,td{white-space:nowrap}
+.sticky-col{position:sticky;left:0;z-index:10}
+tr.src-row:hover td{background:rgba(255,255,255,.03)}
+tr.total-row td{background:rgba(250,204,21,.06);border-top:2px solid rgba(250,204,21,.4)}
+/* Модальне вікно */
+#compareModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;overflow-y:auto}
+#compareModal.open{display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
 </style>
 <script>
-(function() {
-    const role = sessionStorage.getItem('sd_role');
-    const auth = sessionStorage.getItem('sd_auth');
-    if (!auth || !role) { window.location.href = 'index.html'; return; }
-    if (role !== 'owner') { window.location.href = 'marketing.html'; return; }
-    window.SD_ROLE = role;
+(function(){
+    const role=sessionStorage.getItem('sd_role'),auth=sessionStorage.getItem('sd_auth');
+    if(!auth||!role){window.location.href='index.html';return;}
+    if(role!=='owner'){window.location.href='marketing.html';return;}
+    window.SD_ROLE=role;
 })();
 </script>
 </head>
@@ -40,38 +35,49 @@
     <!-- Шапка -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-700 pb-5 gap-4">
         <div>
-            <h1 class="text-2xl md:text-3xl font-extrabold text-white uppercase tracking-tight">
-                SD <span class="text-yellow-500">Витрати</span> <span class="text-slate-500 font-normal text-lg">/ загальний звіт</span>
-            </h1>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white uppercase tracking-tight">SD <span class="text-yellow-500">Витрати</span> <span class="text-slate-500 font-normal text-lg">/ загальний звіт</span></h1>
             <p class="text-slate-500 mt-1 text-sm">Рекламний бюджет + інші маркетингові витрати по місяцях і джерелах</p>
         </div>
         <div class="flex gap-3 items-center flex-wrap">
             <a href="marketing.html" class="text-slate-400 hover:text-white text-sm font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">← Маркетинг</a>
             <a href="dashboard.html" class="text-slate-400 hover:text-white text-sm font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">📈 Дашборд МП</a>
-            <button onclick="fetchAllData()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2 rounded-lg text-sm transition active:scale-95 shadow-md">🔄 Оновити</button>
+            <button onclick="fetchAllData()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2 rounded-lg text-sm transition active:scale-95">🔄 Оновити</button>
             <a href="index.html" onclick="sessionStorage.clear()" class="text-slate-500 hover:text-slate-300 text-xs font-bold px-3 py-2 rounded-lg hover:bg-slate-800 transition">Вийти</a>
             <div id="diagBox" style="display:none" class="text-xs font-mono bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-emerald-400"></div>
         </div>
     </div>
 
     <!-- Фільтри -->
-    <div class="bg-slate-800/50 rounded-2xl border border-slate-700 p-4 mb-6 flex flex-wrap gap-6 items-end">
-        <div>
-            <div class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest mb-2">Місяці (оберіть один або кілька для порівняння):</div>
-            <div id="monthFilter" class="flex flex-wrap gap-2"></div>
+    <div class="bg-slate-800/50 rounded-2xl border border-slate-700 p-4 mb-6">
+        <div class="flex flex-wrap gap-4 items-end justify-between">
+            <div>
+                <div class="text-[10px] text-yellow-400 uppercase font-bold tracking-widest mb-2">Місяці (оберіть один або кілька):</div>
+                <div id="monthFilter" class="flex flex-wrap gap-2"></div>
+            </div>
+            <button id="compareBtn" onclick="openCompare()" class="hidden bg-blue-700 hover:bg-blue-600 text-white font-bold px-5 py-2 rounded-lg text-sm transition">⚖️ Порівняти місяці</button>
         </div>
-        <div id="loader" class="hidden text-yellow-400 text-sm animate-pulse font-bold">⏳ Завантаження...</div>
+        <div id="loader" class="hidden text-yellow-400 text-sm animate-pulse font-bold mt-3">⏳ Завантаження...</div>
     </div>
 
     <!-- KPI -->
     <div id="kpiRow" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6"></div>
 
-    <!-- Таблиця -->
-    <div class="rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-xs border-collapse" id="mainTable">
-                <thead id="tableHead" class="text-slate-400 font-bold uppercase tracking-wider"></thead>
-                <tbody id="tableBody"></tbody>
+    <!-- Блоки по місяцях -->
+    <div id="monthBlocks"></div>
+
+</div>
+
+<!-- МОДАЛЬНЕ ВІКНО ПОРІВНЯННЯ -->
+<div id="compareModal">
+    <div class="bg-slate-900 rounded-2xl border border-blue-700/50 shadow-2xl w-full max-w-5xl">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-slate-700">
+            <h2 class="text-lg font-black text-white uppercase tracking-wider">⚖️ Порівняння місяців</h2>
+            <button onclick="closeCompare()" class="text-slate-400 hover:text-white text-2xl leading-none">×</button>
+        </div>
+        <div class="p-6 overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead id="compareHead" class="text-slate-400 text-[10px] font-bold uppercase tracking-wider"></thead>
+                <tbody id="compareBody" class="divide-y divide-slate-700/40"></tbody>
             </table>
         </div>
     </div>
@@ -82,317 +88,385 @@ const API_URL       = "https://script.google.com/macros/s/AKfycbztT7xbTXNHbcq-fJ
 const SPEND_API_URL = "https://script.google.com/macros/s/AKfycbzpHcCTz_3EV66bjHi-8w0sLRDhWYT9adQlxqo7QILh4UR8-X2jVsJvCazsB0SM2SWX/exec";
 const COSTS_API_URL = "https://script.google.com/macros/s/AKfycbzLD2hj3oNHUNajjghO-fNMYU8vVUZicA1DyJzPII6hBJoL3t2qfOnwwAfv56xr2yOQ/exec";
 
-const STATUS_TARGET = "якісний";
-const INITIAL_STATUSES = new Set(["новий","сайт","facebook|instagram|tik-tok"]);
-
-let globalLeads=[], globalAdvs=[], globalSpend=[], globalCosts=[];
+const STATUS_TARGET="якісний";
+let globalLeads=[],globalAdvs=[],globalSpend=[],globalCosts=[];
 let selectedMonths=[];
-let costsExpanded=false;
 
-const SOURCES = [
-    { key:'fb_eco',    label:'FB Ecoforma' },
-    { key:'fb_wood',   label:'FB Wood Agency' },
-    { key:'site_eco',  label:'Сайт EcoForma' },
-    { key:'site_wood', label:'Сайт Wood Agency' },
-    { key:'olx',       label:'OLX' },
+const SOURCES=[
+    {key:'fb_eco',   label:'FB Ecoforma'},
+    {key:'fb_wood',  label:'FB Wood Agency'},
+    {key:'site_eco', label:'Сайт EcoForma'},
+    {key:'site_wood',label:'Сайт Wood Agency'},
+    {key:'olx',      label:'OLX'},
 ];
 
-const SRC_MATCH = [
-    { key:'fb_eco',    test:(s,m)=> s.includes('facebook')&&(s.includes('ecoforma')||s.includes('екоформа'))&&!s.includes('дзвінок') },
-    { key:'fb_eco',    test:(s,m)=> s.includes('дзвінок')&&s.includes('facebook')&&(s.includes('ecoforma')||s.includes('екоформа')) },
-    { key:'fb_wood',   test:(s,m)=> s.includes('facebook')&&(s.includes('wood')||s.includes('вуд'))&&!s.includes('дзвінок') },
-    { key:'fb_wood',   test:(s,m)=> s.includes('дзвінок')&&s.includes('facebook')&&(s.includes('wood')||s.includes('вуд')) },
-    { key:'site_eco',  test:(s,m)=> (s.includes('ecoforma')||s.includes('екоформа'))&&!s.includes('facebook')&&!s.includes('дзвінок') },
-    { key:'site_eco',  test:(s,m)=> s.includes('дзвінок')&&(s.includes('ecoforma')||s.includes('екоформа'))&&!s.includes('facebook') },
-    { key:'site_wood', test:(s,m)=> (s.includes('wood')||s.includes('відповідальним'))&&!s.includes('facebook')&&!s.includes('дзвінок') },
-    { key:'site_wood', test:(s,m)=> s.includes('дзвінок')&&(s.includes('wood')||m.includes('савчук')) },
-    { key:'olx',       test:(s,m)=> s.includes('olx') },
+const SRC_MATCH=[
+    {key:'fb_eco',   t:(s,m)=>s.includes('facebook')&&(s.includes('ecoforma')||s.includes('екоформа'))&&!s.includes('дзвінок')},
+    {key:'fb_eco',   t:(s,m)=>s.includes('дзвінок')&&s.includes('facebook')&&(s.includes('ecoforma')||s.includes('екоформа'))},
+    {key:'fb_wood',  t:(s,m)=>s.includes('facebook')&&(s.includes('wood')||s.includes('вуд'))&&!s.includes('дзвінок')},
+    {key:'fb_wood',  t:(s,m)=>s.includes('дзвінок')&&s.includes('facebook')&&(s.includes('wood')||s.includes('вуд'))},
+    {key:'site_eco', t:(s,m)=>(s.includes('ecoforma')||s.includes('екоформа'))&&!s.includes('facebook')&&!s.includes('дзвінок')},
+    {key:'site_eco', t:(s,m)=>s.includes('дзвінок')&&(s.includes('ecoforma')||s.includes('екоформа'))&&!s.includes('facebook')},
+    {key:'site_wood',t:(s,m)=>(s.includes('wood')||s.includes('відповідальним'))&&!s.includes('facebook')&&!s.includes('дзвінок')},
+    {key:'site_wood',t:(s,m)=>s.includes('дзвінок')&&(s.includes('wood')||m.includes('савчук'))},
+    {key:'olx',      t:(s,m)=>s.includes('olx')},
 ];
 
-const SPEND_MAP = [
-    { test:s=> s.includes('ecoforma')&&!s.includes('google'), keys:['fb_eco'] },
-    { test:s=> s.includes('wood')&&!s.includes('google'),     keys:['fb_wood'] },
-    { test:s=> s.includes('google')&&s.includes('ecoforma'),  keys:['site_eco'] },
-    { test:s=> s.includes('google')&&s.includes('wood'),      keys:['site_wood'] },
-    { test:s=> s.includes('olx'),                             keys:['olx'] },
+const SPEND_MAP=[
+    {t:s=>s.includes('ecoforma')&&!s.includes('google'),keys:['fb_eco']},
+    {t:s=>s.includes('wood')&&!s.includes('google'),    keys:['fb_wood']},
+    {t:s=>s.includes('google')&&s.includes('ecoforma'), keys:['site_eco']},
+    {t:s=>s.includes('google')&&s.includes('wood'),     keys:['site_wood']},
+    {t:s=>s.includes('olx'),                            keys:['olx']},
 ];
 
-const MN = {'01':'Січень','02':'Лютий','03':'Березень','04':'Квітень','05':'Травень','06':'Червень','07':'Липень','08':'Серпень','09':'Вересень','10':'Жовтень','11':'Листопад','12':'Грудень'};
+const MN={'01':'Січень','02':'Лютий','03':'Березень','04':'Квітень','05':'Травень','06':'Червень','07':'Липень','08':'Серпень','09':'Вересень','10':'Жовтень','11':'Листопад','12':'Грудень'};
 
-const pd = str => {
-    if(!str) return new Date(0);
+const pd=str=>{
+    if(!str)return new Date(0);
     const s=String(str).trim();
-    if(s.includes('T')||s.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(s);
+    if(s.includes('T')||s.match(/^\d{4}-\d{2}-\d{2}/))return new Date(s);
     const p=s.split(/[. :]/);
-    if(p.length>=3) return new Date(+p[2],+p[1]-1,+p[0]);
+    if(p.length>=3)return new Date(+p[2],+p[1]-1,+p[0]);
     return new Date(s);
 };
-
-const getMK = str => {
+const getMK=str=>{
     const s=String(str).trim();
-    const m1=s.match(/^(\d{1,2})[.\/-](\d{4})$/); if(m1) return m1[2]+'-'+m1[1].padStart(2,'0');
-    const m2=s.match(/^(\d{4})[.\/-](\d{1,2})$/); if(m2) return m2[1]+'-'+m2[2].padStart(2,'0');
+    const m1=s.match(/^(\d{1,2})[.\/-](\d{4})$/);if(m1)return m1[2]+'-'+m1[1].padStart(2,'0');
+    const m2=s.match(/^(\d{4})[.\/-](\d{1,2})$/);if(m2)return m2[1]+'-'+m2[2].padStart(2,'0');
     return s;
 };
-const fmtMK = k => { const p=k.split('-'); return p.length===2?(MN[p[1]]||p[1])+' '+p[0]:k; };
-const fmtM  = n => (!n||n===0)?'—':Math.round(n).toLocaleString('uk-UA')+' ₴';
-const pct   = (a,b)=>(!b||b===0)?'—':(a/b*100).toFixed(1)+'%';
+const fmtMK=k=>{const p=k.split('-');return p.length===2?(MN[p[1]]||p[1])+' '+p[0]:k;};
+const fmtM=n=>(!n||n===0)?'—':Math.round(n).toLocaleString('uk-UA')+' ₴';
+const pct=(a,b)=>(!b||!a)?'—':(a/b*100).toFixed(1)+'%';
+const diff=(a,b)=>{
+    if(!a||!b)return '';
+    const d=((a-b)/b*100);
+    const cls=d>0?'text-red-400':'text-emerald-400'; // для витрат ріст = погано
+    return `<span class="text-[10px] ${cls}">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}%</span>`;
+};
 
-function findSrc(src,mgr) {
-    const s=String(src).toLowerCase().trim(), m=String(mgr||'').toLowerCase().trim();
-    for(const r of SRC_MATCH) if(r.test(s,m)) return r.key;
-    return 'other';
-}
-
-function mapCostsSrc(srcRaw) {
-    const s=srcRaw.toLowerCase().trim();
-    if(s.includes('ecoforma')||s.includes('ecofo')) return s.includes('сайт')||s.includes('site')?['site_eco']:['fb_eco'];
-    if(s.includes('wood')) return s.includes('сайт')||s.includes('site')?['site_wood']:['fb_wood'];
-    if(s.includes('olx')) return ['olx'];
-    if(s.includes('facebook')||s.includes('fb')) return ['fb_eco','fb_wood'];
-    if(s.includes('сайт')||s.includes('site')) return ['site_eco','site_wood'];
+function findSrc(src,mgr){
+    const s=String(src||'').toLowerCase().trim(),m=String(mgr||'').toLowerCase().trim();
+    for(const r of SRC_MATCH)if(r.t(s,m))return r.key;
     return null;
 }
 
-function getActiveFb(mk) {
+function mapCostsSrc(srcRaw){
+    const s=srcRaw.toLowerCase().trim();
+    if(s.includes('ecoforma')||s.includes('ecofo'))return s.includes('сайт')||s.includes('site')?['site_eco']:['fb_eco'];
+    if(s.includes('wood'))return s.includes('сайт')||s.includes('site')?['site_wood']:['fb_wood'];
+    if(s.includes('olx'))return['olx'];
+    if(s.includes('facebook')||s.includes('fb'))return['fb_eco','fb_wood'];
+    if(s.includes('сайт')||s.includes('site'))return['site_eco','site_wood'];
+    return null;
+}
+
+function getActiveFb(mk){
     const a=new Set();
     globalLeads.forEach(l=>{
-        const d=pd(l.date), lm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(lm!==mk) return;
+        const d=pd(l.date),lm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(lm!==mk)return;
         const s=String(l.source||'').toLowerCase();
-        if(s.includes('facebook')&&(s.includes('ecoforma')||s.includes('екоформа'))) a.add('fb_eco');
-        if(s.includes('facebook')&&(s.includes('wood')||s.includes('вуд'))) a.add('fb_wood');
+        if(s.includes('facebook')&&(s.includes('ecoforma')||s.includes('екоформа')))a.add('fb_eco');
+        if(s.includes('facebook')&&(s.includes('wood')||s.includes('вуд')))a.add('fb_wood');
     });
     return a;
 }
 
-function buildData(months) {
-    const empty = ()=>({adBudget:0,zpMarketing:0,zpOutsource:0,services:0,other:0,leads:0,ca:0,sales:0,salesSum:0});
+function buildData(months){
+    const empty=()=>({ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0});
     const data={};
-    months.forEach(m=>{ data[m]={}; SOURCES.forEach(s=>data[m][s.key]=empty()); });
+    months.forEach(m=>{data[m]={};SOURCES.forEach(s=>data[m][s.key]=empty());});
 
     globalSpend.forEach(s=>{
-        const d=pd(s.date), mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(!months.includes(mk)) return;
-        for(const mp of SPEND_MAP) if(mp.test(s.source.toLowerCase())) { mp.keys.forEach(k=>{ if(data[mk][k]) data[mk][k].adBudget+=s.spend; }); break; }
+        const d=pd(s.date),mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(!months.includes(mk))return;
+        for(const mp of SPEND_MAP)if(mp.t(s.source.toLowerCase())){mp.keys.forEach(k=>{if(data[mk][k])data[mk][k].ad+=s.spend;});break;}
     });
 
     globalCosts.forEach(c=>{
-        const mk=getMK(c.Month); if(!months.includes(mk)) return;
-        const type=String(c.Type||'').toLowerCase(), amount=c.Amount||0;
+        const mk=getMK(c.Month);if(!months.includes(mk))return;
+        const type=String(c.Type||'').toLowerCase(),amount=c.Amount||0;
         let targets=mapCostsSrc(String(c.Source||''));
-        if(!targets) targets=SOURCES.map(s=>s.key);
-        if(targets.length>1){ const af=getActiveFb(mk), am=targets.filter(k=>af.has(k)); if(am.length>0) targets=am; }
+        if(!targets)targets=SOURCES.map(s=>s.key);
+        if(targets.length>1){const af=getActiveFb(mk),am=targets.filter(k=>af.has(k));if(am.length>0)targets=am;}
         const share=amount/targets.length;
         targets.forEach(gk=>{
-            if(!data[mk]?.[gk]) return;
-            if(type.includes('зп')&&!type.includes('аутсорс')) data[mk][gk].zpMarketing+=share;
-            else if(type.includes('аутсорс')||type.includes('підрядник')) data[mk][gk].zpOutsource+=share;
-            else if(type.includes('сервіс')||type.includes('програм')||type.includes('кепшн')||type.includes('домен')) data[mk][gk].services+=share;
+            if(!data[mk]?.[gk])return;
+            if(type.includes('зп')&&!type.includes('аутсорс'))data[mk][gk].zp+=share;
+            else if(type.includes('аутсорс')||type.includes('підрядник'))data[mk][gk].out+=share;
+            else if(type.includes('сервіс')||type.includes('програм')||type.includes('кепшн')||type.includes('домен'))data[mk][gk].svc+=share;
             else data[mk][gk].other+=share;
         });
     });
 
     globalLeads.forEach(l=>{
-        const d=pd(l.date), mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(!months.includes(mk)) return;
+        const d=pd(l.date),mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(!months.includes(mk))return;
         const gk=findSrc(l.source,l.manager);
-        if(data[mk]?.[gk]) { data[mk][gk].leads++; if(l.status.toLowerCase()===STATUS_TARGET) data[mk][gk].ca++; }
+        if(gk&&data[mk]?.[gk]){data[mk][gk].leads++;if(l.status.toLowerCase()===STATUS_TARGET)data[mk][gk].ca++;}
     });
 
     globalAdvs.forEach(a=>{
-        const d=pd(a.date), mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(!months.includes(mk)) return;
+        const d=pd(a.date),mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(!months.includes(mk))return;
         const gk=findSrc(a.source,a.manager);
-        if(data[mk]?.[gk]) { data[mk][gk].sales++; data[mk][gk].salesSum+=a.amount; }
+        if(gk&&data[mk]?.[gk]){data[mk][gk].sales++;data[mk][gk].sum+=a.amount;}
     });
+
     return data;
 }
 
-function calc(r) {
-    const tot=(r.adBudget||0)+(r.zpMarketing||0)+(r.zpOutsource||0)+(r.services||0)+(r.other||0);
-    return { ...r, tot,
-        cplAd:   r.adBudget&&r.leads  ? r.adBudget/r.leads  : 0,
-        cplTot:  tot&&r.leads         ? tot/r.leads          : 0,
-        cpcaAd:  r.adBudget&&r.ca     ? r.adBudget/r.ca      : 0,
-        cpcaTot: tot&&r.ca            ? tot/r.ca             : 0,
-        cpcAd:   r.adBudget&&r.sales  ? r.adBudget/r.sales   : 0,
-        cpcTot:  tot&&r.sales         ? tot/r.sales          : 0,
-        avgChk:  r.sales&&r.salesSum  ? r.salesSum/r.sales   : 0,
+function calc(r){
+    const tot=(r.ad||0)+(r.zp||0)+(r.out||0)+(r.svc||0)+(r.other||0);
+    return{...r,tot,
+        cplAd:  r.ad&&r.leads  ?r.ad/r.leads  :0,
+        cplTot: tot&&r.leads   ?tot/r.leads    :0,
+        cpcaAd: r.ad&&r.ca     ?r.ad/r.ca      :0,
+        cpcaTot:tot&&r.ca      ?tot/r.ca        :0,
+        cpcAd:  r.ad&&r.sales  ?r.ad/r.sales   :0,
+        cpcTot: tot&&r.sales   ?tot/r.sales     :0,
+        avgChk: r.sales&&r.sum ?r.sum/r.sales   :0,
+        convCa: r.leads        ?r.ca/r.leads    :0,
+        convS:  r.ca           ?r.sales/r.ca    :0,
     };
 }
 
-function sumObjs(arr) {
-    const keys=['adBudget','zpMarketing','zpOutsource','services','other','leads','ca','sales','salesSum'];
-    const res={};  keys.forEach(k=>res[k]=arr.reduce((s,r)=>s+(r[k]||0),0));
+function sumObjs(arr){
+    const k=['ad','zp','out','svc','other','leads','ca','sales','sum'];
+    const res={};k.forEach(key=>res[key]=arr.reduce((s,r)=>s+(r[key]||0),0));
     return res;
 }
 
-function toggleCosts() {
+// Колонки таблиці (показники)
+const COLS=[
+    {id:'tot',     label:'Загальні витрати',         fn:r=>fmtM(r.tot),   cls:'text-yellow-400 font-bold'},
+    {id:'ad',      label:'💸 Рекламний бюджет',       fn:r=>fmtM(r.ad),    cls:'text-purple-300'},
+    {id:'out',     label:'🤝 Оплата підряднику',      fn:r=>fmtM(r.out),   cls:'text-blue-300', sub:true},
+    {id:'zp',      label:'👤 ЗП працівникам',         fn:r=>fmtM(r.zp),    cls:'text-blue-300', sub:true},
+    {id:'svc',     label:'🛠 Сервіси',                fn:r=>fmtM(r.svc),   cls:'text-slate-400', sub:true},
+    {id:'leads',   label:'👥 Ліди',                   fn:r=>r.leads||'—',  cls:'text-blue-300 font-bold'},
+    {id:'cplAd',   label:'💰 Ціна ліда (реклама)',    fn:r=>r.cplAd?fmtM(r.cplAd):'—',   cls:'text-purple-300'},
+    {id:'cplTot',  label:'💰 Ціна ліда (загальна)',   fn:r=>r.cplTot?fmtM(r.cplTot):'—', cls:'text-yellow-300'},
+    {id:'ca',      label:'🎯 ЦА',                     fn:r=>r.ca||'—',     cls:'text-emerald-400 font-bold'},
+    {id:'convCa',  label:'📈 Конверсія в ЦА',         fn:r=>pct(r.ca,r.leads), cls:'text-emerald-300'},
+    {id:'cpcaAd',  label:'🎯 Ціна ЦА (реклама)',      fn:r=>r.cpcaAd?fmtM(r.cpcaAd):'—',   cls:'text-purple-300'},
+    {id:'cpcaTot', label:'🎯 Ціна ЦА (загальна)',     fn:r=>r.cpcaTot?fmtM(r.cpcaTot):'—', cls:'text-yellow-300'},
+    {id:'sales',   label:'🛒 Продажі',                fn:r=>r.sales||'—',  cls:'text-orange-400 font-bold'},
+    {id:'convS',   label:'📊 Конверсія ЦА→Продаж',   fn:r=>pct(r.sales,r.ca), cls:'text-orange-300'},
+    {id:'sum',     label:'💵 Сума продажів',           fn:r=>fmtM(r.sum),   cls:'text-yellow-500 font-bold'},
+    {id:'avgChk',  label:'🧾 Середній чек',            fn:r=>r.avgChk?fmtM(r.avgChk):'—', cls:'text-yellow-300'},
+    {id:'cpcAd',   label:'👤 Ціна клієнта (реклама)', fn:r=>r.cpcAd?fmtM(r.cpcAd):'—',   cls:'text-purple-300'},
+    {id:'cpcTot',  label:'👤 Ціна клієнта (загальна)',fn:r=>r.cpcTot?fmtM(r.cpcTot):'—', cls:'text-yellow-300'},
+];
+
+let costsExpanded=false;
+function toggleCosts(){
     costsExpanded=!costsExpanded;
-    document.querySelectorAll('.sub-cost-row').forEach(r=>r.classList.toggle('open',costsExpanded));
-    document.getElementById('toggleCostsBtn').textContent = costsExpanded ? '▾ Деталі витрат' : '▸ Деталі витрат';
+    document.querySelectorAll('.sub-col').forEach(el=>el.style.display=costsExpanded?'':'none');
+    document.querySelectorAll('.toggle-costs-btn').forEach(b=>b.textContent=costsExpanded?'▾ Деталі':'▸ Деталі');
 }
 
-function render() {
-    if(!selectedMonths.length) return;
+function renderMonthBlock(mk,data){
+    const d=data[mk];
+    const visibleCols=COLS.filter(c=>!c.sub);
+
+    // Заголовок таблиці
+    const thCells=visibleCols.map(c=>`<th class="px-3 py-3 text-right text-[10px] text-slate-400 uppercase tracking-wider min-w-[110px]">${c.label}</th>`).join('');
+    // Вставляємо кнопку деталей після "Загальні витрати"
+    const thWithDetail=thCells.replace(
+        '<th class="px-3 py-3 text-right text-[10px] text-slate-400 uppercase tracking-wider min-w-[110px]">💸 Рекламний бюджет</th>',
+        `<th class="px-3 py-3 text-right text-[10px] text-slate-400 uppercase tracking-wider min-w-[110px]">
+            <button class="toggle-costs-btn text-yellow-400 font-bold hover:text-yellow-300 transition" onclick="toggleCosts()">▸ Деталі</button>
+         </th>`
+    );
+
+    // Підрядки деталей (ховаються)
+    const subThCells=COLS.filter(c=>c.sub).map(c=>`<th class="sub-col px-3 py-3 text-right text-[10px] text-slate-400 uppercase tracking-wider min-w-[110px]" style="display:none">${c.label}</th>`).join('');
+
+    let rows='';
+
+    SOURCES.forEach(src=>{
+        const r=calc(d?.[src.key]||{ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0});
+        const hasData=r.leads>0||r.ad>0||r.sales>0||r.zp>0||r.out>0;
+        if(!hasData)return;
+
+        const mainCells=visibleCols.map(c=>`<td class="px-3 py-2.5 text-right ${c.cls}">${c.fn(r)}</td>`).join('');
+        // Замінюємо клітинку Рекламного бюджету на кнопку деталей + значення
+        const mainWithBtn=mainCells.replace(
+            `<td class="px-3 py-2.5 text-right text-purple-300">${fmtM(r.ad)}</td>`,
+            `<td class="px-3 py-2.5 text-right text-purple-300">${fmtM(r.ad)}</td>`
+        );
+
+        const subCells=COLS.filter(c=>c.sub).map(c=>`<td class="sub-col px-3 py-2 text-right text-[11px] ${c.cls}" style="display:none">${c.fn(r)}</td>`).join('');
+
+        rows+=`<tr class="src-row border-b border-slate-700/30 hover:bg-slate-800/20 transition">
+            <td class="px-4 py-2.5 font-bold text-slate-200 sticky-col bg-slate-900/95">${src.label}</td>
+            ${mainCells}${subCells}
+        </tr>`;
+    });
+
+    // Рядок ВСЬОГО
+    const totRaw=sumObjs(SOURCES.map(s=>d?.[s.key]||{}));
+    const tot=calc(totRaw);
+    const totMain=visibleCols.map(c=>`<td class="px-3 py-2.5 text-right font-bold ${c.cls}">${c.fn(tot)}</td>`).join('');
+    const totSub=COLS.filter(c=>c.sub).map(c=>`<td class="sub-col px-3 py-2 text-right text-[11px] font-bold ${c.cls}" style="display:none">${c.fn(tot)}</td>`).join('');
+
+    rows+=`<tr class="total-row">
+        <td class="px-4 py-3 font-black text-yellow-400 text-sm sticky-col bg-slate-900">📊 Всього</td>
+        ${totMain}${totSub}
+    </tr>`;
+
+    return `
+    <div class="bg-slate-800/20 rounded-2xl border border-slate-700 shadow-xl overflow-hidden mb-6">
+        <div class="bg-yellow-950/20 px-6 py-3 border-b border-yellow-800/30 flex items-center gap-3">
+            <h3 class="text-base font-black text-yellow-300 uppercase tracking-wider">${fmtMK(mk)}</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs border-collapse">
+                <thead class="bg-slate-900/80 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-slate-400 text-[10px] font-bold uppercase tracking-wider min-w-[160px] sticky-col bg-slate-900">Джерело</th>
+                        ${thWithDetail}${subThCells}
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function render(){
+    if(!selectedMonths.length)return;
     const data=buildData(selectedMonths);
-    const multi=selectedMonths.length>1;
 
-    // ---- ЗАГОЛОВОК ----
-    const thM = selectedMonths.map(m=>`<th class="px-4 py-3 text-right text-yellow-300 min-w-[130px] bg-slate-900/80">${fmtMK(m)}</th>`).join('');
-    const thT = multi?`<th class="px-4 py-3 text-right text-yellow-400 min-w-[130px] bg-yellow-900/20 font-black">Разом</th>`:'';
-    document.getElementById('tableHead').innerHTML=`<tr>
-        <th class="px-4 py-3 text-left min-w-[200px] bg-slate-900 sticky-col">Показник / Джерело</th>
-        ${thM}${thT}
-    </tr>`;
-
-    // helper: значення по місяцях + разом
-    const vals=(fn,srcKey)=>{
-        const cells=selectedMonths.map(m=>{
-            const r=calc(data[m]?.[srcKey]||{adBudget:0,zpMarketing:0,zpOutsource:0,services:0,other:0,leads:0,ca:0,sales:0,salesSum:0});
-            return `<td class="px-4 py-2 text-right">${fn(r)}</td>`;
-        }).join('');
-        if(!multi) return cells;
-        const sum=calc(sumObjs(selectedMonths.map(m=>data[m]?.[srcKey]||{})));
-        return cells+`<td class="px-4 py-2 text-right bg-yellow-900/10 font-bold">${fn(sum)}</td>`;
-    };
-
-    // helper: підсумок по всіх джерелах
-    const valsAll=(fn)=>{
-        const cells=selectedMonths.map(m=>{
-            const s=calc(sumObjs(SOURCES.map(src=>data[m]?.[src.key]||{})));
-            return `<td class="px-4 py-2 text-right bg-yellow-900/10 font-bold">${fn(s)}</td>`;
-        }).join('');
-        if(!multi) return cells;
-        const all=calc(sumObjs(selectedMonths.flatMap(m=>SOURCES.map(src=>data[m]?.[src.key]||{}))));
-        return cells+`<td class="px-4 py-2 text-right bg-yellow-900/20 font-black text-yellow-300">${fn(all)}</td>`;
-    };
-
-    const colspan = selectedMonths.length+(multi?1:0)+1;
-
-    // ---- РЯДКИ ----
-    const METRICS = [
-        { id:'costs', label:'💸 Витрати', fn:r=>fmtM(r.tot), cls:'text-purple-300 font-bold', isCostHeader:true },
-        { id:'sub_ad',    label:'↳ Рекламний бюджет',   fn:r=>fmtM(r.adBudget),    cls:'text-slate-400', sub:true },
-        { id:'sub_out',   label:'↳ Оплата підрядникам', fn:r=>fmtM(r.zpOutsource), cls:'text-slate-400', sub:true },
-        { id:'sub_emp',   label:'↳ Оплата працівникам', fn:r=>fmtM(r.zpMarketing), cls:'text-slate-400', sub:true },
-        { id:'sub_svc',   label:'↳ Сервіси',            fn:r=>fmtM(r.services),    cls:'text-slate-400', sub:true },
-        { id:'leads',  label:'👥 Ліди',                  fn:r=>`<b class="text-blue-300">${r.leads||'—'}</b>`, cls:'' },
-        { id:'cplad',  label:'💰 Ціна ліда (реклама)',   fn:r=>r.cplAd?fmtM(r.cplAd):'—',   cls:'text-purple-300' },
-        { id:'cpltot', label:'💰 Ціна ліда (загальна)',  fn:r=>r.cplTot?fmtM(r.cplTot):'—', cls:'text-yellow-300' },
-        { id:'ca',     label:'🎯 ЦА',                    fn:r=>`<b class="text-emerald-400">${r.ca||'—'}</b>`, cls:'' },
-        { id:'convca', label:'📈 Конверсія в ЦА',        fn:r=>pct(r.ca,r.leads),   cls:'text-emerald-300' },
-        { id:'cpcaad', label:'🎯 Ціна ЦА (реклама)',     fn:r=>r.cpcaAd?fmtM(r.cpcaAd):'—',   cls:'text-purple-300' },
-        { id:'cpcatot',label:'🎯 Ціна ЦА (загальна)',    fn:r=>r.cpcaTot?fmtM(r.cpcaTot):'—', cls:'text-yellow-300' },
-        { id:'sales',  label:'🛒 Продажі',               fn:r=>`<b class="text-orange-400">${r.sales||'—'}</b>`, cls:'' },
-        { id:'convs',  label:'📊 Конверсія ЦА→Продаж',  fn:r=>pct(r.sales,r.ca),   cls:'text-orange-300' },
-        { id:'sum',    label:'💵 Сума продажів',          fn:r=>fmtM(r.salesSum),    cls:'text-yellow-500 font-bold' },
-        { id:'avg',    label:'🧾 Середній чек',           fn:r=>r.avgChk?fmtM(r.avgChk):'—', cls:'text-yellow-300' },
-        { id:'cpcad',  label:'👤 Ціна клієнта (реклама)',  fn:r=>r.cpcAd?fmtM(r.cpcAd):'—',  cls:'text-purple-300' },
-        { id:'cpctot', label:'👤 Ціна клієнта (загальна)', fn:r=>r.cpcTot?fmtM(r.cpcTot):'—', cls:'text-yellow-300' },
-    ];
-
-    let html='';
-
-    SOURCES.forEach((src,si)=>{
-        // Перевіряємо чи є дані
-        const hasData=selectedMonths.some(m=>{
-            const d=data[m]?.[src.key];
-            return d&&(d.leads>0||d.adBudget>0||d.sales>0||d.zpMarketing>0||d.zpOutsource>0);
-        });
-        if(!hasData) return;
-
-        // Заголовок джерела
-        html+=`<tr class="src-header">
-            <td class="px-4 py-3 text-slate-200 font-black text-sm sticky-col bg-slate-900" colspan="${colspan}">
-                ${src.label}
-            </td>
-        </tr>`;
-
-        // Метрики
-        METRICS.forEach(metric=>{
-            if(metric.isCostHeader) {
-                // Витрати з кнопкою розкриття
-                html+=`<tr class="hover:bg-slate-800/20 border-b border-slate-700/30">
-                    <td class="px-4 py-2 font-bold sticky-col bg-slate-900/95">
-                        <button id="toggleCostsBtn" onclick="toggleCosts()" class="text-yellow-400 font-bold text-[11px] hover:text-yellow-300 transition">▸ Деталі витрат</button>
-                    </td>
-                    ${vals(metric.fn, src.key)}
-                </tr>`;
-            } else if(metric.sub) {
-                html+=`<tr class="sub-cost-row hover:bg-slate-800/10 border-b border-slate-700/20">
-                    <td class="px-4 py-1.5 text-slate-400 text-[11px] pl-10 sticky-col bg-slate-900/95">${metric.label}</td>
-                    ${vals(metric.fn, src.key)}
-                </tr>`;
-            } else {
-                html+=`<tr class="hover:bg-slate-800/20 border-b border-slate-700/20">
-                    <td class="px-4 py-2 text-slate-400 text-[11px] pl-6 sticky-col bg-slate-900/95 ${metric.cls}">${metric.label}</td>
-                    ${vals(metric.fn, src.key)}
-                </tr>`;
-            }
-        });
-        html+=`<tr><td colspan="${colspan}" class="py-1"></td></tr>`;
-    });
-
-    // ---- ВСЬОГО ----
-    html+=`<tr class="total-section">
-        <td class="px-4 py-3 text-yellow-400 font-black text-sm sticky-col bg-slate-900" colspan="${colspan}">📊 ВСЬОГО — всі джерела</td>
-    </tr>`;
-
-    METRICS.filter(m=>!m.sub&&!m.isCostHeader).forEach(metric=>{
-        html+=`<tr class="hover:bg-yellow-900/10 border-b border-yellow-800/20">
-            <td class="px-4 py-2 text-slate-300 text-[11px] pl-6 sticky-col bg-slate-900/95 font-bold ${metric.cls}">${metric.label}</td>
-            ${valsAll(metric.fn)}
-        </tr>`;
-    });
-    // Витрати для всього
-    html+=`<tr class="hover:bg-yellow-900/10 border-b border-yellow-800/20">
-        <td class="px-4 py-2 text-slate-300 text-[11px] pl-6 sticky-col bg-slate-900/95 font-bold text-purple-300">💸 Загальні витрати</td>
-        ${valsAll(r=>fmtM(r.tot))}
-    </tr>`;
-
-    document.getElementById('tableBody').innerHTML=html;
-
-    // ---- KPI ----
-    const allSum=calc(sumObjs(selectedMonths.flatMap(m=>SOURCES.map(s=>data[m]?.[s.key]||{}))));
+    // KPI — сума по всіх місяцях
+    const allRaw=sumObjs(selectedMonths.flatMap(m=>SOURCES.map(s=>data[m]?.[s.key]||{})));
+    const all=calc(allRaw);
     document.getElementById('kpiRow').innerHTML=[
-        {l:'💸 Реклама',       v:fmtM(allSum.adBudget), c:'text-purple-300'},
-        {l:'📦 Всього витрат', v:fmtM(allSum.tot),      c:'text-yellow-300'},
-        {l:'👥 Ліди',          v:allSum.leads||'—',     c:'text-blue-100'},
-        {l:'🎯 ЦА',            v:allSum.ca||'—',        c:'text-emerald-300'},
-        {l:'🛒 Продажі',       v:allSum.sales||'—',     c:'text-orange-400'},
-        {l:'💵 Сума продажів', v:fmtM(allSum.salesSum), c:'text-yellow-500'},
+        {l:'💸 Реклама',       v:fmtM(all.ad),    c:'text-purple-300'},
+        {l:'📦 Всього витрат', v:fmtM(all.tot),   c:'text-yellow-300'},
+        {l:'👥 Ліди',          v:all.leads||'—',  c:'text-blue-100'},
+        {l:'🎯 ЦА',            v:all.ca||'—',     c:'text-emerald-300'},
+        {l:'🛒 Продажі',       v:all.sales||'—',  c:'text-orange-400'},
+        {l:'💵 Сума продажів', v:fmtM(all.sum),   c:'text-yellow-500'},
     ].map(k=>`<div class="bg-slate-800/50 rounded-xl border border-slate-700 px-4 py-3 text-center">
         <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">${k.l}</p>
         <p class="text-xl font-black ${k.c}">${k.v}</p>
     </div>`).join('');
+
+    // Блоки по місяцях
+    document.getElementById('monthBlocks').innerHTML=selectedMonths.map(m=>renderMonthBlock(m,data)).join('');
+
+    // Кнопка порівняти — тільки якщо 2+ місяці
+    document.getElementById('compareBtn').classList.toggle('hidden',selectedMonths.length<2);
 }
 
-function initFilter() {
+// ---- ПОРІВНЯННЯ ----
+function openCompare(){
+    const data=buildData(selectedMonths);
+
+    // Показники для порівняння
+    const COMPARE_METRICS=[
+        {label:'💸 Витрачений рекламний бюджет', fn:r=>fmtM(r.ad),    inv:true},
+        {label:'📦 Загальна сума витрат',         fn:r=>fmtM(r.tot),   inv:true},
+        {label:'👥 Кількість лідів',              fn:r=>r.leads||'—',  inv:false},
+        {label:'🎯 Кількість ЦА',                 fn:r=>r.ca||'—',     inv:false},
+        {label:'📈 Конверсія в ЦА',               fn:r=>pct(r.ca,r.leads), inv:false},
+        {label:'🎯 Ціна ЦА (від рекл. бюджету)',  fn:r=>r.cpcaAd?fmtM(r.cpcaAd):'—',   inv:true},
+        {label:'🎯 Ціна ЦА (від заг. витрат)',    fn:r=>r.cpcaTot?fmtM(r.cpcaTot):'—', inv:true},
+        {label:'🛒 Кількість продажів',            fn:r=>r.sales||'—',  inv:false},
+        {label:'💵 Сума продажів',                fn:r=>fmtM(r.sum),   inv:false},
+        {label:'📊 Конверсія в продаж',           fn:r=>pct(r.sales,r.ca), inv:false},
+        {label:'👤 Ціна клієнта (від заг. витрат)',fn:r=>r.cpcTot?fmtM(r.cpcTot):'—', inv:true},
+        {label:'👤 Ціна клієнта (від рекл. бюдж)',fn:r=>r.cpcAd?fmtM(r.cpcAd):'—',   inv:true},
+    ];
+
+    // Заголовок: Показник | Місяць1 | Місяць2 | ...
+    const thM=selectedMonths.map(m=>`<th class="px-4 py-3 text-right text-yellow-300 min-w-[130px]">${fmtMK(m)}</th>`).join('');
+    document.getElementById('compareHead').innerHTML=`<tr>
+        <th class="px-4 py-3 text-left text-slate-400 min-w-[260px]">Показник</th>${thM}
+    </tr>`;
+
+    // Рядки
+    const tbody=COMPARE_METRICS.map(metric=>{
+        // Загальний по всіх джерелах для кожного місяця
+        const vals=selectedMonths.map(m=>{
+            const raw=sumObjs(SOURCES.map(s=>data[m]?.[s.key]||{}));
+            return calc(raw);
+        });
+
+        const cells=vals.map((r,i)=>{
+            const val=metric.fn(r);
+            // Підсвічуємо зміни якщо 2+ місяці
+            let arrow='';
+            if(i>0){
+                const prev=vals[i-1];
+                const cur=metric.fn(r);
+                // Числове порівняння
+                const pRaw=sumObjs(SOURCES.map(s=>data[selectedMonths[i-1]]?.[s.key]||{}));
+                const pCalc=calc(pRaw);
+                // Беремо числові значення для порівняння
+                const getNum=r2=>{
+                    const v=metric.fn(r2);
+                    return parseFloat(String(v).replace(/[^\d.]/g,''))||0;
+                };
+                const n1=getNum(pCalc),n2=getNum(r);
+                if(n1&&n2&&n1!==n2){
+                    const pct=((n2-n1)/n1*100);
+                    const up=pct>0;
+                    // inv=true означає що ріст = погано (витрати)
+                    const good=metric.inv?!up:up;
+                    arrow=` <span class="text-[10px] ${good?'text-emerald-400':'text-red-400'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(1)}%</span>`;
+                }
+            }
+            return `<td class="px-4 py-2.5 text-right font-bold">${val}${arrow}</td>`;
+        }).join('');
+
+        return `<tr class="hover:bg-slate-800/20 border-b border-slate-700/30 transition">
+            <td class="px-4 py-2.5 text-slate-300 text-xs font-bold">${metric.label}</td>
+            ${cells}
+        </tr>`;
+    }).join('');
+
+    document.getElementById('compareBody').innerHTML=tbody;
+    document.getElementById('compareModal').classList.add('open');
+}
+
+function closeCompare(){
+    document.getElementById('compareModal').classList.remove('open');
+}
+
+// Клік поза модальним — закрити
+document.getElementById('compareModal').addEventListener('click',e=>{
+    if(e.target===document.getElementById('compareModal'))closeCompare();
+});
+
+function initFilter(){
     const ms=new Set();
-    globalCosts.forEach(c=>{const mk=getMK(c.Month); if(mk?.includes('-')) ms.add(mk);});
-    globalSpend.forEach(s=>{const d=pd(s.date); if(d.getFullYear()>2000) ms.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));});
+    globalCosts.forEach(c=>{const mk=getMK(c.Month);if(mk?.includes('-'))ms.add(mk);});
+    globalSpend.forEach(s=>{const d=pd(s.date);if(d.getFullYear()>2000)ms.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));});
     const months=[...ms].filter(m=>m&&m.includes('-')).sort();
-    if(!selectedMonths.length) selectedMonths=months.slice(-3);
+    if(!selectedMonths.length)selectedMonths=months.slice(-3);
     document.getElementById('monthFilter').innerHTML=months.map(m=>`
         <button onclick="toggleMonth('${m}')" class="tab-btn px-3 py-1.5 font-bold text-xs rounded-lg border border-transparent transition ${selectedMonths.includes(m)?'tab-active':'text-slate-400 hover:bg-slate-800'}">
             ${fmtMK(m)}
         </button>`).join('');
 }
 
-function toggleMonth(m) {
+function toggleMonth(m){
     selectedMonths.includes(m)
-        ? (selectedMonths.length>1 && (selectedMonths=selectedMonths.filter(x=>x!==m)))
-        : (selectedMonths.push(m), selectedMonths.sort());
-    initFilter(); render();
+        ?(selectedMonths.length>1&&(selectedMonths=selectedMonths.filter(x=>x!==m)))
+        :(selectedMonths.push(m),selectedMonths.sort());
+    initFilter();render();
 }
 
-async function fetchAllData() {
+async function fetchAllData(){
     document.getElementById('loader').classList.remove('hidden');
-    try {
+    try{
         const clean=arr=>(arr||[]).map(o=>{const c={};for(let k in o)c[k.trim()]=o[k];return c;});
-        const main=await (await fetch(API_URL)).json();
+        const main=await(await fetch(API_URL)).json();
         globalLeads=clean(main.leads||[]).map(r=>({date:String(r['Дата створення']||'').trim(),source:String(r['Джерело']||'').trim(),manager:String(r['Відповідальний']||'').trim(),status:String(r['Якість ліда']||'').trim()}));
         globalAdvs=clean(main.advs||[]).map(r=>({date:String(r['Дата авансу']||'').trim(),source:String(r['Джерело']||'').trim(),manager:String(r['Відповідальний']||'').trim(),amount:parseFloat(String(r['Сума угоди']||0).replace(/\s/g,''))||0}));
 
@@ -404,10 +478,10 @@ async function fetchAllData() {
 
         const d=document.getElementById('diagBox');
         d.innerHTML=`✅ Ліди:<b>${globalLeads.length}</b> Spend:<b>${globalSpend.length}</b> Витрати:<b>${globalCosts.length}</b>`;
-        d.style.display='block'; setTimeout(()=>d.style.display='none',5000);
+        d.style.display='block';setTimeout(()=>d.style.display='none',5000);
 
-        initFilter(); render();
-    } catch(e){alert('Помилка: '+e.message);}
+        initFilter();render();
+    }catch(e){alert('Помилка: '+e.message);}
     finally{document.getElementById('loader').classList.add('hidden');}
 }
 
