@@ -72,18 +72,17 @@
 
     
     <!-- HEADER -->
- <div class="header-btns flex flex-wrap items-center gap-3 justify-end">
+<div class="header-btns flex flex-wrap items-center gap-3 justify-end">
             <a href="marketing.html" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center">📈 Маркетинг</a>
-            <a href="costs.html" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center">💰 Загальні витрати</a>
+            
+            <a href="costs.html" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center mr-2 md:mr-8">💰 Загальні витрати</a>
             
             <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 font-bold shadow-lg text-sm transition flex items-center justify-center">📥 CSV</button>
             <button id="comparePanelBtn" onclick="toggleComparePanel()"
                 class="bg-purple-700 hover:bg-purple-600 text-white px-5 py-2 rounded-xl font-bold shadow-lg text-sm flex items-center gap-2 transition justify-center">
                 <span>⚖️</span> <span id="compareBtnLabel">Порівняти з періодом</span>
             </button>
-     
         </div>
-
     
     <!-- ПАНЕЛЬ ПОРІВНЯННЯ -->
     <div id="comparePanel">
