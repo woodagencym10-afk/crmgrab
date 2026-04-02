@@ -71,19 +71,13 @@
 <div class="max-w-7xl mx-auto">
 
     <!-- HEADER -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-dark-border pb-5 gap-4">
-        <div>
-            <h1 class="text-3xl font-extrabold text-white uppercase tracking-tight">SD <span class="text-blue-500">Analytics</span></h1>
-            <p class="text-dark-subtle mt-1 text-sm">Синхронізація з вкладкою "МП" + База авансів</p>
-        </div>
-        <div class="header-btns flex items-center gap-3">
+   <div class="header-btns flex items-center gap-3">
             <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 font-bold shadow-lg text-sm">📥 CSV</button>
             <button id="comparePanelBtn" onclick="toggleComparePanel()"
                 class="bg-purple-700 hover:bg-purple-600 text-white px-5 py-2 rounded-xl font-bold shadow-lg text-sm flex items-center gap-2 transition">
                 <span>⚖️</span> <span id="compareBtnLabel">Порівняти з періодом</span>
             </button>
         </div>
-    </div>
 
     <!-- ПАНЕЛЬ ПОРІВНЯННЯ -->
     <div id="comparePanel">
