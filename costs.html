@@ -303,7 +303,10 @@ function renderMonthBlock(mk,data){
         const subCells=COLS.filter(c=>c.sub).map(c=>`<td class="sub-col px-3 py-2 text-right text-[11px] ${c.cls}" style="display:none">${c.fn(r)}</td>`).join('');
 
         rows+=`<tr class="src-row border-b border-slate-700/30 hover:bg-slate-800/20 transition">
-            <td class="px-4 py-2.5 font-bold text-slate-200 sticky-col bg-slate-900/95">${src.label}</td>
+            <td class="px-4 py-2.5 font-bold text-slate-200 sticky-col bg-slate-900/95">
+                ${src.label}
+                ${effBadge(src.key)}
+            </td>
             ${mainCells}${subCells}
         </tr>`;
     });
@@ -319,10 +322,40 @@ function renderMonthBlock(mk,data){
         ${totMain}${totSub}
     </tr>`;
 
+    // KPI плитки для місяця
+    const totRawKpi=sumObjs(SOURCES.map(s=>d?.[s.key]||{}));
+    const totKpi=calc(totRawKpi);
+    const kpiCards=[
+        {l:'📦 Загальні витрати',      v:fmtM(totKpi.tot),    c:'text-yellow-300'},
+        {l:'💸 Рекламний бюджет',       v:fmtM(totKpi.ad),     c:'text-purple-300'},
+        {l:'👥 Ліди',                   v:totKpi.leads||'—',   c:'text-blue-300'},
+        {l:'🎯 Ціна ЦА (реклама)',      v:totKpi.cpcaAd?fmtM(totKpi.cpcaAd):'—', c:'text-purple-200'},
+        {l:'🎯 Ціна ЦА (загальна)',     v:totKpi.cpcaTot?fmtM(totKpi.cpcaTot):'—', c:'text-yellow-200'},
+        {l:'📈 Конверсія в ЦА',         v:pct(totKpi.ca,totKpi.leads), c:'text-emerald-300'},
+        {l:'🛒 Продажі',                v:totKpi.sales||'—',   c:'text-orange-400'},
+        {l:'💵 Сума продажів',           v:fmtM(totKpi.sum),    c:'text-yellow-500'},
+        {l:'📊 Конверсія ЦА→Продаж',   v:pct(totKpi.sales,totKpi.ca), c:'text-orange-300'},
+        {l:'👤 Ціна клієнта (загальна)',v:totKpi.cpcTot?fmtM(totKpi.cpcTot):'—', c:'text-yellow-200'},
+    ].map(k=>`<div class="bg-slate-900/60 rounded-xl border border-slate-700/60 px-3 py-2.5 text-center min-w-[120px]">
+        <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1 leading-tight">${k.l}</p>
+        <p class="text-sm font-black ${k.c}">${k.v}</p>
+    </div>`).join('');
+
+    // Міні-бейджі ефективності по джерелах (ROAS і конверсія)
+    const effBadge=(srcKey)=>{
+        const r=calc(d?.[srcKey]||{ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0});
+        if(!r.leads&&!r.ad) return '';
+        const items=[];
+        if(r.ad&&r.sum) items.push(`<span class="text-[9px] text-purple-300">ROAS: ${(r.sum/r.ad).toFixed(1)}x</span>`);
+        if(r.leads) items.push(`<span class="text-[9px] text-emerald-300">ЦА: ${pct(r.ca,r.leads)}</span>`);
+        return items.length?`<div class="flex gap-2 mt-1">${items.join('')}</div>`:'';
+    };
+
     return `
     <div class="bg-slate-800/20 rounded-2xl border border-slate-700 shadow-xl overflow-hidden mb-6">
-        <div class="bg-yellow-950/20 px-6 py-3 border-b border-yellow-800/30 flex items-center gap-3">
-            <h3 class="text-base font-black text-yellow-300 uppercase tracking-wider">${fmtMK(mk)}</h3>
+        <div class="bg-yellow-950/20 px-6 py-3 border-b border-yellow-800/30">
+            <h3 class="text-base font-black text-yellow-300 uppercase tracking-wider mb-3">${fmtMK(mk)}</h3>
+            <div class="flex flex-wrap gap-2">${kpiCards}</div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-xs border-collapse">
