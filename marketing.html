@@ -88,13 +88,25 @@
         <div id="loader" class="hidden text-blue-400 text-sm animate-pulse font-bold pb-2">⏳Запрягаємо коней...</div>
     </div>
 
-    <div class="flex flex-wrap gap-2 mb-6">
-        <button id="tab_all" onclick="setTab('all')" class="tab-btn tab-active px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">📊 Всі джерела (Рекл+Орг)</button>
-        <button id="tab_ads" onclick="setTab('ads')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">📣 Платна реклама</button>
-        <button id="tab_org" onclick="setTab('org')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">🌱 Органіка</button>
-        <button id="tab_campaigns" onclick="setTab('campaigns')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">🔬 Детальний звіт</button>
-        <button id="tab_costs" onclick="setTab('costs')" class="tab-btn px-6 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">💰 Загальні витрати</button>
-    </div>
+   <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-dark-border pb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white uppercase tracking-tight">Marketing <span class="text-blue-500">Analytics</span></h1>
+                <p class="text-dark-subtle mt-1 text-sm">Аналіз ефективності рекламних кампаній</p>
+            </div>
+
+            <div class="header-btns flex flex-wrap items-center gap-3 justify-end">
+                <a href="dashboard.html" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center">📈 Відділ продажу</a>
+                
+                <span id="costsLink" style="display:none">
+                    <a href="costs.html" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center md:mr-6">💰 Загальні витрати</a>
+                </span>
+                
+                <button onclick="fetchAllData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-bold shadow-lg text-sm transition active:scale-95 flex items-center justify-center">🔄 Оновити дані</button>
+                
+                <a href="index.html" onclick="sessionStorage.clear()" class="text-slate-500 hover:text-white px-4 py-2 rounded-xl text-sm font-bold bg-slate-800 hover:bg-slate-700 transition flex items-center justify-center shadow-lg">Вийти</a>
+            </div>
+        </div>
+        <div id="diagBox" style="display:none" class="text-xs font-mono bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-emerald-400 max-w-xs text-right mb-4"></div>
 
     <div id="mainContainer" class="bg-dark-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8 transition-colors duration-300">
         <div id="mainHeader" class="bg-[#131c2e] px-6 py-4 border-b border-slate-700 flex flex-wrap gap-4 justify-between items-center transition-colors duration-300">
