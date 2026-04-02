@@ -288,18 +288,22 @@ function renderMonthBlock(mk,data){
 
     let rows='';
 
+    // Міні-бейджі ефективності по джерелах (оголошуємо ДО циклу)
+    const effBadge=(srcKey)=>{
+        const r=calc(d?.[srcKey]||{ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0});
+        if(!r.leads&&!r.ad) return '';
+        const items=[];
+        if(r.ad&&r.sum) items.push(`<span class="text-[9px] text-purple-300">ROAS: ${(r.sum/r.ad).toFixed(1)}x</span>`);
+        if(r.leads) items.push(`<span class="text-[9px] text-emerald-300">ЦА: ${pct(r.ca,r.leads)}</span>`);
+        return items.length?`<div class="flex gap-2 mt-1">${items.join('')}</div>`:'';
+    };
+
     SOURCES.forEach(src=>{
         const r=calc(d?.[src.key]||{ad:0,zp:0,out:0,svc:0,other:0,leads:0,ca:0,sales:0,sum:0});
         const hasData=r.leads>0||r.ad>0||r.sales>0||r.zp>0||r.out>0;
         if(!hasData)return;
 
         const mainCells=visibleCols.map(c=>`<td class="px-3 py-2.5 text-right ${c.cls}">${c.fn(r)}</td>`).join('');
-        // Замінюємо клітинку Рекламного бюджету на кнопку деталей + значення
-        const mainWithBtn=mainCells.replace(
-            `<td class="px-3 py-2.5 text-right text-purple-300">${fmtM(r.ad)}</td>`,
-            `<td class="px-3 py-2.5 text-right text-purple-300">${fmtM(r.ad)}</td>`
-        );
-
         const subCells=COLS.filter(c=>c.sub).map(c=>`<td class="sub-col px-3 py-2 text-right text-[11px] ${c.cls}" style="display:none">${c.fn(r)}</td>`).join('');
 
         rows+=`<tr class="src-row border-b border-slate-700/30 hover:bg-slate-800/20 transition">
