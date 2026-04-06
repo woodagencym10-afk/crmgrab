@@ -106,6 +106,7 @@
         <button id="tab_facebook"  onclick="setTab('facebook')"  class="tab-btn px-5 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">📘 Facebook</button>
         <button id="tab_sites"     onclick="setTab('sites')"     class="tab-btn px-5 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">🌐 Сайти</button>
         <button id="tab_campaigns" onclick="setTab('campaigns')" class="tab-btn px-5 py-2.5 font-bold text-sm text-slate-400 hover:bg-slate-800 rounded-lg border border-transparent">🔬 Детальний звіт</button>
+        <button onclick="openCompareModal()" class="tab-btn px-5 py-2.5 font-bold text-sm text-violet-400 hover:bg-violet-900/30 rounded-lg border border-violet-800/40">⚖️ Порівняти періоди</button>
     </div>
 
     <div id="mainContainer" class="bg-dark-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8 transition-colors duration-300">
@@ -1397,6 +1398,338 @@ window.onload = () => {
     }
     fetchAllData();
 };
+</script>
+<!-- ============================================================ -->
+<!-- МОДАЛЬНЕ ВІКНО ПОРІВНЯННЯ ПЕРІОДІВ -->
+<!-- ============================================================ -->
+<div id="compareModal" style="display:none" class="fixed inset-0 z-50 flex items-start justify-center pt-6 pb-6 px-4 overflow-y-auto" onclick="if(event.target===this)closeCompareModal()">
+    <div class="bg-[#0f172a] border border-violet-800/50 rounded-2xl shadow-2xl w-full max-w-5xl relative">
+        <!-- Шапка -->
+        <div class="bg-violet-950/60 px-6 py-4 border-b border-violet-800/40 rounded-t-2xl flex items-center justify-between">
+            <h2 class="text-lg font-black text-white uppercase tracking-wider">⚖️ Порівняння періодів</h2>
+            <button onclick="closeCompareModal()" class="text-slate-400 hover:text-white text-2xl font-bold leading-none transition">×</button>
+        </div>
+
+        <!-- Налаштування -->
+        <div class="p-6 border-b border-slate-800">
+            <!-- Режим порівняння -->
+            <div class="flex gap-3 mb-5">
+                <button id="cmpMode_periods" onclick="setCmpMode('periods')" class="tab-btn tab-active px-4 py-2 text-sm font-bold rounded-lg border border-transparent">📅 Два періоди, одне джерело</button>
+                <button id="cmpMode_sources" onclick="setCmpMode('sources')" class="tab-btn px-4 py-2 text-sm font-bold rounded-lg border border-transparent text-slate-400 hover:bg-slate-800">🔀 Два джерела, один період</button>
+            </div>
+
+            <div id="cmpSettingsPeriods" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Джерело -->
+                <div>
+                    <div class="text-[10px] text-violet-400 uppercase font-bold tracking-widest mb-2">Джерело</div>
+                    <select id="cmpSource" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none focus:border-violet-500"></select>
+                </div>
+                <!-- Період А -->
+                <div>
+                    <div class="text-[10px] text-blue-400 uppercase font-bold tracking-widest mb-2">Період А</div>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="cmpStartA" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
+                        <span class="text-slate-500 text-xs">—</span>
+                        <input type="date" id="cmpEndA" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <!-- Період Б -->
+                <div>
+                    <div class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest mb-2">Період Б</div>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="cmpStartB" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500">
+                        <span class="text-slate-500 text-xs">—</span>
+                        <input type="date" id="cmpEndB" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+            </div>
+
+            <div id="cmpSettingsSources" style="display:none" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Період -->
+                <div>
+                    <div class="text-[10px] text-violet-400 uppercase font-bold tracking-widest mb-2">Період</div>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="cmpStartSingle" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-violet-500">
+                        <span class="text-slate-500 text-xs">—</span>
+                        <input type="date" id="cmpEndSingle" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-violet-500">
+                    </div>
+                </div>
+                <!-- Джерело А -->
+                <div>
+                    <div class="text-[10px] text-blue-400 uppercase font-bold tracking-widest mb-2">Джерело А</div>
+                    <select id="cmpSourceA" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none focus:border-blue-500"></select>
+                </div>
+                <!-- Джерело Б -->
+                <div>
+                    <div class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest mb-2">Джерело Б</div>
+                    <select id="cmpSourceB" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none focus:border-emerald-500"></select>
+                </div>
+            </div>
+
+            <button onclick="runCompare()" class="mt-5 bg-violet-600 hover:bg-violet-700 text-white font-black px-8 py-2.5 rounded-lg text-sm transition active:scale-95 shadow-lg">
+                🔍 Порівняти
+            </button>
+        </div>
+
+        <!-- Результат -->
+        <div id="cmpResult" class="p-6"></div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// ПОРІВНЯННЯ ПЕРІОДІВ
+// ============================================================
+let cmpMode = 'periods'; // 'periods' | 'sources'
+
+function openCompareModal() {
+    // Заповнюємо селекти джерел
+    const sourceOptions = SOURCE_GROUPS.map(g => `<option value="${g.key}">${g.label}</option>`).join('');
+    ['cmpSource','cmpSourceA','cmpSourceB'].forEach(id => {
+        document.getElementById(id).innerHTML = sourceOptions;
+    });
+    // Якщо є вибраний період у головному фільтрі — підставляємо в А
+    const s = document.getElementById('dateStart').value;
+    const e = document.getElementById('dateEnd').value;
+    if (s && e) {
+        document.getElementById('cmpStartA').value = s;
+        document.getElementById('cmpEndA').value   = e;
+        document.getElementById('cmpStartSingle').value = s;
+        document.getElementById('cmpEndSingle').value   = e;
+        // Б — попередній такий самий відрізок
+        const days = Math.round((new Date(e) - new Date(s)) / 86400000);
+        const prevEnd   = new Date(s); prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - days);
+        document.getElementById('cmpStartB').value = prevStart.toISOString().slice(0,10);
+        document.getElementById('cmpEndB').value   = prevEnd.toISOString().slice(0,10);
+    }
+    document.getElementById('cmpResult').innerHTML = '';
+    document.getElementById('compareModal').style.display = 'flex';
+}
+
+function closeCompareModal() {
+    document.getElementById('compareModal').style.display = 'none';
+}
+
+function setCmpMode(mode) {
+    cmpMode = mode;
+    document.getElementById('cmpSettingsPeriods').style.display = mode === 'periods' ? '' : 'none';
+    document.getElementById('cmpSettingsSources').style.display = mode === 'sources' ? '' : 'none';
+    document.getElementById('cmpMode_periods').classList.toggle('tab-active', mode === 'periods');
+    document.getElementById('cmpMode_sources').classList.toggle('tab-active', mode === 'sources');
+    document.getElementById('cmpMode_periods').classList.toggle('text-slate-400', mode !== 'periods');
+    document.getElementById('cmpMode_sources').classList.toggle('text-slate-400', mode !== 'sources');
+    document.getElementById('cmpResult').innerHTML = '';
+}
+
+// Збираємо метрики для конкретного джерела за конкретний період
+function getCmpMetrics(groupKey, dStart, dEnd) {
+    const leads = globalLeads.filter(l => {
+        const d = parseDate(l.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(l.source, l.utm, l.manager);
+        if (!cat || cat === 'repeat') return false;
+        const f = findChild(l.source, l.manager, l.utm);
+        return f.gk === groupKey;
+    });
+
+    const advs = globalAdvs.filter(a => {
+        const d = parseDate(a.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(a.source, a.utm, a.manager);
+        if (!cat || cat === 'repeat') return false;
+        const f = findChild(a.source, a.manager, a.utm);
+        return f.gk === groupKey;
+    });
+
+    const m      = analyze(leads);
+    const sales  = advs.length;
+    const salesSum = advs.reduce((s, a) => s + a.amount, 0);
+    const spend  = spendBySource[groupKey] || getCmpSpend(groupKey, dStart, dEnd);
+
+    const cpl    = (spend && m.total)  ? spend / m.total  : 0;
+    const cpca   = (spend && m.target) ? spend / m.target : 0;
+    const convCall  = m.total  ? m.reached / m.total  : 0;
+    const convCA    = m.total  ? m.target  / m.total  : 0;
+    const convSales = m.target ? sales     / m.target  : 0;
+    const avgCheck  = sales    ? salesSum  / sales     : 0;
+
+    return { total: m.total, reached: m.reached, target: m.target, sales, salesSum, spend, cpl, cpca, convCall, convCA, convSales, avgCheck };
+}
+
+function getCmpSpend(groupKey, dStart, dEnd) {
+    let total = 0;
+    globalSpend.forEach(s => {
+        const d = parseDate(s.date);
+        if (d < dStart || d > dEnd) return;
+        for (const mapping of SPEND_SOURCE_MAP) {
+            if (mapping.match(s.source) && mapping.groupKeys.includes(groupKey)) {
+                total += s.spend;
+                break;
+            }
+        }
+    });
+    return total;
+}
+
+function runCompare() {
+    let mA, mB, labelA, labelB;
+
+    if (cmpMode === 'periods') {
+        const groupKey = document.getElementById('cmpSource').value;
+        const groupLabel = SOURCE_GROUPS.find(g => g.key === groupKey)?.label || groupKey;
+        const sA = document.getElementById('cmpStartA').value;
+        const eA = document.getElementById('cmpEndA').value;
+        const sB = document.getElementById('cmpStartB').value;
+        const eB = document.getElementById('cmpEndB').value;
+        if (!sA || !eA || !sB || !eB) return alert('Вкажіть обидва періоди');
+
+        const dStartA = new Date(sA); dStartA.setHours(0,0,0,0);
+        const dEndA   = new Date(eA); dEndA.setHours(23,59,59,999);
+        const dStartB = new Date(sB); dStartB.setHours(0,0,0,0);
+        const dEndB   = new Date(eB); dEndB.setHours(23,59,59,999);
+
+        mA = getCmpMetrics(groupKey, dStartA, dEndA);
+        mB = getCmpMetrics(groupKey, dStartB, dEndB);
+        labelA = `${sA} — ${eA}`;
+        labelB = `${sB} — ${eB}`;
+        renderCompareResult(mA, mB, labelA, labelB, groupLabel, groupLabel);
+    } else {
+        const gKeyA = document.getElementById('cmpSourceA').value;
+        const gKeyB = document.getElementById('cmpSourceB').value;
+        const sP    = document.getElementById('cmpStartSingle').value;
+        const eP    = document.getElementById('cmpEndSingle').value;
+        if (!sP || !eP) return alert('Вкажіть період');
+
+        const dStart = new Date(sP); dStart.setHours(0,0,0,0);
+        const dEnd   = new Date(eP); dEnd.setHours(23,59,59,999);
+
+        mA = getCmpMetrics(gKeyA, dStart, dEnd);
+        mB = getCmpMetrics(gKeyB, dStart, dEnd);
+        labelA = SOURCE_GROUPS.find(g => g.key === gKeyA)?.label || gKeyA;
+        labelB = SOURCE_GROUPS.find(g => g.key === gKeyB)?.label || gKeyB;
+        renderCompareResult(mA, mB, labelA, labelB, `${sP} — ${eP}`, `${sP} — ${eP}`);
+    }
+}
+
+function renderCompareResult(mA, mB, labelA, labelB, titleA, titleB) {
+    // Хелпер: дельта з іконкою і кольором
+    function delta(a, b, invert = false, isPercent = false, isMoney = false) {
+        if (!b || b === 0) return '<span class="text-slate-500">—</span>';
+        const diff = a - b;
+        const pct  = ((a - b) / b * 100).toFixed(1);
+        const better = invert ? diff < 0 : diff > 0;
+        const color  = diff === 0 ? 'text-slate-400' : better ? 'text-emerald-400' : 'text-red-400';
+        const arrow  = diff === 0 ? '→' : better ? '↑' : '↓';
+        const sign   = diff > 0 ? '+' : '';
+        return `<span class="${color} font-bold text-xs">${arrow} ${sign}${pct}%</span>`;
+    }
+
+    function fmtPct(v) { return v ? (v * 100).toFixed(1) + '%' : '—'; }
+
+    // Метрики для карток
+    const cards = [
+        { label: 'Ліди',             a: mA.total,     b: mB.total,     fmt: v => v || '—',         invert: false, color: 'blue' },
+        { label: 'Додзвін',          a: mA.reached,   b: mB.reached,   fmt: v => v || '—',         invert: false, color: 'amber' },
+        { label: 'ЦА',               a: mA.target,    b: mB.target,    fmt: v => v || '—',         invert: false, color: 'emerald' },
+        { label: 'Продажів',         a: mA.sales,     b: mB.sales,     fmt: v => v || '—',         invert: false, color: 'orange' },
+        { label: 'Конв. в додзвін',  a: mA.convCall,  b: mB.convCall,  fmt: fmtPct,                invert: false, color: 'amber' },
+        { label: 'Конв. в ЦА',       a: mA.convCA,    b: mB.convCA,    fmt: fmtPct,                invert: false, color: 'emerald' },
+        { label: 'Конв. в продаж',   a: mA.convSales, b: mB.convSales, fmt: fmtPct,                invert: false, color: 'orange' },
+        { label: 'Ціна ліда',        a: mA.cpl,       b: mB.cpl,       fmt: v => fmtMoneyUSD(v),   invert: true,  color: 'purple' },
+        { label: 'Ціна ЦА',          a: mA.cpca,      b: mB.cpca,      fmt: v => fmtMoneyUSD(v),   invert: true,  color: 'purple' },
+        { label: 'Сума угод',        a: mA.salesSum,  b: mB.salesSum,  fmt: v => fmtMoney(v),      invert: false, color: 'yellow' },
+        { label: 'Середній чек',     a: mA.avgCheck,  b: mB.avgCheck,  fmt: v => fmtMoney(v),      invert: false, color: 'yellow' },
+        { label: 'Бюджет',           a: mA.spend,     b: mB.spend,     fmt: v => fmtMoneyUSD(v),   invert: true,  color: 'violet' },
+    ];
+
+    const colorMap = {
+        blue:    { bg: 'bg-blue-900/20',    border: 'border-blue-800/40',    text: 'text-blue-300' },
+        amber:   { bg: 'bg-amber-900/20',   border: 'border-amber-800/40',   text: 'text-amber-300' },
+        emerald: { bg: 'bg-emerald-900/20', border: 'border-emerald-800/40', text: 'text-emerald-300' },
+        orange:  { bg: 'bg-orange-900/20',  border: 'border-orange-800/40',  text: 'text-orange-300' },
+        purple:  { bg: 'bg-purple-900/20',  border: 'border-purple-800/40',  text: 'text-purple-300' },
+        yellow:  { bg: 'bg-yellow-900/20',  border: 'border-yellow-800/40',  text: 'text-yellow-300' },
+        violet:  { bg: 'bg-violet-900/20',  border: 'border-violet-800/40',  text: 'text-violet-300' },
+    };
+
+    // Картки з дельтою
+    const cardsHtml = cards.map(c => {
+        const cl = colorMap[c.color];
+        return `
+        <div class="${cl.bg} border ${cl.border} rounded-xl p-4 flex flex-col gap-1">
+            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">${c.label}</div>
+            <div class="flex items-end justify-between mt-1">
+                <div>
+                    <div class="text-[9px] text-blue-400 mb-0.5">${labelA}</div>
+                    <div class="${cl.text} text-lg font-black">${c.fmt(c.a)}</div>
+                </div>
+                <div class="text-center px-2">${delta(c.a, c.b, c.invert)}</div>
+                <div class="text-right">
+                    <div class="text-[9px] text-emerald-400 mb-0.5">${labelB}</div>
+                    <div class="text-slate-300 text-lg font-black">${c.fmt(c.b)}</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Барчарт (SVG) — 4 ключові метрики
+    const barMetrics = [
+        { label: 'Ліди',   a: mA.total,   b: mB.total },
+        { label: 'ЦА',     a: mA.target,  b: mB.target },
+        { label: 'Продажі',a: mA.sales,   b: mB.sales },
+        { label: 'Конв.ЦА',a: +(mA.convCA*100).toFixed(1), b: +(mB.convCA*100).toFixed(1) },
+    ];
+
+    const maxVal = Math.max(...barMetrics.flatMap(m => [m.a, m.b]), 1);
+    const barW = 36, gap = 8, groupW = barW*2+gap, groupGap = 32;
+    const chartW = barMetrics.length * (groupW + groupGap);
+    const chartH = 160;
+
+    const bars = barMetrics.map((bm, i) => {
+        const x = i * (groupW + groupGap);
+        const hA = Math.max(4, (bm.a / maxVal) * chartH * 0.85);
+        const hB = Math.max(4, (bm.b / maxVal) * chartH * 0.85);
+        return `
+            <rect x="${x}" y="${chartH - hA}" width="${barW}" height="${hA}" rx="4" fill="#3b82f6" opacity="0.85"/>
+            <text x="${x + barW/2}" y="${chartH - hA - 5}" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="bold">${bm.a}</text>
+            <rect x="${x + barW + gap}" y="${chartH - hB}" width="${barW}" height="${hB}" rx="4" fill="#10b981" opacity="0.85"/>
+            <text x="${x + barW + gap + barW/2}" y="${chartH - hB - 5}" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="bold">${bm.b}</text>
+            <text x="${x + groupW/2}" y="${chartH + 16}" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">${bm.label}</text>
+        `;
+    }).join('');
+
+    const chartHtml = `
+    <div class="mt-6">
+        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-3">📊 Графік ключових метрик</div>
+        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50 overflow-x-auto">
+            <svg viewBox="0 0 ${chartW} ${chartH + 28}" class="w-full" style="min-width:${chartW}px; max-height:220px">
+                ${bars}
+                <!-- Легенда -->
+                <rect x="0" y="${chartH + 22}" width="10" height="6" rx="2" fill="#3b82f6"/>
+                <text x="14" y="${chartH + 28}" fill="#93c5fd" font-size="9">${labelA}</text>
+                <rect x="120" y="${chartH + 22}" width="10" height="6" rx="2" fill="#10b981"/>
+                <text x="134" y="${chartH + 28}" fill="#6ee7b7" font-size="9">${labelB}</text>
+            </svg>
+        </div>
+    </div>`;
+
+    document.getElementById('cmpResult').innerHTML = `
+        <div class="mb-4 flex flex-wrap gap-3 items-center">
+            <span class="inline-flex items-center gap-2 bg-blue-900/30 border border-blue-800/40 rounded-lg px-3 py-1.5 text-xs font-bold text-blue-300">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span>${labelA}
+            </span>
+            <span class="text-slate-500 font-bold">vs</span>
+            <span class="inline-flex items-center gap-2 bg-emerald-900/30 border border-emerald-800/40 rounded-lg px-3 py-1.5 text-xs font-bold text-emerald-300">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>${labelB}
+            </span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            ${cardsHtml}
+        </div>
+        ${chartHtml}
+    `;
+}
 </script>
 </body>
 </html>
