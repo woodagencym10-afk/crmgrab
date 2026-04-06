@@ -665,11 +665,9 @@ function renderActiveView() {
             if (currentTab === 'org' &&  ch.isPaid)  return;
 
             let cL = [], cA = [];
-            cats.forEach(cat => {
-                const correctCat = ch.isPaid ? 'ads' : 'organic';
-                if (leadsIdx[correctCat]?.[grp.key]?.children?.[ch.key]) cL.push(...leadsIdx[correctCat][grp.key].children[ch.key]);
-                if (advsIdx[correctCat]?.[grp.key]?.children?.[ch.key])  cA.push(...advsIdx[correctCat][grp.key].children[ch.key]);
-            });
+            const correctCat = ch.isPaid ? 'ads' : 'organic';
+            if (leadsIdx[correctCat]?.[grp.key]?.children?.[ch.key]) cL.push(...leadsIdx[correctCat][grp.key].children[ch.key]);
+            if (advsIdx[correctCat]?.[grp.key]?.children?.[ch.key])  cA.push(...advsIdx[correctCat][grp.key].children[ch.key]);
 
             if (cL.length === 0 && cA.length === 0) return;
 
