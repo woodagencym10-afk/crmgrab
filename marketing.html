@@ -706,8 +706,8 @@ function renderActiveView() {
     });
     if (spendVisible) {
         document.getElementById('kpiSpend').textContent = fmtMoneyUSD(tSpend);
-        document.getElementById('kpiCPL').textContent = totalAdsLeads ? fmtMoneyUSD(tSpend / totalAdsLeads) : '—';
-        document.getElementById('kpiCPCA').textContent = totalAdsCA ? fmtMoneyUSD(tSpend / totalAdsCA) : '—';
+       document.getElementById('kpiCPL').textContent = tL ? fmtMoneyUSD(tSpend / tL) : '—';
+document.getElementById('kpiCPCA').textContent = tCA ? fmtMoneyUSD(tSpend / tCA) : '—';
     }
 
     // Фільтр воронки
