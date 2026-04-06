@@ -1473,8 +1473,421 @@ window.onload = () => {
 
 <script>
 let cmpMode = 'periods';
+let cmpFilter = 'all'; // 'all' | 'paid' | 'organic'
+// Зберігаємо останній виклик для перерендеру при зміні фільтру
+let _lastCmpCall = null;
 
 function openCompareModal() {
+    const sourceOptions = SOURCE_GROUPS.map(g => `<option value="${g.key}">${g.label}</option>`).join('');
+    ['cmpSource','cmpSourceA','cmpSourceB'].forEach(id => {
+        document.getElementById(id).innerHTML = sourceOptions;
+    });
+    const s = document.getElementById('dateStart').value;
+    const e = document.getElementById('dateEnd').value;
+    if (s && e) {
+        document.getElementById('cmpStartA').value = s;
+        document.getElementById('cmpEndA').value   = e;
+        document.getElementById('cmpStartSingle').value = s;
+        document.getElementById('cmpEndSingle').value   = e;
+        const days = Math.round((new Date(e) - new Date(s)) / 86400000);
+        const prevEnd   = new Date(s); prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - days);
+        document.getElementById('cmpStartB').value = prevStart.toISOString().slice(0,10);
+        document.getElementById('cmpEndB').value   = prevEnd.toISOString().slice(0,10);
+    }
+    cmpFilter = 'all';
+    _lastCmpCall = null;
+    document.getElementById('cmpResult').innerHTML = '';
+    document.getElementById('compareModal').style.display = 'flex';
+}
+
+function closeCompareModal() {
+    document.getElementById('compareModal').style.display = 'none';
+}
+
+function setCmpMode(mode) {
+    cmpMode = mode;
+    document.getElementById('cmpSettingsPeriods').style.display = mode === 'periods' ? '' : 'none';
+    document.getElementById('cmpSettingsSources').style.display = mode === 'sources' ? '' : 'none';
+    ['periods','sources'].forEach(m => {
+        document.getElementById('cmpMode_' + m).classList.toggle('tab-active', m === mode);
+        document.getElementById('cmpMode_' + m).classList.toggle('text-slate-400', m !== mode);
+    });
+    _lastCmpCall = null;
+    document.getElementById('cmpResult').innerHTML = '';
+}
+
+function setCmpFilter(f) {
+    cmpFilter = f;
+    if (_lastCmpCall) _lastCmpCall();
+}
+
+// ---- Збір метрик по групі з опціональним фільтром paid/organic/all ----
+// childKey = null → вся група; childKey = 'ck' → конкретний дочірній
+function getCmpMetrics(groupKey, dStart, dEnd, filterMode) {
+    const grp = SOURCE_GROUPS.find(g => g.key === groupKey);
+
+    function leadsMatch(l) {
+        const d = parseDate(l.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(l.source, l.utm, l.manager);
+        if (!cat || cat === 'repeat') return false;
+        const f = findChild(l.source, l.manager, l.utm);
+        if (f.gk !== groupKey) return false;
+        if (filterMode === 'paid')    return f.isPaid === true;
+        if (filterMode === 'organic') return f.isPaid === false;
+        return true;
+    }
+    function advsMatch(a) {
+        const d = parseDate(a.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(a.source, a.utm, a.manager);
+        if (!cat || cat === 'repeat') return false;
+        const f = findChild(a.source, a.manager, a.utm);
+        if (f.gk !== groupKey) return false;
+        if (filterMode === 'paid')    return f.isPaid === true;
+        if (filterMode === 'organic') return f.isPaid === false;
+        return true;
+    }
+
+    const leads = globalLeads.filter(leadsMatch);
+    const advs  = globalAdvs.filter(advsMatch);
+    return buildMetrics(leads, advs, groupKey, dStart, dEnd, filterMode);
+}
+
+// Метрики по конкретному дочірньому ключу
+function getCmpMetricsChild(groupKey, childKey, isPaid, dStart, dEnd) {
+    const correctCat = isPaid ? 'ads' : 'organic';
+
+    function leadsMatch(l) {
+        const d = parseDate(l.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(l.source, l.utm, l.manager);
+        if (!cat || cat === 'repeat') return false;
+        const f = findChild(l.source, l.manager, l.utm);
+        return f.gk === groupKey && f.ck === childKey;
+    }
+    function advsMatch(a) {
+        const d = parseDate(a.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(a.source, a.utm, a.manager);
+        if (!cat || cat === 'repeat') return false;
+        const f = findChild(a.source, a.manager, a.utm);
+        return f.gk === groupKey && f.ck === childKey;
+    }
+
+    const leads = globalLeads.filter(leadsMatch);
+    const advs  = globalAdvs.filter(advsMatch);
+    // Spend тільки для платних
+    return buildMetrics(leads, advs, groupKey, dStart, dEnd, isPaid ? 'paid' : 'organic');
+}
+
+function buildMetrics(leads, advs, groupKey, dStart, dEnd, filterMode) {
+    const m        = analyze(leads);
+    const sales    = advs.length;
+    const salesSum = advs.reduce((s, a) => s + a.amount, 0);
+    const spend    = filterMode === 'organic' ? 0 : getCmpSpend(groupKey, dStart, dEnd);
+    const cpl      = (spend && m.total)  ? spend / m.total  : 0;
+    const cpca     = (spend && m.target) ? spend / m.target : 0;
+    const convCall  = m.total  ? m.reached / m.total  : null;
+    const convCA    = m.total  ? m.target  / m.total  : null;
+    const convSales = m.target ? sales     / m.target  : null;
+    const avgCheck  = sales    ? salesSum  / sales     : 0;
+    return { total: m.total, reached: m.reached, target: m.target, sales, salesSum, spend, cpl, cpca, convCall, convCA, convSales, avgCheck };
+}
+
+function getCmpSpend(groupKey, dStart, dEnd) {
+    let total = 0;
+    globalSpend.forEach(s => {
+        const d = parseDate(s.date);
+        if (d < dStart || d > dEnd) return;
+        for (const mapping of SPEND_SOURCE_MAP) {
+            if (mapping.match(s.source) && mapping.groupKeys.includes(groupKey)) { total += s.spend; break; }
+        }
+    });
+    return total;
+}
+
+function runCompare() {
+    let gkA, gkB, dSA, dEA, dSB, dEB, labelA, labelB, sourceLabel;
+
+    if (cmpMode === 'periods') {
+        gkA = gkB = document.getElementById('cmpSource').value;
+        sourceLabel = SOURCE_GROUPS.find(g => g.key === gkA)?.label || gkA;
+        const sA = document.getElementById('cmpStartA').value, eA = document.getElementById('cmpEndA').value;
+        const sB = document.getElementById('cmpStartB').value, eB = document.getElementById('cmpEndB').value;
+        if (!sA||!eA||!sB||!eB) return alert('Вкажіть обидва періоди');
+        dSA = new Date(sA); dSA.setHours(0,0,0,0); dEA = new Date(eA); dEA.setHours(23,59,59,999);
+        dSB = new Date(sB); dSB.setHours(0,0,0,0); dEB = new Date(eB); dEB.setHours(23,59,59,999);
+        labelA = formatDateRange(sA, eA); labelB = formatDateRange(sB, eB);
+    } else {
+        gkA = document.getElementById('cmpSourceA').value;
+        gkB = document.getElementById('cmpSourceB').value;
+        const sP = document.getElementById('cmpStartSingle').value, eP = document.getElementById('cmpEndSingle').value;
+        if (!sP||!eP) return alert('Вкажіть період');
+        dSA = dSB = new Date(sP); dSA.setHours(0,0,0,0);
+        dEA = dEB = new Date(eP); dEA.setHours(23,59,59,999);
+        labelA = SOURCE_GROUPS.find(g => g.key === gkA)?.label || gkA;
+        labelB = SOURCE_GROUPS.find(g => g.key === gkB)?.label || gkB;
+        sourceLabel = formatDateRange(sP, eP);
+    }
+
+    // Зберігаємо для перерендеру при зміні фільтра
+    _lastCmpCall = () => {
+        const mA = getCmpMetrics(gkA, dSA, dEA, cmpFilter);
+        const mB = getCmpMetrics(gkB, dSB, dEB, cmpFilter);
+
+        // Дочірні рядки — тільки ті що підходять під фільтр
+        const grpA = SOURCE_GROUPS.find(g => g.key === gkA);
+        const grpB = SOURCE_GROUPS.find(g => g.key === gkB);
+        const childrenA = (grpA?.children || []).filter(ch => {
+            if (cmpFilter === 'paid')    return ch.isPaid;
+            if (cmpFilter === 'organic') return !ch.isPaid;
+            return true;
+        });
+        const childrenB = (grpB?.children || []).filter(ch => {
+            if (cmpFilter === 'paid')    return ch.isPaid;
+            if (cmpFilter === 'organic') return !ch.isPaid;
+            return true;
+        });
+
+        // Будуємо метрики для кожного дочірнього
+        const childMetricsA = childrenA.map(ch => ({
+            label: ch.label,
+            isPaid: ch.isPaid,
+            ck: ch.ck,
+            m: getCmpMetricsChild(gkA, ch.ck, ch.isPaid, dSA, dEA)
+        }));
+        const childMetricsB = childrenB.map(ch => ({
+            label: ch.label,
+            isPaid: ch.isPaid,
+            ck: ch.ck,
+            m: getCmpMetricsChild(gkB, ch.ck, ch.isPaid, dSB, dEB)
+        }));
+
+        renderCompareResult(mA, mB, labelA, labelB, sourceLabel, childMetricsA, childMetricsB, gkA === gkB);
+    };
+    _lastCmpCall();
+}
+
+function formatDateRange(s, e) {
+    const fmt = d => d.split('-').reverse().join('.');
+    return `${fmt(s)} — ${fmt(e)}`;
+}
+
+function renderCompareResult(mA, mB, labelA, labelB, subtitle, childrenA, childrenB, sameSource) {
+    const fmtPct = v => v !== null && v !== undefined ? (v * 100).toFixed(1) + '%' : '—';
+    const fmtN   = v => (v || v === 0) ? v : '—';
+
+    function deltaBadge(a, b, invert = false) {
+        if (b === null || b === undefined || b === 0 || a === null || a === undefined) return '<span class="text-slate-500 text-xs">—</span>';
+        const pct    = ((a - b) / Math.abs(b) * 100);
+        const better = invert ? pct < 0 : pct > 0;
+        const color  = Math.abs(pct) < 0.5 ? 'text-slate-400' : better ? 'text-emerald-400' : 'text-red-400';
+        const bg     = Math.abs(pct) < 0.5 ? 'bg-slate-700/40' : better ? 'bg-emerald-900/30' : 'bg-red-900/30';
+        const arrow  = Math.abs(pct) < 0.5 ? '→' : better ? '↑' : '↓';
+        const sign   = pct > 0 ? '+' : '';
+        return `<span class="inline-flex items-center gap-1 ${bg} ${color} font-black text-xs px-2 py-0.5 rounded-full">${arrow} ${sign}${pct.toFixed(1)}%</span>`;
+    }
+
+    function progressBar(v, color) {
+        if (v === null || v === undefined) return '';
+        const w = Math.min(100, v * 100).toFixed(1);
+        return `<div class="mt-1 h-1 bg-slate-700 rounded-full overflow-hidden"><div class="h-full rounded-full ${color}" style="width:${w}%"></div></div>`;
+    }
+
+    // ---- Вердикт ----
+    const vMetrics = [
+        { a: mA.total, b: mB.total, inv: false },
+        { a: mA.target, b: mB.target, inv: false },
+        { a: mA.convCA, b: mB.convCA, inv: false },
+        { a: mA.convSales, b: mB.convSales, inv: false },
+        { a: mA.cpl, b: mB.cpl, inv: true },
+        { a: mA.cpca, b: mB.cpca, inv: true },
+        { a: mA.salesSum, b: mB.salesSum, inv: false },
+    ];
+    let wA = 0, wB = 0;
+    vMetrics.forEach(({ a, b, inv }) => {
+        if (!a || !b) return;
+        if (Math.abs(a - b) / Math.max(Math.abs(b), 0.001) < 0.005) return;
+        (inv ? a < b : a > b) ? wA++ : wB++;
+    });
+    const tot = wA + wB;
+    let verdictHtml = '';
+    if (tot > 0) {
+        if (wA > wB)      verdictHtml = `<div class="mb-4 flex items-center gap-3 bg-blue-900/25 border border-blue-700/40 rounded-xl px-4 py-3"><span class="text-xl">🔵</span><span class="text-blue-300 font-black text-sm">${labelA}</span><span class="text-slate-300 text-sm">кращий по <b>${wA} з ${tot}</b> метрик</span></div>`;
+        else if (wB > wA) verdictHtml = `<div class="mb-4 flex items-center gap-3 bg-emerald-900/25 border border-emerald-700/40 rounded-xl px-4 py-3"><span class="text-xl">🟢</span><span class="text-emerald-300 font-black text-sm">${labelB}</span><span class="text-slate-300 text-sm">кращий по <b>${wB} з ${tot}</b> метрик</span></div>`;
+        else              verdictHtml = `<div class="mb-4 flex items-center gap-3 bg-slate-800/60 border border-slate-600/40 rounded-xl px-4 py-3"><span class="text-xl">🤝</span><span class="text-slate-300 text-sm font-bold">Результати практично рівні</span></div>`;
+    }
+
+    // ---- Функція побудови таблиці метрик (головної або дочірньої) ----
+    function buildMetricRows(mA, mB, isChild) {
+        const pad = isChild ? 'px-6' : 'px-4';
+        const bg  = isChild ? 'bg-slate-900/30' : '';
+
+        const rows = [
+            { label: 'Ліди',              a: fmtN(mA.total),     b: fmtN(mB.total),     delta: deltaBadge(mA.total, mB.total),           better: mA.total !== mB.total ? (mA.total > mB.total ? 'a':'b') : null },
+            { label: 'Додзвін',           a: fmtN(mA.reached),   b: fmtN(mB.reached),   delta: deltaBadge(mA.reached, mB.reached),       better: mA.reached !== mB.reached ? (mA.reached > mB.reached ? 'a':'b') : null },
+            { label: 'ЦА',                a: fmtN(mA.target),    b: fmtN(mB.target),    delta: deltaBadge(mA.target, mB.target),         better: mA.target !== mB.target ? (mA.target > mB.target ? 'a':'b') : null },
+            { label: 'Продажів',          a: fmtN(mA.sales),     b: fmtN(mB.sales),     delta: deltaBadge(mA.sales, mB.sales),           better: mA.sales !== mB.sales ? (mA.sales > mB.sales ? 'a':'b') : null },
+            { label: 'Конв. в додзвін',   a: fmtPct(mA.convCall),b: fmtPct(mB.convCall),delta: deltaBadge(mA.convCall, mB.convCall),     better: (mA.convCall||0) !== (mB.convCall||0) ? ((mA.convCall||0) > (mB.convCall||0) ? 'a':'b') : null, barA: progressBar(mA.convCall,'bg-blue-500'), barB: progressBar(mB.convCall,'bg-emerald-500') },
+            { label: 'Конв. в ЦА',        a: fmtPct(mA.convCA),  b: fmtPct(mB.convCA),  delta: deltaBadge(mA.convCA, mB.convCA),         better: (mA.convCA||0) !== (mB.convCA||0) ? ((mA.convCA||0) > (mB.convCA||0) ? 'a':'b') : null, barA: progressBar(mA.convCA,'bg-blue-500'), barB: progressBar(mB.convCA,'bg-emerald-500') },
+            { label: 'Конв. в продаж',    a: fmtPct(mA.convSales),b: fmtPct(mB.convSales),delta: deltaBadge(mA.convSales, mB.convSales), better: (mA.convSales||0) !== (mB.convSales||0) ? ((mA.convSales||0) > (mB.convSales||0) ? 'a':'b') : null, barA: progressBar(mA.convSales,'bg-blue-500'), barB: progressBar(mB.convSales,'bg-emerald-500') },
+            { label: 'Сума угод',         a: fmtMoney(mA.salesSum),b: fmtMoney(mB.salesSum),delta: deltaBadge(mA.salesSum, mB.salesSum), better: mA.salesSum !== mB.salesSum ? (mA.salesSum > mB.salesSum ? 'a':'b') : null },
+            { label: 'Середній чек',      a: fmtMoney(mA.avgCheck),b: fmtMoney(mB.avgCheck),delta: deltaBadge(mA.avgCheck, mB.avgCheck), better: mA.avgCheck !== mB.avgCheck ? (mA.avgCheck > mB.avgCheck ? 'a':'b') : null },
+            { label: 'Ціна ліда',         a: fmtMoneyUSD(mA.cpl), b: fmtMoneyUSD(mB.cpl), delta: deltaBadge(mA.cpl, mB.cpl, true),      better: (mA.cpl||0) !== (mB.cpl||0) ? ((mA.cpl||0) < (mB.cpl||0) && mA.cpl ? 'a':'b') : null },
+            { label: 'Ціна ЦА',           a: fmtMoneyUSD(mA.cpca),b: fmtMoneyUSD(mB.cpca),delta: deltaBadge(mA.cpca, mB.cpca, true),    better: (mA.cpca||0) !== (mB.cpca||0) ? ((mA.cpca||0) < (mB.cpca||0) && mA.cpca ? 'a':'b') : null },
+            { label: 'Бюджет',            a: fmtMoneyUSD(mA.spend),b: fmtMoneyUSD(mB.spend),delta: deltaBadge(mA.spend, mB.spend, true), better: mA.spend !== mB.spend ? (mA.spend < mB.spend && mA.spend ? 'a':'b') : null },
+        ];
+
+        return rows.map(r => {
+            const bgA = r.better === 'a' ? 'bg-blue-900/15' : '';
+            const bgB = r.better === 'b' ? 'bg-emerald-900/15' : '';
+            return `<tr class="border-t border-slate-700/30 hover:bg-slate-800/20 transition ${bg}">
+                <td class="${pad} py-2 text-slate-${isChild ? '500' : '300'} text-xs font-${isChild ? 'medium' : 'bold'}">${isChild ? '' : ''}${r.label}</td>
+                <td class="px-3 py-2 text-xs font-black text-blue-200 ${bgA}">${r.a}${r.barA||''}</td>
+                <td class="px-3 py-2 text-xs font-black text-emerald-200 ${bgB}">${r.b}${r.barB||''}</td>
+                <td class="px-3 py-2 text-right">${r.delta}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ---- Дочірні секції ----
+    // Знаходимо спільні ключі (однакове джерело) або просто ітеруємо
+    let childSectionsHtml = '';
+
+    if (sameSource) {
+        // Режим "два періоди" — у А і Б однакові діти
+        childrenA.forEach(chA => {
+            const chB = childrenB.find(c => c.ck === chA.ck);
+            const mChA = chA.m;
+            const mChB = chB ? chB.m : buildMetrics([], [], '', null, null, 'all');
+            if (mChA.total === 0 && mChB.total === 0) return;
+            const badge = chA.isPaid
+                ? '<span class="text-[9px] bg-blue-900/40 text-blue-400 px-1.5 py-0.5 rounded ml-1">реклама</span>'
+                : '<span class="text-[9px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded ml-1">органіка</span>';
+            childSectionsHtml += `
+                <tr class="bg-slate-800/50">
+                    <td colspan="4" class="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        ↳ ${chA.label}${badge}
+                    </td>
+                </tr>
+                ${buildMetricRows(mChA, mChB, true)}
+            `;
+        });
+    } else {
+        // Режим "два джерела" — показуємо дочірніх А зліва, Б справа по позиції
+        const maxLen = Math.max(childrenA.length, childrenB.length);
+        for (let i = 0; i < maxLen; i++) {
+            const chA = childrenA[i];
+            const chB = childrenB[i];
+            if (!chA && !chB) continue;
+            const mChA = chA ? chA.m : buildMetrics([], [], '', null, null, 'all');
+            const mChB = chB ? chB.m : buildMetrics([], [], '', null, null, 'all');
+            if (mChA.total === 0 && mChB.total === 0) continue;
+            const labelLeft  = chA ? chA.label : '—';
+            const labelRight = chB ? chB.label : '—';
+            const badge = isPd => isPd
+                ? '<span class="text-[9px] bg-blue-900/40 text-blue-400 px-1.5 py-0.5 rounded ml-1">реклама</span>'
+                : '<span class="text-[9px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded ml-1">органіка</span>';
+            childSectionsHtml += `
+                <tr class="bg-slate-800/50">
+                    <td class="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-400/70">🔵 ${labelLeft}${chA ? badge(chA.isPaid) : ''}</td>
+                    <td></td>
+                    <td class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-400/70">🟢 ${labelRight}${chB ? badge(chB.isPaid) : ''}</td>
+                    <td></td>
+                </tr>
+                ${buildMetricRows(mChA, mChB, true)}
+            `;
+        }
+    }
+
+    // ---- Барчарт ----
+    const barData = [
+        { label: 'Ліди',     a: mA.total,  b: mB.total,  fmt: v => v },
+        { label: 'ЦА',       a: mA.target, b: mB.target, fmt: v => v },
+        { label: 'Конв.ЦА',  a: mA.convCA  ? +(mA.convCA*100).toFixed(1)  : 0, b: mB.convCA  ? +(mB.convCA*100).toFixed(1)  : 0, fmt: v => v+'%' },
+        { label: 'Продажі',  a: mA.sales,  b: mB.sales,  fmt: v => v },
+    ];
+    const maxBar = Math.max(...barData.flatMap(d => [d.a||0, d.b||0]), 1);
+    const BW=38, GAP=8, GRP=BW*2+GAP, GGRP=36, H=130;
+    const SVG_W = barData.length*(GRP+GGRP)-GGRP+20;
+    const barsHtml = barData.map((bd,i) => {
+        const x=i*(GRP+GGRP)+10, hA=Math.max(3,((bd.a||0)/maxBar)*H*0.9), hB=Math.max(3,((bd.b||0)/maxBar)*H*0.9);
+        return `
+            <rect x="${x}" y="${H-hA}" width="${BW}" height="${hA}" rx="4" fill="#3b82f6" opacity="0.85"/>
+            <text x="${x+BW/2}" y="${H-hA-4}" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="bold">${bd.fmt(bd.a||0)}</text>
+            <rect x="${x+BW+GAP}" y="${H-hB}" width="${BW}" height="${hB}" rx="4" fill="#10b981" opacity="0.85"/>
+            <text x="${x+BW+GAP+BW/2}" y="${H-hB-4}" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="bold">${bd.fmt(bd.b||0)}</text>
+            <text x="${x+GRP/2}" y="${H+15}" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">${bd.label}</text>`;
+    }).join('');
+
+    // ---- Фільтр підкатегорій ----
+    const filterBtns = ['all','paid','organic'].map(f => {
+        const labels = { all:'🔀 Всі', paid:'📣 Реклама', organic:'🌱 Органіка' };
+        const active = cmpFilter === f;
+        return `<button onclick="setCmpFilter('${f}')" class="tab-btn px-3 py-1.5 text-xs font-bold rounded-lg border border-transparent transition ${active ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">${labels[f]}</button>`;
+    }).join('');
+
+    const subtitleHtml = subtitle ? `<div class="text-[10px] text-slate-500 uppercase tracking-widest mb-3">${subtitle}</div>` : '';
+
+    document.getElementById('cmpResult').innerHTML = `
+        ${subtitleHtml}
+        ${verdictHtml}
+
+        <!-- Легенда + фільтр -->
+        <div class="flex flex-wrap gap-3 mb-4 items-center justify-between">
+            <div class="flex gap-3 flex-wrap">
+                <div class="flex items-center gap-2 bg-blue-900/20 border border-blue-800/40 rounded-lg px-3 py-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0"></span>
+                    <span class="text-blue-300 font-black text-xs">${labelA}</span>
+                </div>
+                <div class="flex items-center gap-2 bg-emerald-900/20 border border-emerald-800/40 rounded-lg px-3 py-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></span>
+                    <span class="text-emerald-300 font-black text-xs">${labelB}</span>
+                </div>
+            </div>
+            <div class="flex gap-2">${filterBtns}</div>
+        </div>
+
+        <!-- Таблиця -->
+        <div class="rounded-xl overflow-hidden border border-slate-700/50 mb-5">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-900/80">
+                        <th class="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Метрика</th>
+                        <th class="px-3 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-blue-400">🔵 ${labelA}</th>
+                        <th class="px-3 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-emerald-400">🟢 ${labelB}</th>
+                        <th class="px-3 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Зміна</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Загальний підсумок -->
+                    <tr class="bg-slate-800/40">
+                        <td colspan="4" class="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-violet-400">📊 Загальний підсумок</td>
+                    </tr>
+                    ${buildMetricRows(mA, mB, false)}
+                    <!-- Розбивка по компонентах -->
+                    ${childSectionsHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Барчарт -->
+        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/40">
+            <div class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-3">📊 Візуальне порівняння (загальне)</div>
+            <div class="overflow-x-auto">
+                <svg viewBox="0 0 ${SVG_W} ${H+28}" style="min-width:${SVG_W}px;max-height:190px;width:100%">
+                    ${barsHtml}
+                    <rect x="10" y="${H+22}" width="8" height="6" rx="2" fill="#3b82f6"/>
+                    <text x="22" y="${H+28}" fill="#93c5fd" font-size="9">${labelA}</text>
+                    <rect x="130" y="${H+22}" width="8" height="6" rx="2" fill="#10b981"/>
+                    <text x="142" y="${H+28}" fill="#6ee7b7" font-size="9">${labelB}</text>
+                </svg>
+            </div>
+        </div>
+    `;
+}
     const sourceOptions = SOURCE_GROUPS.map(g => `<option value="${g.key}">${g.label}</option>`).join('');
     ['cmpSource','cmpSourceA','cmpSourceB'].forEach(id => {
         document.getElementById(id).innerHTML = sourceOptions;
