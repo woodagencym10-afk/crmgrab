@@ -1403,92 +1403,82 @@ window.onload = () => {
 <!-- МОДАЛЬНЕ ВІКНО ПОРІВНЯННЯ ПЕРІОДІВ -->
 <!-- ============================================================ -->
 <div id="compareModal" style="display:none" class="fixed inset-0 z-50 flex items-start justify-center pt-6 pb-6 px-4 overflow-y-auto" onclick="if(event.target===this)closeCompareModal()">
-    <div class="bg-[#0f172a] border border-violet-800/50 rounded-2xl shadow-2xl w-full max-w-5xl relative">
+    <div class="bg-[#0f172a] border border-violet-800/50 rounded-2xl shadow-2xl w-full max-w-4xl relative">
         <!-- Шапка -->
         <div class="bg-violet-950/60 px-6 py-4 border-b border-violet-800/40 rounded-t-2xl flex items-center justify-between">
-            <h2 class="text-lg font-black text-white uppercase tracking-wider">⚖️ Порівняння періодів</h2>
-            <button onclick="closeCompareModal()" class="text-slate-400 hover:text-white text-2xl font-bold leading-none transition">×</button>
+            <h2 class="text-lg font-black text-white uppercase tracking-wider">⚖️ Порівняння</h2>
+            <button onclick="closeCompareModal()" class="text-slate-400 hover:text-white text-2xl font-bold leading-none transition px-2">×</button>
         </div>
 
         <!-- Налаштування -->
-        <div class="p-6 border-b border-slate-800">
-            <!-- Режим порівняння -->
-            <div class="flex gap-3 mb-5">
-                <button id="cmpMode_periods" onclick="setCmpMode('periods')" class="tab-btn tab-active px-4 py-2 text-sm font-bold rounded-lg border border-transparent">📅 Два періоди, одне джерело</button>
-                <button id="cmpMode_sources" onclick="setCmpMode('sources')" class="tab-btn px-4 py-2 text-sm font-bold rounded-lg border border-transparent text-slate-400 hover:bg-slate-800">🔀 Два джерела, один період</button>
+        <div class="p-5 border-b border-slate-800">
+            <div class="flex gap-3 mb-4">
+                <button id="cmpMode_periods" onclick="setCmpMode('periods')" class="tab-btn tab-active px-4 py-2 text-sm font-bold rounded-lg border border-transparent">📅 Два періоди · одне джерело</button>
+                <button id="cmpMode_sources" onclick="setCmpMode('sources')" class="tab-btn px-4 py-2 text-sm font-bold rounded-lg border border-transparent text-slate-400 hover:bg-slate-800">🔀 Два джерела · один період</button>
             </div>
 
-            <div id="cmpSettingsPeriods" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Джерело -->
+            <!-- Режим: два періоди -->
+            <div id="cmpSettingsPeriods" class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <div class="text-[10px] text-violet-400 uppercase font-bold tracking-widest mb-2">Джерело</div>
+                    <div class="text-[10px] text-violet-400 uppercase font-bold tracking-widest mb-1.5">Джерело</div>
                     <select id="cmpSource" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none focus:border-violet-500"></select>
                 </div>
-                <!-- Період А -->
                 <div>
-                    <div class="text-[10px] text-blue-400 uppercase font-bold tracking-widest mb-2">Період А</div>
-                    <div class="flex gap-2 items-center">
-                        <input type="date" id="cmpStartA" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
+                    <div class="text-[10px] text-blue-400 uppercase font-bold tracking-widest mb-1.5">🔵 Період А</div>
+                    <div class="flex gap-1.5 items-center">
+                        <input type="date" id="cmpStartA" class="flex-1 bg-slate-800 border border-blue-800/60 rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
                         <span class="text-slate-500 text-xs">—</span>
-                        <input type="date" id="cmpEndA" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
+                        <input type="date" id="cmpEndA"   class="flex-1 bg-slate-800 border border-blue-800/60 rounded-lg p-2 text-sm text-white outline-none focus:border-blue-500">
                     </div>
                 </div>
-                <!-- Період Б -->
                 <div>
-                    <div class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest mb-2">Період Б</div>
-                    <div class="flex gap-2 items-center">
-                        <input type="date" id="cmpStartB" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500">
+                    <div class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest mb-1.5">🟢 Період Б</div>
+                    <div class="flex gap-1.5 items-center">
+                        <input type="date" id="cmpStartB" class="flex-1 bg-slate-800 border border-emerald-800/60 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500">
                         <span class="text-slate-500 text-xs">—</span>
-                        <input type="date" id="cmpEndB" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500">
+                        <input type="date" id="cmpEndB"   class="flex-1 bg-slate-800 border border-emerald-800/60 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500">
                     </div>
                 </div>
             </div>
 
-            <div id="cmpSettingsSources" style="display:none" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Період -->
+            <!-- Режим: два джерела -->
+            <div id="cmpSettingsSources" style="display:none" class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <div class="text-[10px] text-violet-400 uppercase font-bold tracking-widest mb-2">Період</div>
-                    <div class="flex gap-2 items-center">
+                    <div class="text-[10px] text-violet-400 uppercase font-bold tracking-widest mb-1.5">Період</div>
+                    <div class="flex gap-1.5 items-center">
                         <input type="date" id="cmpStartSingle" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-violet-500">
                         <span class="text-slate-500 text-xs">—</span>
-                        <input type="date" id="cmpEndSingle" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-violet-500">
+                        <input type="date" id="cmpEndSingle"   class="flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white outline-none focus:border-violet-500">
                     </div>
                 </div>
-                <!-- Джерело А -->
                 <div>
-                    <div class="text-[10px] text-blue-400 uppercase font-bold tracking-widest mb-2">Джерело А</div>
-                    <select id="cmpSourceA" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none focus:border-blue-500"></select>
+                    <div class="text-[10px] text-blue-400 uppercase font-bold tracking-widest mb-1.5">🔵 Джерело А</div>
+                    <select id="cmpSourceA" class="w-full bg-slate-800 border border-blue-800/60 rounded-lg p-2.5 text-sm text-white outline-none focus:border-blue-500"></select>
                 </div>
-                <!-- Джерело Б -->
                 <div>
-                    <div class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest mb-2">Джерело Б</div>
-                    <select id="cmpSourceB" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none focus:border-emerald-500"></select>
+                    <div class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest mb-1.5">🟢 Джерело Б</div>
+                    <select id="cmpSourceB" class="w-full bg-slate-800 border border-emerald-800/60 rounded-lg p-2.5 text-sm text-white outline-none focus:border-emerald-500"></select>
                 </div>
             </div>
 
-            <button onclick="runCompare()" class="mt-5 bg-violet-600 hover:bg-violet-700 text-white font-black px-8 py-2.5 rounded-lg text-sm transition active:scale-95 shadow-lg">
+            <button onclick="runCompare()" class="mt-4 bg-violet-600 hover:bg-violet-700 text-white font-black px-8 py-2.5 rounded-lg text-sm transition active:scale-95 shadow-lg">
                 🔍 Порівняти
             </button>
         </div>
 
         <!-- Результат -->
-        <div id="cmpResult" class="p-6"></div>
+        <div id="cmpResult" class="p-5"></div>
     </div>
 </div>
 
 <script>
-// ============================================================
-// ПОРІВНЯННЯ ПЕРІОДІВ
-// ============================================================
-let cmpMode = 'periods'; // 'periods' | 'sources'
+let cmpMode = 'periods';
 
 function openCompareModal() {
-    // Заповнюємо селекти джерел
     const sourceOptions = SOURCE_GROUPS.map(g => `<option value="${g.key}">${g.label}</option>`).join('');
     ['cmpSource','cmpSourceA','cmpSourceB'].forEach(id => {
         document.getElementById(id).innerHTML = sourceOptions;
     });
-    // Якщо є вибраний період у головному фільтрі — підставляємо в А
     const s = document.getElementById('dateStart').value;
     const e = document.getElementById('dateEnd').value;
     if (s && e) {
@@ -1496,7 +1486,6 @@ function openCompareModal() {
         document.getElementById('cmpEndA').value   = e;
         document.getElementById('cmpStartSingle').value = s;
         document.getElementById('cmpEndSingle').value   = e;
-        // Б — попередній такий самий відрізок
         const days = Math.round((new Date(e) - new Date(s)) / 86400000);
         const prevEnd   = new Date(s); prevEnd.setDate(prevEnd.getDate() - 1);
         const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - days);
@@ -1515,45 +1504,39 @@ function setCmpMode(mode) {
     cmpMode = mode;
     document.getElementById('cmpSettingsPeriods').style.display = mode === 'periods' ? '' : 'none';
     document.getElementById('cmpSettingsSources').style.display = mode === 'sources' ? '' : 'none';
-    document.getElementById('cmpMode_periods').classList.toggle('tab-active', mode === 'periods');
-    document.getElementById('cmpMode_sources').classList.toggle('tab-active', mode === 'sources');
-    document.getElementById('cmpMode_periods').classList.toggle('text-slate-400', mode !== 'periods');
-    document.getElementById('cmpMode_sources').classList.toggle('text-slate-400', mode !== 'sources');
+    ['periods','sources'].forEach(m => {
+        document.getElementById('cmpMode_' + m).classList.toggle('tab-active', m === mode);
+        document.getElementById('cmpMode_' + m).classList.toggle('text-slate-400', m !== mode);
+    });
     document.getElementById('cmpResult').innerHTML = '';
 }
 
-// Збираємо метрики для конкретного джерела за конкретний період
 function getCmpMetrics(groupKey, dStart, dEnd) {
     const leads = globalLeads.filter(l => {
         const d = parseDate(l.date);
         if (d < dStart || d > dEnd) return false;
         const cat = classify(l.source, l.utm, l.manager);
         if (!cat || cat === 'repeat') return false;
-        const f = findChild(l.source, l.manager, l.utm);
-        return f.gk === groupKey;
+        return findChild(l.source, l.manager, l.utm).gk === groupKey;
     });
-
     const advs = globalAdvs.filter(a => {
         const d = parseDate(a.date);
         if (d < dStart || d > dEnd) return false;
         const cat = classify(a.source, a.utm, a.manager);
         if (!cat || cat === 'repeat') return false;
-        const f = findChild(a.source, a.manager, a.utm);
-        return f.gk === groupKey;
+        return findChild(a.source, a.manager, a.utm).gk === groupKey;
     });
 
-    const m      = analyze(leads);
-    const sales  = advs.length;
+    const m        = analyze(leads);
+    const sales    = advs.length;
     const salesSum = advs.reduce((s, a) => s + a.amount, 0);
-    const spend  = spendBySource[groupKey] || getCmpSpend(groupKey, dStart, dEnd);
-
-    const cpl    = (spend && m.total)  ? spend / m.total  : 0;
-    const cpca   = (spend && m.target) ? spend / m.target : 0;
-    const convCall  = m.total  ? m.reached / m.total  : 0;
-    const convCA    = m.total  ? m.target  / m.total  : 0;
-    const convSales = m.target ? sales     / m.target  : 0;
+    const spend    = getCmpSpend(groupKey, dStart, dEnd);
+    const cpl      = (spend && m.total)  ? spend / m.total  : 0;
+    const cpca     = (spend && m.target) ? spend / m.target : 0;
+    const convCall  = m.total  ? m.reached / m.total  : null;
+    const convCA    = m.total  ? m.target  / m.total  : null;
+    const convSales = m.target ? sales     / m.target  : null;
     const avgCheck  = sales    ? salesSum  / sales     : 0;
-
     return { total: m.total, reached: m.reached, target: m.target, sales, salesSum, spend, cpl, cpca, convCall, convCA, convSales, avgCheck };
 }
 
@@ -1563,171 +1546,288 @@ function getCmpSpend(groupKey, dStart, dEnd) {
         const d = parseDate(s.date);
         if (d < dStart || d > dEnd) return;
         for (const mapping of SPEND_SOURCE_MAP) {
-            if (mapping.match(s.source) && mapping.groupKeys.includes(groupKey)) {
-                total += s.spend;
-                break;
-            }
+            if (mapping.match(s.source) && mapping.groupKeys.includes(groupKey)) { total += s.spend; break; }
         }
     });
     return total;
 }
 
 function runCompare() {
-    let mA, mB, labelA, labelB;
+    let mA, mB, labelA, labelB, sourceLabel;
 
     if (cmpMode === 'periods') {
-        const groupKey = document.getElementById('cmpSource').value;
-        const groupLabel = SOURCE_GROUPS.find(g => g.key === groupKey)?.label || groupKey;
-        const sA = document.getElementById('cmpStartA').value;
-        const eA = document.getElementById('cmpEndA').value;
-        const sB = document.getElementById('cmpStartB').value;
-        const eB = document.getElementById('cmpEndB').value;
-        if (!sA || !eA || !sB || !eB) return alert('Вкажіть обидва періоди');
-
-        const dStartA = new Date(sA); dStartA.setHours(0,0,0,0);
-        const dEndA   = new Date(eA); dEndA.setHours(23,59,59,999);
-        const dStartB = new Date(sB); dStartB.setHours(0,0,0,0);
-        const dEndB   = new Date(eB); dEndB.setHours(23,59,59,999);
-
-        mA = getCmpMetrics(groupKey, dStartA, dEndA);
-        mB = getCmpMetrics(groupKey, dStartB, dEndB);
-        labelA = `${sA} — ${eA}`;
-        labelB = `${sB} — ${eB}`;
-        renderCompareResult(mA, mB, labelA, labelB, groupLabel, groupLabel);
+        const gk = document.getElementById('cmpSource').value;
+        sourceLabel = SOURCE_GROUPS.find(g => g.key === gk)?.label || gk;
+        const sA = document.getElementById('cmpStartA').value, eA = document.getElementById('cmpEndA').value;
+        const sB = document.getElementById('cmpStartB').value, eB = document.getElementById('cmpEndB').value;
+        if (!sA||!eA||!sB||!eB) return alert('Вкажіть обидва періоди');
+        const dSA = new Date(sA); dSA.setHours(0,0,0,0); const dEA = new Date(eA); dEA.setHours(23,59,59,999);
+        const dSB = new Date(sB); dSB.setHours(0,0,0,0); const dEB = new Date(eB); dEB.setHours(23,59,59,999);
+        mA = getCmpMetrics(gk, dSA, dEA); mB = getCmpMetrics(gk, dSB, dEB);
+        labelA = formatDateRange(sA, eA); labelB = formatDateRange(sB, eB);
     } else {
-        const gKeyA = document.getElementById('cmpSourceA').value;
-        const gKeyB = document.getElementById('cmpSourceB').value;
-        const sP    = document.getElementById('cmpStartSingle').value;
-        const eP    = document.getElementById('cmpEndSingle').value;
-        if (!sP || !eP) return alert('Вкажіть період');
-
-        const dStart = new Date(sP); dStart.setHours(0,0,0,0);
-        const dEnd   = new Date(eP); dEnd.setHours(23,59,59,999);
-
-        mA = getCmpMetrics(gKeyA, dStart, dEnd);
-        mB = getCmpMetrics(gKeyB, dStart, dEnd);
-        labelA = SOURCE_GROUPS.find(g => g.key === gKeyA)?.label || gKeyA;
-        labelB = SOURCE_GROUPS.find(g => g.key === gKeyB)?.label || gKeyB;
-        renderCompareResult(mA, mB, labelA, labelB, `${sP} — ${eP}`, `${sP} — ${eP}`);
+        const gkA = document.getElementById('cmpSourceA').value, gkB = document.getElementById('cmpSourceB').value;
+        const sP  = document.getElementById('cmpStartSingle').value, eP = document.getElementById('cmpEndSingle').value;
+        if (!sP||!eP) return alert('Вкажіть період');
+        const dS = new Date(sP); dS.setHours(0,0,0,0); const dE = new Date(eP); dE.setHours(23,59,59,999);
+        mA = getCmpMetrics(gkA, dS, dE); mB = getCmpMetrics(gkB, dS, dE);
+        labelA = SOURCE_GROUPS.find(g => g.key === gkA)?.label || gkA;
+        labelB = SOURCE_GROUPS.find(g => g.key === gkB)?.label || gkB;
+        sourceLabel = formatDateRange(sP, eP);
     }
+    renderCompareResult(mA, mB, labelA, labelB, sourceLabel);
 }
 
-function renderCompareResult(mA, mB, labelA, labelB, titleA, titleB) {
-    // Хелпер: дельта з іконкою і кольором
-    function delta(a, b, invert = false, isPercent = false, isMoney = false) {
-        if (!b || b === 0) return '<span class="text-slate-500">—</span>';
-        const diff = a - b;
-        const pct  = ((a - b) / b * 100).toFixed(1);
-        const better = invert ? diff < 0 : diff > 0;
-        const color  = diff === 0 ? 'text-slate-400' : better ? 'text-emerald-400' : 'text-red-400';
-        const arrow  = diff === 0 ? '→' : better ? '↑' : '↓';
-        const sign   = diff > 0 ? '+' : '';
-        return `<span class="${color} font-bold text-xs">${arrow} ${sign}${pct}%</span>`;
+function formatDateRange(s, e) {
+    const fmt = d => d.split('-').reverse().join('.');
+    return `${fmt(s)} — ${fmt(e)}`;
+}
+
+function renderCompareResult(mA, mB, labelA, labelB, subtitle) {
+    // ---- Хелпери ----
+    const fmtPct = v => v !== null && v !== undefined ? (v * 100).toFixed(1) + '%' : '—';
+    const fmtN   = v => v || (v === 0 ? '0' : '—');
+
+    function deltaBadge(a, b, invert = false) {
+        if (b === null || b === undefined || b === 0 || a === null || a === undefined) return '<span class="text-slate-500 text-xs">—</span>';
+        const pct    = ((a - b) / Math.abs(b) * 100);
+        const better = invert ? pct < 0 : pct > 0;
+        const color  = Math.abs(pct) < 0.5 ? 'text-slate-400' : better ? 'text-emerald-400' : 'text-red-400';
+        const bg     = Math.abs(pct) < 0.5 ? 'bg-slate-700/40' : better ? 'bg-emerald-900/30' : 'bg-red-900/30';
+        const arrow  = Math.abs(pct) < 0.5 ? '→' : better ? '↑' : '↓';
+        const sign   = pct > 0 ? '+' : '';
+        return `<span class="inline-flex items-center gap-1 ${bg} ${color} font-black text-xs px-2 py-0.5 rounded-full">${arrow} ${sign}${pct.toFixed(1)}%</span>`;
     }
 
-    function fmtPct(v) { return v ? (v * 100).toFixed(1) + '%' : '—'; }
+    function progressBar(v, max, color) {
+        if (v === null || v === undefined || max === 0) return '';
+        const w = Math.min(100, (v / max) * 100).toFixed(1);
+        return `<div class="mt-1.5 h-1.5 bg-slate-700 rounded-full overflow-hidden"><div class="h-full rounded-full ${color}" style="width:${w}%"></div></div>`;
+    }
 
-    // Метрики для карток
-    const cards = [
-        { label: 'Ліди',             a: mA.total,     b: mB.total,     fmt: v => v || '—',         invert: false, color: 'blue' },
-        { label: 'Додзвін',          a: mA.reached,   b: mB.reached,   fmt: v => v || '—',         invert: false, color: 'amber' },
-        { label: 'ЦА',               a: mA.target,    b: mB.target,    fmt: v => v || '—',         invert: false, color: 'emerald' },
-        { label: 'Продажів',         a: mA.sales,     b: mB.sales,     fmt: v => v || '—',         invert: false, color: 'orange' },
-        { label: 'Конв. в додзвін',  a: mA.convCall,  b: mB.convCall,  fmt: fmtPct,                invert: false, color: 'amber' },
-        { label: 'Конв. в ЦА',       a: mA.convCA,    b: mB.convCA,    fmt: fmtPct,                invert: false, color: 'emerald' },
-        { label: 'Конв. в продаж',   a: mA.convSales, b: mB.convSales, fmt: fmtPct,                invert: false, color: 'orange' },
-        { label: 'Ціна ліда',        a: mA.cpl,       b: mB.cpl,       fmt: v => fmtMoneyUSD(v),   invert: true,  color: 'purple' },
-        { label: 'Ціна ЦА',          a: mA.cpca,      b: mB.cpca,      fmt: v => fmtMoneyUSD(v),   invert: true,  color: 'purple' },
-        { label: 'Сума угод',        a: mA.salesSum,  b: mB.salesSum,  fmt: v => fmtMoney(v),      invert: false, color: 'yellow' },
-        { label: 'Середній чек',     a: mA.avgCheck,  b: mB.avgCheck,  fmt: v => fmtMoney(v),      invert: false, color: 'yellow' },
-        { label: 'Бюджет',           a: mA.spend,     b: mB.spend,     fmt: v => fmtMoneyUSD(v),   invert: true,  color: 'violet' },
+    // ---- Вердикт ----
+    const metrics = [
+        { a: mA.total,     b: mB.total,     inv: false },
+        { a: mA.target,    b: mB.target,    inv: false },
+        { a: mA.convCA,    b: mB.convCA,    inv: false },
+        { a: mA.convSales, b: mB.convSales, inv: false },
+        { a: mA.cpl,       b: mB.cpl,       inv: true  },
+        { a: mA.cpca,      b: mB.cpca,      inv: true  },
+        { a: mA.salesSum,  b: mB.salesSum,  inv: false },
+    ];
+    let winsA = 0, winsB = 0;
+    metrics.forEach(({ a, b, inv }) => {
+        if (!a || !b) return;
+        const aBetter = inv ? a < b : a > b;
+        if (Math.abs(a - b) / Math.max(Math.abs(b), 0.001) < 0.005) return; // ігнор <0.5%
+        aBetter ? winsA++ : winsB++;
+    });
+    const total = winsA + winsB;
+    let verdictHtml = '';
+    if (total > 0) {
+        if (winsA > winsB) {
+            verdictHtml = `<div class="mb-5 flex items-center gap-3 bg-blue-900/25 border border-blue-700/40 rounded-xl px-4 py-3">
+                <span class="text-2xl">🔵</span>
+                <div><span class="text-blue-300 font-black text-sm">${labelA}</span> <span class="text-slate-300 text-sm">кращий по <b>${winsA} з ${total}</b> метрик</span></div>
+            </div>`;
+        } else if (winsB > winsA) {
+            verdictHtml = `<div class="mb-5 flex items-center gap-3 bg-emerald-900/25 border border-emerald-700/40 rounded-xl px-4 py-3">
+                <span class="text-2xl">🟢</span>
+                <div><span class="text-emerald-300 font-black text-sm">${labelB}</span> <span class="text-slate-300 text-sm">кращий по <b>${winsB} з ${total}</b> метрик</span></div>
+            </div>`;
+        } else {
+            verdictHtml = `<div class="mb-5 flex items-center gap-3 bg-slate-800/60 border border-slate-600/40 rounded-xl px-4 py-3">
+                <span class="text-2xl">🤝</span>
+                <span class="text-slate-300 text-sm font-bold">Результати практично рівні</span>
+            </div>`;
+        }
+    }
+
+    // ---- Групи рядків таблиці ----
+    const maxConv = 1;
+    const rows = [
+        // Заголовок групи
+        { group: '📊 Кількісні показники' },
+        {
+            label: 'Ліди',
+            a: fmtN(mA.total), b: fmtN(mB.total),
+            delta: deltaBadge(mA.total, mB.total),
+            better: mA.total !== mB.total ? (mA.total > mB.total ? 'a' : 'b') : null,
+        },
+        {
+            label: 'Додзвін',
+            a: fmtN(mA.reached), b: fmtN(mB.reached),
+            delta: deltaBadge(mA.reached, mB.reached),
+            better: mA.reached !== mB.reached ? (mA.reached > mB.reached ? 'a' : 'b') : null,
+        },
+        {
+            label: 'ЦА',
+            a: fmtN(mA.target), b: fmtN(mB.target),
+            delta: deltaBadge(mA.target, mB.target),
+            better: mA.target !== mB.target ? (mA.target > mB.target ? 'a' : 'b') : null,
+        },
+        {
+            label: 'Продажів',
+            a: fmtN(mA.sales), b: fmtN(mB.sales),
+            delta: deltaBadge(mA.sales, mB.sales),
+            better: mA.sales !== mB.sales ? (mA.sales > mB.sales ? 'a' : 'b') : null,
+        },
+
+        { group: '📈 Конверсії' },
+        {
+            label: 'Конверсія в додзвін',
+            a: fmtPct(mA.convCall), b: fmtPct(mB.convCall),
+            delta: deltaBadge(mA.convCall, mB.convCall),
+            better: (mA.convCall||0) !== (mB.convCall||0) ? ((mA.convCall||0) > (mB.convCall||0) ? 'a' : 'b') : null,
+            barA: progressBar(mA.convCall, maxConv, 'bg-blue-500'),
+            barB: progressBar(mB.convCall, maxConv, 'bg-emerald-500'),
+        },
+        {
+            label: 'Конверсія в ЦА',
+            a: fmtPct(mA.convCA), b: fmtPct(mB.convCA),
+            delta: deltaBadge(mA.convCA, mB.convCA),
+            better: (mA.convCA||0) !== (mB.convCA||0) ? ((mA.convCA||0) > (mB.convCA||0) ? 'a' : 'b') : null,
+            barA: progressBar(mA.convCA, maxConv, 'bg-blue-500'),
+            barB: progressBar(mB.convCA, maxConv, 'bg-emerald-500'),
+        },
+        {
+            label: 'Конверсія в продаж',
+            a: fmtPct(mA.convSales), b: fmtPct(mB.convSales),
+            delta: deltaBadge(mA.convSales, mB.convSales),
+            better: (mA.convSales||0) !== (mB.convSales||0) ? ((mA.convSales||0) > (mB.convSales||0) ? 'a' : 'b') : null,
+            barA: progressBar(mA.convSales, maxConv, 'bg-blue-500'),
+            barB: progressBar(mB.convSales, maxConv, 'bg-emerald-500'),
+        },
+
+        { group: '💰 Фінанси' },
+        {
+            label: 'Сума угод',
+            a: fmtMoney(mA.salesSum), b: fmtMoney(mB.salesSum),
+            delta: deltaBadge(mA.salesSum, mB.salesSum),
+            better: mA.salesSum !== mB.salesSum ? (mA.salesSum > mB.salesSum ? 'a' : 'b') : null,
+        },
+        {
+            label: 'Середній чек',
+            a: fmtMoney(mA.avgCheck), b: fmtMoney(mB.avgCheck),
+            delta: deltaBadge(mA.avgCheck, mB.avgCheck),
+            better: mA.avgCheck !== mB.avgCheck ? (mA.avgCheck > mB.avgCheck ? 'a' : 'b') : null,
+        },
+
+        { group: '💸 Реклама' },
+        {
+            label: 'Бюджет',
+            a: fmtMoneyUSD(mA.spend), b: fmtMoneyUSD(mB.spend),
+            delta: deltaBadge(mA.spend, mB.spend, true),
+            better: mA.spend !== mB.spend ? (mA.spend < mB.spend ? 'a' : 'b') : null,
+        },
+        {
+            label: 'Ціна ліда',
+            a: fmtMoneyUSD(mA.cpl), b: fmtMoneyUSD(mB.cpl),
+            delta: deltaBadge(mA.cpl, mB.cpl, true),
+            better: (mA.cpl||0) !== (mB.cpl||0) ? ((mA.cpl||0) < (mB.cpl||0) && mA.cpl ? 'a' : 'b') : null,
+        },
+        {
+            label: 'Ціна ЦА',
+            a: fmtMoneyUSD(mA.cpca), b: fmtMoneyUSD(mB.cpca),
+            delta: deltaBadge(mA.cpca, mB.cpca, true),
+            better: (mA.cpca||0) !== (mB.cpca||0) ? ((mA.cpca||0) < (mB.cpca||0) && mA.cpca ? 'a' : 'b') : null,
+        },
     ];
 
-    const colorMap = {
-        blue:    { bg: 'bg-blue-900/20',    border: 'border-blue-800/40',    text: 'text-blue-300' },
-        amber:   { bg: 'bg-amber-900/20',   border: 'border-amber-800/40',   text: 'text-amber-300' },
-        emerald: { bg: 'bg-emerald-900/20', border: 'border-emerald-800/40', text: 'text-emerald-300' },
-        orange:  { bg: 'bg-orange-900/20',  border: 'border-orange-800/40',  text: 'text-orange-300' },
-        purple:  { bg: 'bg-purple-900/20',  border: 'border-purple-800/40',  text: 'text-purple-300' },
-        yellow:  { bg: 'bg-yellow-900/20',  border: 'border-yellow-800/40',  text: 'text-yellow-300' },
-        violet:  { bg: 'bg-violet-900/20',  border: 'border-violet-800/40',  text: 'text-violet-300' },
-    };
+    // ---- Будуємо таблицю ----
+    let tableRows = '';
+    rows.forEach(r => {
+        if (r.group) {
+            tableRows += `<tr class="bg-slate-800/60">
+                <td colspan="4" class="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">${r.group}</td>
+            </tr>`;
+            return;
+        }
+        const bgA = r.better === 'a' ? 'bg-blue-900/20' : '';
+        const bgB = r.better === 'b' ? 'bg-emerald-900/20' : '';
+        tableRows += `<tr class="border-t border-slate-700/40 hover:bg-slate-800/30 transition">
+            <td class="px-4 py-2.5 text-slate-300 text-sm font-bold">${r.label}</td>
+            <td class="px-4 py-2.5 text-sm font-black text-blue-200 ${bgA} rounded-l">
+                ${r.a}${r.barA || ''}
+            </td>
+            <td class="px-4 py-2.5 text-sm font-black text-emerald-200 ${bgB} rounded-r">
+                ${r.b}${r.barB || ''}
+            </td>
+            <td class="px-4 py-2.5 text-right">${r.delta}</td>
+        </tr>`;
+    });
 
-    // Картки з дельтою
-    const cardsHtml = cards.map(c => {
-        const cl = colorMap[c.color];
-        return `
-        <div class="${cl.bg} border ${cl.border} rounded-xl p-4 flex flex-col gap-1">
-            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">${c.label}</div>
-            <div class="flex items-end justify-between mt-1">
-                <div>
-                    <div class="text-[9px] text-blue-400 mb-0.5">${labelA}</div>
-                    <div class="${cl.text} text-lg font-black">${c.fmt(c.a)}</div>
-                </div>
-                <div class="text-center px-2">${delta(c.a, c.b, c.invert)}</div>
-                <div class="text-right">
-                    <div class="text-[9px] text-emerald-400 mb-0.5">${labelB}</div>
-                    <div class="text-slate-300 text-lg font-black">${c.fmt(c.b)}</div>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    // Барчарт (SVG) — 4 ключові метрики
-    const barMetrics = [
-        { label: 'Ліди',   a: mA.total,   b: mB.total },
-        { label: 'ЦА',     a: mA.target,  b: mB.target },
-        { label: 'Продажі',a: mA.sales,   b: mB.sales },
-        { label: 'Конв.ЦА',a: +(mA.convCA*100).toFixed(1), b: +(mB.convCA*100).toFixed(1) },
+    // ---- Барчарт ----
+    const barData = [
+        { label: 'Ліди',      a: mA.total,            b: mB.total,            fmt: v => v },
+        { label: 'ЦА',        a: mA.target,           b: mB.target,           fmt: v => v },
+        { label: 'Конв.ЦА',   a: mA.convCA ? +(mA.convCA*100).toFixed(1) : 0, b: mB.convCA ? +(mB.convCA*100).toFixed(1) : 0, fmt: v => v + '%' },
+        { label: 'Продажі',   a: mA.sales,            b: mB.sales,            fmt: v => v },
     ];
+    const maxBar = Math.max(...barData.flatMap(d => [d.a||0, d.b||0]), 1);
+    const BW = 40, GAP = 10, GRP = BW*2+GAP, GGRP = 40, H = 140;
+    const SVG_W = barData.length * (GRP + GGRP) - GGRP + 20;
 
-    const maxVal = Math.max(...barMetrics.flatMap(m => [m.a, m.b]), 1);
-    const barW = 36, gap = 8, groupW = barW*2+gap, groupGap = 32;
-    const chartW = barMetrics.length * (groupW + groupGap);
-    const chartH = 160;
-
-    const bars = barMetrics.map((bm, i) => {
-        const x = i * (groupW + groupGap);
-        const hA = Math.max(4, (bm.a / maxVal) * chartH * 0.85);
-        const hB = Math.max(4, (bm.b / maxVal) * chartH * 0.85);
+    const barsHtml = barData.map((bd, i) => {
+        const x  = i * (GRP + GGRP) + 10;
+        const hA = Math.max(3, ((bd.a||0) / maxBar) * H * 0.9);
+        const hB = Math.max(3, ((bd.b||0) / maxBar) * H * 0.9);
         return `
-            <rect x="${x}" y="${chartH - hA}" width="${barW}" height="${hA}" rx="4" fill="#3b82f6" opacity="0.85"/>
-            <text x="${x + barW/2}" y="${chartH - hA - 5}" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="bold">${bm.a}</text>
-            <rect x="${x + barW + gap}" y="${chartH - hB}" width="${barW}" height="${hB}" rx="4" fill="#10b981" opacity="0.85"/>
-            <text x="${x + barW + gap + barW/2}" y="${chartH - hB - 5}" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="bold">${bm.b}</text>
-            <text x="${x + groupW/2}" y="${chartH + 16}" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">${bm.label}</text>
+            <rect x="${x}" y="${H-hA}" width="${BW}" height="${hA}" rx="5" fill="#3b82f6" opacity="0.85"/>
+            <text x="${x+BW/2}" y="${H-hA-5}" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">${bd.fmt(bd.a||0)}</text>
+            <rect x="${x+BW+GAP}" y="${H-hB}" width="${BW}" height="${hB}" rx="5" fill="#10b981" opacity="0.85"/>
+            <text x="${x+BW+GAP+BW/2}" y="${H-hB-5}" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="bold">${bd.fmt(bd.b||0)}</text>
+            <text x="${x+GRP/2}" y="${H+16}" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">${bd.label}</text>
         `;
     }).join('');
 
-    const chartHtml = `
-    <div class="mt-6">
-        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-3">📊 Графік ключових метрик</div>
-        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50 overflow-x-auto">
-            <svg viewBox="0 0 ${chartW} ${chartH + 28}" class="w-full" style="min-width:${chartW}px; max-height:220px">
-                ${bars}
-                <!-- Легенда -->
-                <rect x="0" y="${chartH + 22}" width="10" height="6" rx="2" fill="#3b82f6"/>
-                <text x="14" y="${chartH + 28}" fill="#93c5fd" font-size="9">${labelA}</text>
-                <rect x="120" y="${chartH + 22}" width="10" height="6" rx="2" fill="#10b981"/>
-                <text x="134" y="${chartH + 28}" fill="#6ee7b7" font-size="9">${labelB}</text>
-            </svg>
-        </div>
-    </div>`;
+    // Субтитл (джерело або дати для режиму джерел)
+    const subtitleHtml = subtitle ? `<div class="text-[10px] text-slate-500 uppercase tracking-widest mb-3">${subtitle}</div>` : '';
 
     document.getElementById('cmpResult').innerHTML = `
-        <div class="mb-4 flex flex-wrap gap-3 items-center">
-            <span class="inline-flex items-center gap-2 bg-blue-900/30 border border-blue-800/40 rounded-lg px-3 py-1.5 text-xs font-bold text-blue-300">
-                <span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span>${labelA}
-            </span>
-            <span class="text-slate-500 font-bold">vs</span>
-            <span class="inline-flex items-center gap-2 bg-emerald-900/30 border border-emerald-800/40 rounded-lg px-3 py-1.5 text-xs font-bold text-emerald-300">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>${labelB}
-            </span>
+        ${subtitleHtml}
+        ${verdictHtml}
+
+        <!-- Легенда -->
+        <div class="flex gap-4 mb-3">
+            <div class="flex items-center gap-2 bg-blue-900/20 border border-blue-800/40 rounded-lg px-3 py-1.5">
+                <span class="w-3 h-3 rounded-full bg-blue-400 shrink-0"></span>
+                <span class="text-blue-300 font-black text-xs">${labelA}</span>
+            </div>
+            <div class="flex items-center gap-2 bg-emerald-900/20 border border-emerald-800/40 rounded-lg px-3 py-1.5">
+                <span class="w-3 h-3 rounded-full bg-emerald-400 shrink-0"></span>
+                <span class="text-emerald-300 font-black text-xs">${labelB}</span>
+            </div>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            ${cardsHtml}
+
+        <!-- Таблиця -->
+        <div class="rounded-xl overflow-hidden border border-slate-700/50 mb-5">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-900/80">
+                        <th class="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Метрика</th>
+                        <th class="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-blue-400">🔵 ${labelA}</th>
+                        <th class="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-emerald-400">🟢 ${labelB}</th>
+                        <th class="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Зміна</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
         </div>
-        ${chartHtml}
+
+        <!-- Барчарт -->
+        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/40">
+            <div class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-3">📊 Візуальне порівняння</div>
+            <div class="overflow-x-auto">
+                <svg viewBox="0 0 ${SVG_W} ${H+28}" style="min-width:${SVG_W}px; max-height:200px; width:100%">
+                    ${barsHtml}
+                    <rect x="10" y="${H+22}" width="10" height="6" rx="2" fill="#3b82f6"/>
+                    <text x="24" y="${H+29}" fill="#93c5fd" font-size="10">${labelA}</text>
+                    <rect x="140" y="${H+22}" width="10" height="6" rx="2" fill="#10b981"/>
+                    <text x="154" y="${H+29}" fill="#6ee7b7" font-size="10">${labelB}</text>
+                </svg>
+            </div>
+        </div>
     `;
 }
 </script>
