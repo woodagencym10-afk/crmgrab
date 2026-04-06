@@ -1586,7 +1586,7 @@ function buildMetrics(leads, advs, groupKey, dStart, dEnd, filterMode) {
     const m        = analyze(leads);
     const sales    = advs.length;
     const salesSum = advs.reduce((s, a) => s + a.amount, 0);
-    const spend    = filterMode === 'organic' ? 0 : getCmpSpend(groupKey, dStart, dEnd);
+    const spend    = (filterMode === 'organic' || !dStart || !dEnd) ? 0 : getCmpSpend(groupKey, dStart, dEnd);
     const cpl      = (spend && m.total)  ? spend / m.total  : 0;
     const cpca     = (spend && m.target) ? spend / m.target : 0;
     const convCall  = m.total  ? m.reached / m.total  : null;
@@ -1594,6 +1594,10 @@ function buildMetrics(leads, advs, groupKey, dStart, dEnd, filterMode) {
     const convSales = m.target ? sales     / m.target  : null;
     const avgCheck  = sales    ? salesSum  / sales     : 0;
     return { total: m.total, reached: m.reached, target: m.target, sales, salesSum, spend, cpl, cpca, convCall, convCA, convSales, avgCheck };
+}
+
+function emptyMetrics() {
+    return { total:0, reached:0, target:0, sales:0, salesSum:0, spend:0, cpl:0, cpca:0, convCall:null, convCA:null, convSales:null, avgCheck:0 };
 }
 
 function getCmpSpend(groupKey, dStart, dEnd) {
@@ -1625,8 +1629,10 @@ function runCompare() {
         gkB = document.getElementById('cmpSourceB').value;
         const sP = document.getElementById('cmpStartSingle').value, eP = document.getElementById('cmpEndSingle').value;
         if (!sP||!eP) return alert('Вкажіть період');
-        dSA = dSB = new Date(sP); dSA.setHours(0,0,0,0);
-        dEA = dEB = new Date(eP); dEA.setHours(23,59,59,999);
+        dSA = new Date(sP); dSA.setHours(0,0,0,0);
+        dSB = new Date(sP); dSB.setHours(0,0,0,0);
+        dEA = new Date(eP); dEA.setHours(23,59,59,999);
+        dEB = new Date(eP); dEB.setHours(23,59,59,999);
         labelA = SOURCE_GROUPS.find(g => g.key === gkA)?.label || gkA;
         labelB = SOURCE_GROUPS.find(g => g.key === gkB)?.label || gkB;
         sourceLabel = formatDateRange(sP, eP);
@@ -1665,7 +1671,7 @@ function runCompare() {
             m: getCmpMetricsChild(gkB, ch.ck, ch.isPaid, dSB, dEB)
         }));
 
-        renderCompareResult(mA, mB, labelA, labelB, sourceLabel, childMetricsA, childMetricsB, gkA === gkB);
+        renderCompareResult(mA, mB, labelA, labelB, sourceLabel, childMetricsA, childMetricsB, cmpMode === 'periods');
     };
     _lastCmpCall();
 }
@@ -1782,8 +1788,8 @@ function renderCompareResult(mA, mB, labelA, labelB, subtitle, childrenA, childr
             const chA = childrenA[i];
             const chB = childrenB[i];
             if (!chA && !chB) continue;
-            const mChA = chA ? chA.m : buildMetrics([], [], '', null, null, 'all');
-            const mChB = chB ? chB.m : buildMetrics([], [], '', null, null, 'all');
+            const mChA = chA ? chA.m : emptyMetrics();
+            const mChB = chB ? chB.m : emptyMetrics();
             if (mChA.total === 0 && mChB.total === 0) continue;
             const labelLeft  = chA ? chA.label : '—';
             const labelRight = chB ? chB.label : '—';
