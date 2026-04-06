@@ -987,63 +987,168 @@ function setTab(tabName) {
 
 // ============================================================
 // ДЕТАЛЬНИЙ ЗВІТ ПО КАМПАНІЯХ
+// Панелі: FB Ecoforma | FB Wood Agency | Сайт EcoForma | Сайт Wood Agency
 // ============================================================
+
+// Хардкод маппінг: utm_campaign → Campaign Name (виключення з правил)
+const UTM_HARDMAP = {
+    // FB Ecoforma — регіональні кампанії
+    'lead_saite_rivnenska':          'KP | Lead Saite | ADV | Рівненська | 18.01.26',
+    'lead_saite_lviv':               'KP | Lead Saite | ADV | Львівська | 18.01.26',
+    'lead_saite_volynska':           'KP | Lead Saite | ADV | Волинська | 18.01.26',
+    'lead_saite_zakarpatska':        'KP | Lead Saite | ADV | Закарпатська | 18.01.26',
+    'lead_saite_ternopilska':        'KP | Lead Saite | ADV | Тернопільська | 18.01.26',
+    'lead_saite_5oblastey_11_03_26': 'KP | Lead Saite | ADV | 5 областей 2 | New | 11.03.26',
+    'lead_saite_lviv_24_03_26':      'KP | Lead Saite Сертифікати | ADV | Львівська | 24.03.26',
+    'lead_saite_volynska_24_03_26':  'KP | Lead Saite Сертифікати | ADV | Волинська | 24.03.26',
+    'lead_saite_rivnenska_24_03_26': 'KP | Lead Saite Сертифікати | ADV | Рівненська | 24.03.26',
+    'lead_saite_ternopil_24_03_26':  'KP | Lead Saite Сертифікати | ADV | Тернопільська | 24.03.26',
+    // FB Wood Agency
+    'fb_wa_wix_catalog_pvfac_pls_ins': 'KP | WA.shop Adv+ | 20.03.26',
+    'wastore_20_03_26':                'KP | WA.store Adv+ | 20.03.26',
+};
+
+// Визначення панелі кампанії по Campaign Name
+const CAMP_PANELS = [
+    { key: 'fb_eco',    label: 'Facebook Ecoforma',    color: 'blue',   icon: '📘',
+      matchCampaign: n => n.toLowerCase().includes('kp') && !n.toLowerCase().includes('wa.') && !n.toLowerCase().includes('wa |') },
+    { key: 'fb_wood',   label: 'Facebook Wood Agency', color: 'amber',  icon: '🪵',
+      matchCampaign: n => n.toLowerCase().includes('wa.') || n.toLowerCase().includes('wa |') || n.toLowerCase().includes('wa.shop') || n.toLowerCase().includes('wa.store') },
+    { key: 'site_eco',  label: 'Сайт EcoForma',        color: 'emerald',icon: '🌿',
+      matchCampaign: n => n.toLowerCase().includes('pmax') || n.toLowerCase().includes('google') || (n.toLowerCase().includes('eco') && !n.toLowerCase().includes('kp')) },
+    { key: 'site_wood', label: 'Сайт Wood Agency',     color: 'cyan',   icon: '🌐',
+      matchCampaign: n => false }, // поки порожньо — додамо коли з'являться кампанії
+];
+
+const PANEL_COLORS = {
+    blue:    { border: 'border-blue-800/50',    header: 'bg-blue-950/40',    badge: 'bg-blue-900/30 text-blue-300',    dot: 'bg-blue-400' },
+    amber:   { border: 'border-amber-800/50',   header: 'bg-amber-950/40',   badge: 'bg-amber-900/30 text-amber-300',  dot: 'bg-amber-400' },
+    emerald: { border: 'border-emerald-800/50', header: 'bg-emerald-950/40', badge: 'bg-emerald-900/30 text-emerald-300', dot: 'bg-emerald-400' },
+    cyan:    { border: 'border-cyan-800/50',    header: 'bg-cyan-950/40',    badge: 'bg-cyan-900/30 text-cyan-300',    dot: 'bg-cyan-400' },
+};
+
 function tokenize(str) {
-    return String(str || '').toLowerCase().replace(/[|_\-\s\.\,]+/g,' ').split(' ').map(t=>t.trim()).filter(t=>t.length>2);
+    return String(str || '').toLowerCase().replace(/[|_\-\s\.\,\+]+/g,' ').split(' ').map(t=>t.trim()).filter(t=>t.length>1);
 }
-function campaignSimilarity(utm, campaignName) {
-    if (!utm || !campaignName) return 0;
-    const utmTokens  = new Set(tokenize(utm));
-    const campTokens = tokenize(campaignName);
-    if (utmTokens.size === 0 || campTokens.length === 0) return 0;
-    const matches = campTokens.filter(t => utmTokens.has(t)).length;
-    return matches / Math.max(utmTokens.size, campTokens.length);
-}
-function matchUtmToCampaign(utm, campaigns) {
+
+// Покращений матчинг: спочатку хардкод, потім точний збіг токена, потім схожість
+function matchUtmToCampaign(utm, utmSource, allCampaignNames) {
+    if (!utm && !utmSource) return null;
+
+    // 1. Хардкод маппінг
+    const utmLow = (utm || '').toLowerCase().trim();
+    if (UTM_HARDMAP[utmLow]) {
+        const hardTarget = UTM_HARDMAP[utmLow];
+        const found = allCampaignNames.find(c => c === hardTarget);
+        if (found) return found;
+    }
+
+    // 2. utm_source як ключ хардмапу (FB Wood без utm_campaign)
+    const srcLow = (utmSource || '').toLowerCase().trim();
+    if (!utm && srcLow && UTM_HARDMAP[srcLow]) {
+        const hardTarget = UTM_HARDMAP[srcLow];
+        const found = allCampaignNames.find(c => c === hardTarget);
+        if (found) return found;
+    }
+
     if (!utm) return null;
+
+    // 3. Точний збіг utm у Campaign Name (нові кампанії з utm в назві)
+    const exactInName = allCampaignNames.find(c => c.toLowerCase().includes(utmLow));
+    if (exactInName) return exactInName;
+
+    // 4. Точний збіг навпаки (Campaign Name токен є в utm)
+    const campTokenMatch = allCampaignNames.find(c => {
+        const cTokens = tokenize(c);
+        return cTokens.some(t => t.length > 3 && utmLow.includes(t));
+    });
+    if (campTokenMatch) return campTokenMatch;
+
+    // 5. Токенна схожість (поріг вищий — 0.35)
     let best = null, bestScore = 0;
-    campaigns.forEach(c => {
-        const score = campaignSimilarity(utm, c);
-        if (score > bestScore && score >= 0.25) { bestScore = score; best = c; }
+    const utmTokens = new Set(tokenize(utm));
+    allCampaignNames.forEach(c => {
+        const campTokens = tokenize(c);
+        if (utmTokens.size === 0 || campTokens.length === 0) return;
+        const matches = campTokens.filter(t => utmTokens.has(t)).length;
+        const score = matches / Math.max(utmTokens.size, campTokens.length);
+        if (score > bestScore && score >= 0.35) { bestScore = score; best = c; }
     });
     return best;
 }
 
+// Визначення панелі для кампанії
+function detectPanel(campaignName, leadSource) {
+    const n   = campaignName || '';
+    const src = (leadSource || '').toLowerCase();
+
+    // По джерелу ліда — найточніший спосіб
+    if (src.includes('facebook') && (src.includes('ecoforma') || src.includes('екоформа'))) return 'fb_eco';
+    if (src.includes('facebook') && (src.includes('wood') || src.includes('вуд')))           return 'fb_wood';
+    if ((src.includes('ecoforma') || src.includes('екоформа')) && !src.includes('facebook')) return 'site_eco';
+    if ((src.includes('wood') || src.includes('вуд')) && !src.includes('facebook'))          return 'site_wood';
+
+    // По назві кампанії (Spend без лідів)
+    for (const p of CAMP_PANELS) {
+        if (p.matchCampaign(n)) return p.key;
+    }
+    return 'fb_eco'; // fallback
+}
+
 function buildCampaignIndex(dStart, dEnd) {
-    const idx = {};
+    const idx = {}; // { campaignKey: { displayName, panelKey, utms, leads, advs, spend } }
+
+    // Збираємо Spend по кампаніях
     const spendByCampaign = {};
+    const spendSourceByCampaign = {}; // для визначення панелі
     globalSpend.forEach(s => {
         const d = parseDate(s.date);
         if (d < dStart || d > dEnd) return;
         if (!s.campaign) return;
         spendByCampaign[s.campaign] = (spendByCampaign[s.campaign] || 0) + s.spend;
+        spendSourceByCampaign[s.campaign] = s.source;
     });
 
     const allCampaignNames = Object.keys(spendByCampaign);
+
+    // Ініціалізуємо кампанії зі Spend
     allCampaignNames.forEach(name => {
-        if (!idx[name]) idx[name] = { displayName: name, source:'', utms: new Set(), leads:[], advs:[], spend:0 };
-        idx[name].spend += spendByCampaign[name];
+        const panelKey = detectPanel(name, spendSourceByCampaign[name]);
+        idx[name] = { displayName: name, panelKey, utms: new Set(), leads: [], advs: [], spend: spendByCampaign[name] };
     });
 
-    const leads = globalLeads.filter(l => { const d = parseDate(l.date); return d >= dStart && d <= dEnd; });
+    // Ліди з UTM мітками
+    const leads = globalLeads.filter(l => {
+        const d = parseDate(l.date);
+        return d >= dStart && d <= dEnd;
+    });
+
     leads.forEach(l => {
-        if (!l.utm) return;
-        let matched = allCampaignNames.find(c => c.toLowerCase() === l.utm.toLowerCase());
-        if (!matched) matched = matchUtmToCampaign(l.utm, allCampaignNames);
-        const key = matched || ('utm:' + l.utm);
-        if (!idx[key]) idx[key] = { displayName: l.utm, source:'', utms: new Set(), leads:[], advs:[], spend:0 };
-        idx[key].utms.add(l.utm);
+        // Беремо тільки ліди з utm або utm_source
+        const hasUtm = !!l.utm;
+        const utmSrc = getUtmSource(l);
+        if (!hasUtm && !utmSrc) return;
+
+        const matched = matchUtmToCampaign(l.utm, utmSrc, allCampaignNames);
+        const key     = matched || (l.utm ? 'utm:' + l.utm : null);
+        if (!key) return;
+
+        if (!idx[key]) {
+            const panelKey = detectPanel('', l.source);
+            idx[key] = { displayName: l.utm || utmSrc, panelKey, utms: new Set(), leads: [], advs: [], spend: 0 };
+        }
+        if (l.utm) idx[key].utms.add(l.utm);
         idx[key].leads.push(l);
-        const src = String(l.source || '').toLowerCase();
-        if (src.includes('ecoforma') || src.includes('екоформа')) idx[key].source = 'eco';
-        else if (src.includes('wood') || src.includes('вуд'))     idx[key].source = 'wood';
+        // Уточнюємо панель по джерелу ліда (точніше ніж по назві кампанії)
+        const detectedPanel = detectPanel('', l.source);
+        if (detectedPanel) idx[key].panelKey = detectedPanel;
     });
 
+    // Аванси з UTM
     const advs = globalAdvs.filter(a => { const d = parseDate(a.date); return d >= dStart && d <= dEnd; });
     advs.forEach(a => {
         if (!a.utm) return;
-        let matched = allCampaignNames.find(c => c.toLowerCase() === a.utm.toLowerCase());
-        if (!matched) matched = matchUtmToCampaign(a.utm, allCampaignNames);
+        const matched = matchUtmToCampaign(a.utm, null, allCampaignNames);
         const key = matched || ('utm:' + a.utm);
         if (idx[key]) idx[key].advs.push(a);
     });
@@ -1051,7 +1156,17 @@ function buildCampaignIndex(dStart, dEnd) {
     return idx;
 }
 
-let currentCampSource = 'all';
+// Отримати utm_source з ліда
+function getUtmSource(lead) {
+    for (const k of Object.keys(lead)) {
+        const kl = String(k).toLowerCase().replace(/[\s_\-]/g,'');
+        if (kl === 'utmsource') {
+            const v = String(lead[k] || '').trim();
+            if (v && v !== 'undefined' && v !== '—') return v;
+        }
+    }
+    return '';
+}
 
 function renderCampaignsView() {
     const s = document.getElementById('dateStart').value;
@@ -1063,63 +1178,34 @@ function renderCampaignsView() {
 
     const campIdx = buildCampaignIndex(dStart, dEnd);
     const entries = Object.values(campIdx);
-    const filtered = currentCampSource === 'all' ? entries : entries.filter(e => e.source === currentCampSource);
 
-    const sources = [
-        { key: 'all',  label: '🌐 Всі' },
-        { key: 'eco',  label: '🌿 Ecoforma' },
-        { key: 'wood', label: '🪵 Wood Agency' },
-    ];
-    document.getElementById('campSourceFilter').innerHTML = sources.map(src =>
-        `<button onclick="setCampSource('${src.key}')" class="tab-btn px-4 py-1.5 font-bold text-xs rounded-lg border border-transparent ${currentCampSource === src.key ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">${src.label}</button>`
-    ).join('');
+    // Групуємо по панелях
+    const panels = {};
+    CAMP_PANELS.forEach(p => { panels[p.key] = []; });
 
-    filtered.sort((a, b) => b.leads.length - a.leads.length);
-
-    let html = '';
-    let totL=0, totCA=0, totSales=0, totSum=0, totSpend=0;
-
-    filtered.forEach(camp => {
+    entries.forEach(camp => {
         if (camp.leads.length === 0 && camp.spend === 0) return;
-        const m     = analyze(camp.leads);
-        const sales = camp.advs.length;
-        const sum   = camp.advs.reduce((s,a) => s + a.amount, 0);
-        const cpl   = (camp.spend && m.total)  ? camp.spend / m.total  : 0;
-        const cpca  = (camp.spend && m.target) ? camp.spend / m.target : 0;
-
-        totL += m.total; totCA += m.target; totSales += sales; totSum += sum; totSpend += camp.spend;
-
-        const srcBadge = camp.source === 'eco'
-            ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>'
-            : camp.source === 'wood'
-            ? '<span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1"></span>'
-            : '';
-        const utmList = camp.utms.size > 0
-            ? `<div class="text-[9px] text-slate-500 mt-0.5">${[...camp.utms].join(', ')}</div>`
-            : '';
-
-        html += `<tr class="hover:bg-slate-800/30 transition">
-            <td class="px-4 py-2.5">
-                <div class="text-slate-200 text-xs font-semibold flex items-center">${srcBadge}${camp.displayName}</div>
-                ${utmList}
-            </td>
-            <td class="px-2 py-2.5 text-center text-sm font-bold ${m.total>0?'text-blue-300':'text-slate-600'}">${m.total||'—'}</td>
-            <td class="px-2 py-2.5 text-center text-sm ${m.reached>0?'text-amber-300':'text-slate-600'}">${m.reached||'—'}</td>
-            <td class="px-2 py-2.5 text-center text-sm font-bold ${m.target>0?'text-emerald-400':'text-slate-600'}">${m.target||'—'}</td>
-            <td class="px-2 py-2.5 text-center text-sm ${sales>0?'text-orange-400':'text-slate-600'}">${sales||'—'}</td>
-            <td class="px-2 py-2.5 text-right text-sm ${sum>0?'text-yellow-500':'text-slate-600'}">${fmtMoney(sum)}</td>
-            <td class="px-2 py-2.5 text-right text-sm font-bold ${camp.spend>0?'text-purple-400':'text-slate-600'}">${camp.spend?fmtMoneyUSD(camp.spend):'—'}</td>
-            <td class="px-2 py-2.5 text-right text-sm ${cpl>0?'text-purple-300':'text-slate-600'}">${cpl?fmtMoneyUSD(cpl):'—'}</td>
-            <td class="px-4 py-2.5 text-right text-sm ${cpca>0?'text-emerald-300':'text-slate-600'}">${cpca?fmtMoneyUSD(cpca):'—'}</td>
-        </tr>`;
+        const pk = camp.panelKey || 'fb_eco';
+        if (!panels[pk]) panels[pk] = [];
+        panels[pk].push(camp);
     });
 
-    if (!html) html = `<tr><td colspan="9" class="p-8 text-center text-slate-400 font-bold">📭 Немає даних за вибраний період</td></tr>`;
+    // Сортуємо кожну панель за лідами
+    Object.keys(panels).forEach(pk => {
+        panels[pk].sort((a, b) => b.leads.length - a.leads.length);
+    });
 
-    document.getElementById('campTableBody').innerHTML = html;
-
-    const totCpl  = (totSpend && totL)  ? totSpend / totL  : 0;
-    const totCpca = (totSpend && totCA) ? totSpend / totCA : 0;
+    // Загальні KPI
+    let totL=0, totCA=0, totSales=0, totSum=0, totSpend=0;
+    entries.forEach(camp => {
+        const m = analyze(camp.leads);
+        totL += m.total; totCA += m.target;
+        totSales += camp.advs.length;
+        totSum   += camp.advs.reduce((s,a) => s+a.amount, 0);
+        totSpend += camp.spend;
+    });
+    const totCpl  = (totSpend && totL)  ? totSpend/totL  : 0;
+    const totCpca = (totSpend && totCA) ? totSpend/totCA : 0;
     document.getElementById('campKpiRow').innerHTML = `
         <div class="text-center"><p class="text-[10px] text-blue-400 uppercase font-bold tracking-widest">Лідів</p><p class="text-2xl font-black text-blue-100">${totL}</p></div>
         <div class="text-center"><p class="text-[10px] text-emerald-400 uppercase font-bold tracking-widest">ЦА</p><p class="text-2xl font-black text-emerald-300">${totCA}</p></div>
@@ -1129,11 +1215,103 @@ function renderCampaignsView() {
         <div class="text-center"><p class="text-[10px] text-purple-300 uppercase font-bold tracking-widest">Ціна ліда</p><p class="text-2xl font-black text-purple-200">${totCpl?fmtMoneyUSD(totCpl):'—'}</p></div>
         <div class="text-center"><p class="text-[10px] text-emerald-300 uppercase font-bold tracking-widest">Ціна ЦА</p><p class="text-2xl font-black text-emerald-200">${totCpca?fmtMoneyUSD(totCpca):'—'}</p></div>
     `;
-}
 
-function setCampSource(src) {
-    currentCampSource = src;
-    renderCampaignsView();
+    // Рендер панелей
+    let panelsHtml = '';
+    CAMP_PANELS.forEach(panel => {
+        const camps = panels[panel.key] || [];
+        const cl    = PANEL_COLORS[panel.color];
+
+        // Підсумки панелі
+        let pL=0, pCA=0, pSales=0, pSum=0, pSpend=0;
+        camps.forEach(c => {
+            const m = analyze(c.leads);
+            pL += m.total; pCA += m.target;
+            pSales += c.advs.length;
+            pSum   += c.advs.reduce((s,a) => s+a.amount, 0);
+            pSpend += c.spend;
+        });
+        const pCpl  = (pSpend && pL)  ? pSpend/pL  : 0;
+        const pCpca = (pSpend && pCA) ? pSpend/pCA : 0;
+
+        // Рядки таблиці
+        let rowsHtml = '';
+        camps.forEach(camp => {
+            const m    = analyze(camp.leads);
+            const sales = camp.advs.length;
+            const sum   = camp.advs.reduce((s,a) => s+a.amount, 0);
+            const cpl   = (camp.spend && m.total)  ? camp.spend/m.total  : 0;
+            const cpca  = (camp.spend && m.target) ? camp.spend/m.target : 0;
+            const convCA    = m.total  ? (m.target/m.total*100).toFixed(1)+'%'  : '—';
+            const convSales = m.target ? (sales/m.target*100).toFixed(1)+'%'    : '—';
+            const utmBadges = [...camp.utms].map(u =>
+                `<span class="inline-block bg-slate-700/60 text-slate-400 text-[9px] px-1.5 py-0.5 rounded mr-1">${u}</span>`
+            ).join('');
+
+            rowsHtml += `<tr class="border-t border-slate-700/30 hover:bg-slate-800/20 transition">
+                <td class="px-4 py-2.5 max-w-[280px]">
+                    <div class="text-slate-200 text-xs font-semibold">${camp.displayName}</div>
+                    ${utmBadges ? `<div class="mt-0.5">${utmBadges}</div>` : ''}
+                </td>
+                <td class="px-2 py-2 text-center text-sm font-bold ${m.total?'text-blue-300':'text-slate-600'}">${m.total||'—'}</td>
+                <td class="px-2 py-2 text-center text-sm ${m.reached?'text-amber-300':'text-slate-600'}">${m.reached||'—'}</td>
+                <td class="px-2 py-2 text-center text-sm font-bold ${m.target?'text-emerald-400':'text-slate-600'}">${m.target||'—'}</td>
+                <td class="px-2 py-2 text-center text-xs text-emerald-400/70">${convCA}</td>
+                <td class="px-2 py-2 text-center text-sm ${sales?'text-orange-400':'text-slate-600'}">${sales||'—'}</td>
+                <td class="px-2 py-2 text-center text-xs text-orange-400/70">${convSales}</td>
+                <td class="px-2 py-2 text-right text-sm ${sum?'text-yellow-500':'text-slate-600'}">${fmtMoney(sum)}</td>
+                <td class="px-2 py-2 text-right text-sm font-bold ${camp.spend?'text-purple-400':'text-slate-600'}">${camp.spend?fmtMoneyUSD(camp.spend):'—'}</td>
+                <td class="px-2 py-2 text-right text-sm ${cpl?'text-purple-300':'text-slate-600'}">${cpl?fmtMoneyUSD(cpl):'—'}</td>
+                <td class="px-4 py-2 text-right text-sm ${cpca?'text-emerald-300':'text-slate-600'}">${cpca?fmtMoneyUSD(cpca):'—'}</td>
+            </tr>`;
+        });
+
+        if (!rowsHtml) rowsHtml = `<tr><td colspan="11" class="px-4 py-4 text-slate-600 text-xs text-center">Немає даних за вибраний період</td></tr>`;
+
+        panelsHtml += `
+        <div class="rounded-2xl border ${cl.border} overflow-hidden mb-5">
+            <!-- Шапка панелі -->
+            <div class="${cl.header} px-5 py-3 flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">${panel.icon}</span>
+                    <span class="text-sm font-black text-white uppercase tracking-wider">${panel.label}</span>
+                </div>
+                <div class="flex gap-4 flex-wrap">
+                    <div class="text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Ліди</p><p class="text-lg font-black text-blue-200">${pL}</p></div>
+                    <div class="text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">ЦА</p><p class="text-lg font-black text-emerald-300">${pCA}</p></div>
+                    <div class="text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Продажі</p><p class="text-lg font-black text-orange-400">${pSales||'—'}</p></div>
+                    <div class="text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Бюджет</p><p class="text-lg font-black text-purple-300">${pSpend?fmtMoneyUSD(pSpend):'—'}</p></div>
+                    <div class="text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Ціна ліда</p><p class="text-lg font-black text-purple-200">${pCpl?fmtMoneyUSD(pCpl):'—'}</p></div>
+                    <div class="text-center"><p class="text-[9px] text-slate-400 uppercase font-bold">Ціна ЦА</p><p class="text-lg font-black text-emerald-200">${pCpca?fmtMoneyUSD(pCpca):'—'}</p></div>
+                </div>
+            </div>
+            <!-- Таблиця -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-900/50 text-dark-subtle text-[10px] font-bold uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-2.5 text-left">Кампанія</th>
+                            <th class="px-2 py-2.5 text-center">Ліди</th>
+                            <th class="px-2 py-2.5 text-center text-amber-400">Дзв</th>
+                            <th class="px-2 py-2.5 text-center text-emerald-400">ЦА</th>
+                            <th class="px-2 py-2.5 text-center text-emerald-300/70">% ЦА</th>
+                            <th class="px-2 py-2.5 text-center text-orange-400">Прод</th>
+                            <th class="px-2 py-2.5 text-center text-orange-300/70">% Прод</th>
+                            <th class="px-2 py-2.5 text-right text-yellow-400">Сума угод</th>
+                            <th class="px-2 py-2.5 text-right text-purple-400">Бюджет</th>
+                            <th class="px-2 py-2.5 text-right text-purple-300">Ціна ліда</th>
+                            <th class="px-4 py-2.5 text-right text-emerald-300">Ціна ЦА</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-dark-border/10">${rowsHtml}</tbody>
+                </table>
+            </div>
+        </div>`;
+    });
+
+    document.getElementById('campTableBody').innerHTML = `<tr><td colspan="11"><div class="p-4">${panelsHtml}</div></td></tr>`;
+    document.getElementById('campSourceFilter').innerHTML = ''; // фільтр тепер не потрібен
+    document.getElementById('campKpiRow'); // вже заповнено вище
 }
 
 // ============================================================
