@@ -993,8 +993,8 @@ const UTM_HARDMAP = {
     'lead_saite_volynska_24_03_26':  'KP | Lead Saite Сертифікати | ADV | Волинська | 24.03.26',
     'lead_saite_rivnenska_24_03_26': 'KP | Lead Saite Сертифікати | ADV | Рівненська | 24.03.26',
     'lead_saite_ternopil_24_03_26':  'KP | Lead Saite Сертифікати | ADV | Тернопільська | 24.03.26',
-    // FB Wood Agency
-    'fb_wa_wix_catalog_pvfac_pls_ins': 'KP | WA.shop Adv+ | 20.03.26',
+    // Сайт EcoForma (Google Ads)
+    'vagonka': 'KP | LAND | Вагонка | Search | 5 Областей | 21.08',
     'washop_20_03_26':                 'KP | WA.shop Adv+ | 20.03.26',
     'wastore_20_03_26':                'KP | WA.store Adv+ | 20.03.26',
 };
@@ -1058,12 +1058,14 @@ function matchUtmToCampaign(utm, utmSource, allCampaignNames) {
 
     if (!utm) return null;
 
-    // 3. Точний збіг: Campaign Name містить utm як підрядок
-    // (для нових кампаній де utm вписаний прямо в назву)
+    // 3. Точний збіг: Campaign Name містить utm як окреме слово/сегмент
+    // (для нових кампаній де utm вписаний прямо в назву через пробіл або |)
     const exactInName = allCampaignNames.find(c => {
         const cLow = c.toLowerCase();
-        // utm має бути цілим словом/сегментом в назві, не просто підрядком
-        return cLow.includes(utmLow) && utmLow.length > 5;
+        if (utmLow.length <= 5) return false;
+        // Перевіряємо що utm стоїть як окремий сегмент (після пробілу або | або на початку)
+        const pattern = new RegExp('(^|[\\s|])' + utmLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[\\s|])', 'i');
+        return pattern.test(c);
     });
     if (exactInName) return exactInName;
 
