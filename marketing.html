@@ -1034,50 +1034,44 @@ function tokenize(str) {
     return String(str || '').toLowerCase().replace(/[|_\-\s\.\,\+]+/g,' ').split(' ').map(t=>t.trim()).filter(t=>t.length>1);
 }
 
-// Покращений матчинг: спочатку хардкод, потім точний збіг токена, потім схожість
+// Маппінг utm → Campaign Name
 function matchUtmToCampaign(utm, utmSource, allCampaignNames) {
     if (!utm && !utmSource) return null;
 
-    // 1. Хардкод маппінг
     const utmLow = (utm || '').toLowerCase().trim();
-    if (UTM_HARDMAP[utmLow]) {
-        const hardTarget = UTM_HARDMAP[utmLow];
-        const found = allCampaignNames.find(c => c === hardTarget);
+    const srcLow = (utmSource || '').toLowerCase().trim();
+
+    // 1. Хардкод маппінг по utm_campaign
+    if (utmLow && UTM_HARDMAP[utmLow]) {
+        const target = UTM_HARDMAP[utmLow];
+        const found  = allCampaignNames.find(c => c === target);
         if (found) return found;
     }
 
-    // 2. utm_source як ключ хардмапу (FB Wood без utm_campaign)
-    const srcLow = (utmSource || '').toLowerCase().trim();
+    // 2. Хардкод по utm_source (Wood Agency без utm_campaign)
     if (!utm && srcLow && UTM_HARDMAP[srcLow]) {
-        const hardTarget = UTM_HARDMAP[srcLow];
-        const found = allCampaignNames.find(c => c === hardTarget);
+        const target = UTM_HARDMAP[srcLow];
+        const found  = allCampaignNames.find(c => c === target);
         if (found) return found;
     }
 
     if (!utm) return null;
 
-    // 3. Точний збіг utm у Campaign Name (нові кампанії з utm в назві)
-    const exactInName = allCampaignNames.find(c => c.toLowerCase().includes(utmLow));
+    // 3. Точний збіг: Campaign Name містить utm як підрядок
+    // (для нових кампаній де utm вписаний прямо в назву)
+    const exactInName = allCampaignNames.find(c => {
+        const cLow = c.toLowerCase();
+        // utm має бути цілим словом/сегментом в назві, не просто підрядком
+        return cLow.includes(utmLow) && utmLow.length > 5;
+    });
     if (exactInName) return exactInName;
 
-    // 4. Точний збіг навпаки (Campaign Name токен є в utm)
-    const campTokenMatch = allCampaignNames.find(c => {
-        const cTokens = tokenize(c);
-        return cTokens.some(t => t.length > 3 && utmLow.includes(t));
-    });
-    if (campTokenMatch) return campTokenMatch;
+    // 4. Точний збіг навпаки: utm = Campaign Name (повністю)
+    const fullMatch = allCampaignNames.find(c => c.toLowerCase() === utmLow);
+    if (fullMatch) return fullMatch;
 
-    // 5. Токенна схожість (поріг вищий — 0.35)
-    let best = null, bestScore = 0;
-    const utmTokens = new Set(tokenize(utm));
-    allCampaignNames.forEach(c => {
-        const campTokens = tokenize(c);
-        if (utmTokens.size === 0 || campTokens.length === 0) return;
-        const matches = campTokens.filter(t => utmTokens.has(t)).length;
-        const score = matches / Math.max(utmTokens.size, campTokens.length);
-        if (score > bestScore && score >= 0.35) { bestScore = score; best = c; }
-    });
-    return best;
+    // НЕ використовуємо токенний матчинг — занадто багато хибних збігів
+    return null;
 }
 
 function buildCampaignIndex(dStart, dEnd) {
