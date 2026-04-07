@@ -238,53 +238,53 @@ const SOURCE_GROUPS = [
     { key: 'fb_eco', label: 'Facebook Ecoforma', fbGroup: true, siteGroup: false, children: [
         // Платна: з мітками (utm)
         { key: 'fb_eco_paid', label: 'Facebook Ecoforma (реклама)', isPaid: true,
-          match: (s, m, hasUtm) => (s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('дзвінок') && hasUtm) },
+          match: (s, mgr, hasUtm) => (s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('дзвінок') && hasUtm) },
         // Платна: дзвінок facebook ecoforma
         { key: 'fb_eco_call', label: 'Дзвінок Facebook Ecoforma', isPaid: true,
-          match: (s, m, hasUtm) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа')) },
+          match: (s, mgr, hasUtm) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа')) },
         // Органіка: без міток
         { key: 'fb_eco_org', label: 'Facebook Ecoforma (органіка)', isPaid: false,
-          match: (s, m, hasUtm) => s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('дзвінок') && !hasUtm },
+          match: (s, mgr, hasUtm) => s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('дзвінок') && !hasUtm },
     ]},
     { key: 'fb_wood', label: 'Facebook Wood Agency', fbGroup: true, siteGroup: false, children: [
         // Платна: з мітками
         { key: 'fb_wood_paid', label: 'Facebook Wood Agency (реклама)', isPaid: true,
-          match: (s, m, hasUtm) => s.includes('facebook') && (s.includes('wood') || s.includes('вуд')) && !s.includes('дзвінок') && hasUtm },
+          match: (s, mgr, hasUtm) => s.includes('facebook') && (s.includes('wood') || s.includes('вуд')) && !s.includes('дзвінок') && hasUtm },
         // Платна: дзвінок facebook wood
         { key: 'fb_wood_call', label: 'Дзвінок Facebook Wood Agency', isPaid: true,
-          match: (s, m, hasUtm) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('wood') || s.includes('вуд')) },
+          match: (s, mgr, hasUtm) => s.includes('дзвінок') && s.includes('facebook') && (s.includes('wood') || s.includes('вуд')) },
         // Органіка: без міток
         { key: 'fb_wood_org', label: 'Facebook Wood Agency (органіка)', isPaid: false,
-          match: (s, m, hasUtm) => s.includes('facebook') && (s.includes('wood') || s.includes('вуд')) && !s.includes('дзвінок') && !hasUtm },
+          match: (s, mgr, hasUtm) => s.includes('facebook') && (s.includes('wood') || s.includes('вуд')) && !s.includes('дзвінок') && !hasUtm },
     ]},
     { key: 'site_eco', label: 'Сайт EcoForma', fbGroup: false, siteGroup: true, children: [
         // Платна: з мітками
         { key: 'site_eco_paid', label: 'Сайт EcoForma (реклама)', isPaid: true,
-          match: (s, m, hasUtm) => (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') && hasUtm },
+          match: (s, mgr, hasUtm) => (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') && hasUtm },
         // Платна: дзвінок сайт ecoforma
         { key: 'site_eco_call', label: 'Дзвінок Сайт EcoForma', isPaid: true,
-          match: (s, m, hasUtm) => s.includes('дзвінок') && (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook') },
+          match: (s, mgr, hasUtm) => s.includes('дзвінок') && (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook') },
         // Органіка: без міток
         { key: 'site_eco_org', label: 'Сайт EcoForma (органіка)', isPaid: false,
-          match: (s, m, hasUtm) => (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') && !hasUtm },
+          match: (s, mgr, hasUtm) => (s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook') && !s.includes('дзвінок') && !hasUtm },
     ]},
     { key: 'site_wood', label: 'Сайт Wood Agency', fbGroup: false, siteGroup: true, children: [
         // Платна: "дзвінок сайт wood agency" — нове джерело CRM
         { key: 'site_wood_call_paid', label: 'Дзвінок Сайт Wood Agency (реклама)', isPaid: true,
-          match: (s, m, hasUtm) => s.includes('дзвінок') && s.includes('сайт') && (s.includes('wood') || s.includes('вуд')) },
+          match: (s, mgr, hasUtm) => s.includes('дзвінок') && s.includes('сайт') && (s.includes('wood') || s.includes('вуд')) },
         // Платна: сайт wood з мітками
         { key: 'site_wood_paid', label: 'Сайт Wood Agency (реклама)', isPaid: true,
-          match: (s, m, hasUtm) => (s.includes('wood') || s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') && hasUtm },
+          match: (s, mgr, hasUtm) => (s.includes('wood') || s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') && hasUtm },
         // Органіка: "дзвінок" (без уточнення) + Оксана Савчук
         { key: 'site_wood_call_org', label: 'Дзвінок Wood Agency (органіка)', isPaid: false,
-          match: (s, m, hasUtm) => s === 'дзвінок' && m.includes('савчук') },
+          match: (s, mgr, hasUtm) => s === 'дзвінок' && mgr.includes('савчук') },
         // Органіка: сайт wood без міток
         { key: 'site_wood_org', label: 'Сайт Wood Agency (органіка)', isPaid: false,
-          match: (s, m, hasUtm) => (s.includes('wood') || s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') && !hasUtm },
+          match: (s, mgr, hasUtm) => (s.includes('wood') || s.includes('відповідальним')) && !s.includes('facebook') && !s.includes('дзвінок') && !hasUtm },
     ]},
     { key: 'olx', label: 'OLX', fbGroup: false, siteGroup: false, children: [
         { key: 'olx_d', label: 'OLX', isPaid: true,
-          match: (s, m, hasUtm) => s.includes('olx') },
+          match: (s, mgr, hasUtm) => s.includes('olx') },
     ]},
 ];
 
@@ -1712,6 +1712,8 @@ function toggleWeekdaySource(key) {
     });
     renderWeekdayAnalytics(leads);
 }
+
+window.onload = () => {
     const today = new Date(), ago = new Date();
     ago.setDate(today.getDate() - 30);
     document.getElementById('dateStart').valueAsDate = ago;
