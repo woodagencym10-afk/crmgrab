@@ -323,26 +323,29 @@ function getUtmSource(obj) {
 }
 
 function extractData(row, type) {
-    const utmCampaign = getUTM(row);
-    const utmSource   = getUtmSource(row);
+    const utmCampaign    = getUTM(row);
+    const utmSource      = getUtmSource(row);
+    const campaignName   = String(row['campaign_name'] || '').trim();
     if (type === 'lead') {
         return {
-            date:      String(row['Дата створення'] || row.date || '').trim(),
-            source:    String(row['Джерело']        || row.source || '').trim(),
-            utm:       utmCampaign,
-            utmSource: utmSource,
-            manager:   String(row['Відповідальний'] || row.manager || '').trim(),
-            status:    String(row['Якість ліда']    || row.status || '').trim(),
-            reason:    String(row['Причина відмови']|| row.reason || '').trim()
+            date:         String(row['Дата створення'] || row.date || '').trim(),
+            source:       String(row['Джерело']        || row.source || '').trim(),
+            utm:          utmCampaign,
+            utmSource:    utmSource,
+            campaignName: campaignName,
+            manager:      String(row['Відповідальний'] || row.manager || '').trim(),
+            status:       String(row['Якість ліда']    || row.status || '').trim(),
+            reason:       String(row['Причина відмови']|| row.reason || '').trim()
         };
     } else if (type === 'adv') {
         return {
-            date:      String(row['Дата авансу']    || row.date || '').trim(),
-            source:    String(row['Джерело']        || row.source || '').trim(),
-            utm:       utmCampaign,
-            utmSource: utmSource,
-            manager:   String(row['Відповідальний'] || row.manager || '').trim(),
-            amount:    parseFloat(String(row['Сума угоди'] || 0).replace(/\s/g,'')) || 0
+            date:         String(row['Дата авансу']    || row.date || '').trim(),
+            source:       String(row['Джерело']        || row.source || '').trim(),
+            utm:          utmCampaign,
+            utmSource:    utmSource,
+            campaignName: campaignName,
+            manager:      String(row['Відповідальний'] || row.manager || '').trim(),
+            amount:       parseFloat(String(row['Сума угоди'] || 0).replace(/\s/g,'')) || 0
         };
     } else {
         return {
@@ -1080,67 +1083,58 @@ function matchUtmToCampaign(utm, utmSource, allCampaignNames) {
 function buildCampaignIndex(dStart, dEnd) {
     const idx = {};
 
-    // Збираємо Spend — панель визначається по Source (колонка B)
-    const spendByCampaign = {};
-    const panelByCampaign = {};
+    // 1. Витрати зі Spend — панель по Source (колонка B)
     globalSpend.forEach(s => {
         const d = parseDate(s.date);
         if (d < dStart || d > dEnd) return;
         if (!s.campaign) return;
-        spendByCampaign[s.campaign] = (spendByCampaign[s.campaign] || 0) + s.spend;
-        if (!panelByCampaign[s.campaign]) {
-            panelByCampaign[s.campaign] = detectPanelBySpendSource(s.source) || 'fb_eco';
+        if (!idx[s.campaign]) {
+            idx[s.campaign] = {
+                displayName: s.campaign,
+                panelKey:    detectPanelBySpendSource(s.source) || 'fb_eco',
+                utms:        new Set(),
+                leads:       [],
+                advs:        [],
+                spend:       0
+            };
         }
+        idx[s.campaign].spend += s.spend;
     });
 
-    const allCampaignNames = Object.keys(spendByCampaign);
+    // 2. Ліди — пряме співставлення по campaign_name (колонка R МП)
+    globalLeads.forEach(l => {
+        const d = parseDate(l.date);
+        if (d < dStart || d > dEnd) return;
+        const campName = l.campaignName;
+        if (!campName) return;
 
-    // Ініціалізуємо кампанії зі Spend
-    allCampaignNames.forEach(name => {
-        idx[name] = {
-            displayName: name,
-            panelKey:    panelByCampaign[name] || 'fb_eco',
-            utms:        new Set(),
-            leads:       [],
-            advs:        [],
-            spend:       spendByCampaign[name]
-        };
-    });
-
-    // Ліди — матчимо по utm_campaign (колонка N)
-    const leads = globalLeads.filter(l => { const d = parseDate(l.date); return d >= dStart && d <= dEnd; });
-    leads.forEach(l => {
-        const hasUtm = !!l.utm;
-        const utmSrc = l.utmSource || '';
-        if (!hasUtm && !utmSrc) return;
-
-        const matched = matchUtmToCampaign(l.utm, utmSrc, allCampaignNames);
-        const key     = matched || (l.utm ? 'utm:' + l.utm : null);
-        if (!key) return;
-
-        if (!idx[key]) {
-            // Ліди без кампанії у Spend — панель по джерелу ліда
-            const panelKey = detectPanelByLeadSource(l.source) || 'fb_eco';
-            idx[key] = { displayName: l.utm || utmSrc, panelKey, utms: new Set(), leads: [], advs: [], spend: 0 };
+        if (!idx[campName]) {
+            idx[campName] = {
+                displayName: campName,
+                panelKey:    detectPanelByLeadSource(l.source) || 'fb_eco',
+                utms:        new Set(),
+                leads:       [],
+                advs:        [],
+                spend:       0
+            };
         }
-        if (l.utm) idx[key].utms.add(l.utm);
-        idx[key].leads.push(l);
+        if (l.utm) idx[campName].utms.add(l.utm);
+        idx[campName].leads.push(l);
 
-        // Якщо кампанія зі Spend — не перезаписуємо панель (Spend точніший)
-        // Якщо кампанія тільки з лідів — уточнюємо по джерелу
-        if (!panelByCampaign[key]) {
+        // Панель зі Spend має пріоритет — уточнюємо тільки якщо кампанія без Spend
+        if (idx[campName].spend === 0) {
             const fromLead = detectPanelByLeadSource(l.source);
-            if (fromLead) idx[key].panelKey = fromLead;
+            if (fromLead) idx[campName].panelKey = fromLead;
         }
     });
 
-    // Аванси
-    const advs = globalAdvs.filter(a => { const d = parseDate(a.date); return d >= dStart && d <= dEnd; });
-    advs.forEach(a => {
-        if (!a.utm) return;
-        const matched = matchUtmToCampaign(a.utm, null, allCampaignNames);
-        const key = matched || ('utm:' + a.utm);
-        if (idx[key]) idx[key].advs.push(a);
+    // 3. Аванси — по campaign_name
+    globalAdvs.forEach(a => {
+        const d = parseDate(a.date);
+        if (d < dStart || d > dEnd) return;
+        const campName = a.campaignName;
+        if (!campName) return;
+        if (idx[campName]) idx[campName].advs.push(a);
     });
 
     return idx;
