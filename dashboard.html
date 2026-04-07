@@ -1510,21 +1510,22 @@ function renderAreaChart(advData) {
         return;
     }
 
-    const datasets = sources.map(function(src) {
+    const datasets = sources.map(function(src, idx) {
         const c = areaColorOf(src);
         return {
             label: src,
             data:  allBuckets.map(function(bk) { return bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0; }),
             backgroundColor: c.fill,
             borderColor:     c.line,
-            borderWidth: 2.5,
-            fill: true,
+            borderWidth: 2,
+            fill: 'origin',
             tension: 0.4,
-            pointRadius:      allBuckets.length <= 20 ? 4 : 2,
-            pointHoverRadius: 7,
+            pointRadius:      allBuckets.length <= 20 ? 3 : 1,
+            pointHoverRadius: 6,
             pointBackgroundColor: c.line,
             pointBorderColor: '#0f172a',
             pointBorderWidth: 1.5,
+            stack: 'area',
         };
     });
 
@@ -1564,7 +1565,7 @@ function renderAreaChart(advData) {
                 }
             },
             scales: {
-                x: { ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                x: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 }, grid: { color: 'rgba(255,255,255,0.04)' } },
                 y: {
                     stacked: true,
                     ticks: { color: '#94a3b8', font: { size: 10 }, callback: function(v) {
