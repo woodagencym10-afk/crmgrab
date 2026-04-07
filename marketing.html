@@ -1092,7 +1092,7 @@ function buildCampaignIndex(dStart, dEnd) {
         if (!s.campaign) return;
         spendByCampaign[s.campaign] = (spendByCampaign[s.campaign] || 0) + s.spend;
         if (!panelByCampaign[s.campaign]) {
-            panelByCampaign[s.campaign] = detectPanel('', s.source) || 'fb_eco';
+            panelByCampaign[s.campaign] = detectPanelBySpendSource(s.source) || 'fb_eco';
         }
     });
 
@@ -1123,7 +1123,7 @@ function buildCampaignIndex(dStart, dEnd) {
 
         if (!idx[key]) {
             // Ліди без кампанії у Spend — панель по джерелу ліда
-            const panelKey = detectPanel('', l.source) || 'fb_eco';
+            const panelKey = detectPanelByLeadSource(l.source) || 'fb_eco';
             idx[key] = { displayName: l.utm || utmSrc, panelKey, utms: new Set(), leads: [], advs: [], spend: 0 };
         }
         if (l.utm) idx[key].utms.add(l.utm);
@@ -1132,7 +1132,7 @@ function buildCampaignIndex(dStart, dEnd) {
         // Якщо кампанія зі Spend — не перезаписуємо панель (Spend точніший)
         // Якщо кампанія тільки з лідів — уточнюємо по джерелу
         if (!panelByCampaign[key]) {
-            const fromLead = detectPanel('', l.source);
+            const fromLead = detectPanelByLeadSource(l.source);
             if (fromLead) idx[key].panelKey = fromLead;
         }
     });
