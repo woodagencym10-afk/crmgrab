@@ -169,12 +169,26 @@
 </div>
 
 <!-- АНАЛІТИКА ПО ДНЯХ ТИЖНЯ -->
-<div id="weekdayContainer" style="display:none" class="bg-dark-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8 max-w-[1600px] mx-auto transition-colors duration-300">
+<div id="weekdayContainer" style="display:none" class="bg-dark-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8 max-w-[1600px] mx-auto">
     <div class="bg-[#131c2e] px-6 py-4 border-b border-slate-700 flex flex-wrap gap-4 justify-between items-center">
         <h2 class="text-lg font-black text-white uppercase tracking-wider">📅 Активність по днях тижня</h2>
-        <div class="text-[10px] text-slate-500 font-bold">Клікни на джерело щоб побачити деталізацію</div>
+        <div id="wdBestDay" class="text-sm font-bold text-emerald-400"></div>
     </div>
-    <div class="p-5" id="weekdayContent"></div>
+    <div class="p-5">
+        <!-- Перемикач джерел -->
+        <div id="wdSourceBtns" class="flex flex-wrap gap-2 mb-6"></div>
+        <!-- Теплова карта -->
+        <div id="wdHeatmap" class="grid grid-cols-7 gap-3 mb-4"></div>
+        <!-- Легенда -->
+        <div class="flex gap-5 text-[10px] font-bold text-slate-500 mb-4">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded inline-block bg-slate-700"></span>0 ЦА</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded inline-block" style="background:#064e3b"></span>мало</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded inline-block" style="background:#059669"></span>середньо</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded inline-block" style="background:#34d399"></span>багато</span>
+        </div>
+        <!-- Деталізація по кліку на день -->
+        <div id="wdDayDetail" style="display:none" class="bg-slate-900/50 rounded-xl border border-slate-700/50 p-4"></div>
+    </div>
 </div>
 
 <!-- ЗАГАЛЬНІ ВИТРАТИ -->
@@ -547,17 +561,15 @@ function render() {
     renderActiveView();
     if (currentTab === 'campaigns') renderCampaignsView();
 
-    // Аналітика по днях тижня
+    // Теплова карта по днях тижня
     if (currentTab !== 'campaigns') {
-        const allVisibleLeads = leads.filter(l => {
+        const wdLeads = leads.filter(l => {
             const cat = classify(l.source, l.utm, l.manager);
             if (!cat || cat === 'repeat') return false;
             const f = findChild(l.source, l.manager, l.utm);
-            if (f.gk === 'other_src') return false;
-            const grp = SOURCE_GROUPS.find(g => g.key === f.gk);
-            return grp ? isGroupVisible(grp) : false;
+            return f.gk !== 'other_src';
         });
-        renderWeekdayAnalytics(allVisibleLeads);
+        renderWeekdayHeatmap(wdLeads);
     } else {
         document.getElementById('weekdayContainer').style.display = 'none';
     }
@@ -1711,6 +1723,158 @@ function toggleWeekdaySource(key) {
         return cat && cat !== 'repeat';
     });
     renderWeekdayAnalytics(leads);
+}
+
+// ============================================================
+// ТЕПЛОВА КАРТА ПО ДНЯХ ТИЖНЯ
+// ============================================================
+const WD_DAYS     = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+const WD_ORDER    = [1,2,3,4,5,6,0]; // Пн=1 ... Нд=0
+const WD_DAYS_FULL= ['Неділя','Понеділок','Вівторок','Середа','Четвер','П\'ятниця','Субота'];
+
+let wdActiveSource = '__all__';
+let wdActiveDay    = null;
+let wdLeadsCache   = [];
+
+function heatColor(val, max) {
+    if (!max || val === 0) return '#1e293b';
+    const pct = val / max;
+    if (pct < 0.25) return '#064e3b';
+    if (pct < 0.5)  return '#065f46';
+    if (pct < 0.75) return '#059669';
+    return '#34d399';
+}
+
+function buildWdData(leads) {
+    // Повертає { dayIndex: { total, target, children: { chKey: { label, total, target } } } }
+    const days = {};
+    WD_ORDER.forEach(d => { days[d] = { total: 0, target: 0, children: {} }; });
+    leads.forEach(l => {
+        const day = parseDate(l.date).getDay();
+        if (!days[day]) return;
+        days[day].total++;
+        const isTarget = l.status.toLowerCase() === STATUS_TARGET;
+        if (isTarget) days[day].target++;
+        // Дочірній компонент
+        const f = findChild(l.source, l.manager, l.utm);
+        const ck = f.ck;
+        if (!days[day].children[ck]) {
+            // Знаходимо мітку дочірнього
+            let chLabel = ck;
+            SOURCE_GROUPS.forEach(g => g.children.forEach(c => { if (c.key === ck) chLabel = c.label; }));
+            days[day].children[ck] = { label: chLabel, total: 0, target: 0 };
+        }
+        days[day].children[ck].total++;
+        if (isTarget) days[day].children[ck].target++;
+    });
+    return days;
+}
+
+function getWdLeads(sourceKey, allLeads) {
+    if (sourceKey === '__all__') return allLeads;
+    return allLeads.filter(l => {
+        const cat = classify(l.source, l.utm, l.manager);
+        if (!cat || cat === 'repeat') return false;
+        return findChild(l.source, l.manager, l.utm).gk === sourceKey;
+    });
+}
+
+function renderWeekdayHeatmap(allLeads) {
+    wdLeadsCache = allLeads;
+    const container = document.getElementById('weekdayContainer');
+    if (!allLeads || allLeads.length === 0) { container.style.display = 'none'; return; }
+    container.style.display = '';
+
+    // Кнопки джерел
+    const groups = SOURCE_GROUPS.filter(g => isGroupVisible(g));
+    const btns = [{ key: '__all__', label: '🌐 Всі' }, ...groups.map(g => ({ key: g.key, label: g.label }))];
+    document.getElementById('wdSourceBtns').innerHTML = btns.map(b =>
+        `<button onclick="wdSetSource('${b.key}')"
+            class="tab-btn px-3 py-1.5 text-xs font-bold rounded-lg border border-transparent transition
+            ${wdActiveSource === b.key ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">${b.label}</button>`
+    ).join('');
+
+    const filtered = getWdLeads(wdActiveSource, allLeads);
+    const days     = buildWdData(filtered);
+    const maxCA    = Math.max(...WD_ORDER.map(d => days[d]?.target || 0), 1);
+    const bestDay  = WD_ORDER.reduce((b, d) => (days[d]?.target || 0) > (days[b]?.target || 0) ? d : b, WD_ORDER[0]);
+
+    document.getElementById('wdBestDay').innerHTML =
+        `🏆 Найбільше ЦА: <span class="text-white">${WD_DAYS_FULL[bestDay]}</span> — ${days[bestDay]?.target || 0} цільових`;
+
+    // Теплова карта
+    document.getElementById('wdHeatmap').innerHTML = WD_ORDER.map(d => {
+        const total  = days[d]?.total  || 0;
+        const target = days[d]?.target || 0;
+        const bg     = heatColor(target, maxCA);
+        const isBest = d === bestDay;
+        const isActive = wdActiveDay === d;
+        const pctCA  = total ? Math.round(target / total * 100) : 0;
+        return `
+        <div onclick="wdToggleDay(${d})" class="cursor-pointer rounded-xl p-3 flex flex-col items-center gap-2 border transition hover:scale-105
+            ${isActive ? 'border-emerald-500/60 ring-2 ring-emerald-500/30' : isBest ? 'border-emerald-700/50' : 'border-slate-700/40'}"
+            style="background:${bg}20; border-color:${isActive ? '' : bg + '60'}">
+            <div class="text-[11px] font-black uppercase ${isBest ? 'text-emerald-400' : 'text-slate-400'}">${WD_DAYS[WD_ORDER.indexOf(d)]}</div>
+            <div class="w-full rounded-lg flex items-center justify-center py-3" style="background:${bg}">
+                <span class="text-xl font-black ${target > 0 ? 'text-white' : 'text-slate-600'}">${target || '—'}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 font-bold">${total} лідів</div>
+            <div class="text-[10px] font-bold ${pctCA > 0 ? 'text-emerald-400' : 'text-slate-600'}">${pctCA > 0 ? pctCA + '% ЦА' : '—'}</div>
+        </div>`;
+    }).join('');
+
+    // Деталізація по активному дню
+    wdRenderDayDetail(days);
+}
+
+function wdRenderDayDetail(days) {
+    const detail = document.getElementById('wdDayDetail');
+    if (wdActiveDay === null) { detail.style.display = 'none'; return; }
+    const d       = wdActiveDay;
+    const dayData = days[d];
+    if (!dayData) { detail.style.display = 'none'; return; }
+    detail.style.display = '';
+
+    const children = Object.values(dayData.children).filter(c => c.total > 0);
+    children.sort((a, b) => b.target - a.target);
+
+    detail.innerHTML = `
+        <div class="text-sm font-black text-white mb-4 flex items-center gap-2">
+            📋 ${WD_DAYS_FULL[d]}
+            <span class="text-[10px] font-bold text-slate-400 ml-2">Лідів: ${dayData.total} · ЦА: ${dayData.target}</span>
+            <button onclick="wdToggleDay(${d})" class="ml-auto text-slate-500 hover:text-white text-lg leading-none">×</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            ${children.map(c => `
+            <div class="bg-slate-800/60 rounded-lg p-3 border border-slate-700/40">
+                <div class="text-[10px] text-slate-400 font-bold mb-2 leading-tight">${c.label}</div>
+                <div class="flex gap-3">
+                    <div class="text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-bold">Ліди</div>
+                        <div class="text-base font-black text-blue-300">${c.total}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-[9px] text-emerald-500 uppercase font-bold">ЦА</div>
+                        <div class="text-base font-black text-emerald-300">${c.target || '—'}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-bold">%</div>
+                        <div class="text-base font-black text-slate-300">${c.total ? Math.round(c.target/c.total*100) + '%' : '—'}</div>
+                    </div>
+                </div>
+            </div>`).join('')}
+        </div>`;
+}
+
+function wdSetSource(key) {
+    wdActiveSource = key;
+    wdActiveDay    = null;
+    renderWeekdayHeatmap(wdLeadsCache);
+}
+
+function wdToggleDay(day) {
+    wdActiveDay = (wdActiveDay === day) ? null : day;
+    renderWeekdayHeatmap(wdLeadsCache);
 }
 
 window.onload = () => {
