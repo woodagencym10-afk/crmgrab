@@ -1,1365 +1,278 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SD Analytics | Enterprise PRO</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-<script>
-    tailwind.config = {
-        darkMode: 'class',
-        theme: { extend: { colors: { dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f1f5f9', subtle: '#94a3b8' } } } }
-    }
-</script>
-<style>
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #1e293b; }
-    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-    canvas { color: #f1f5f9 !important; }
-    .dropdown-content { display: none; max-height: 250px; overflow-y: auto; z-index: 50; }
-    .dropdown-content.show { display: block; }
-    .checkbox-label { display: flex; align-items: center; padding: 8px 12px; cursor: pointer; transition: background 0.2s; }
-    .checkbox-label:hover { background: #334155; }
-    .tab-btn { transition: all 0.2s; }
-    .tab-btn.active { background: #3b82f6; color: #fff; }
-    .kpi-up { color: #10b981; }
-    .kpi-down { color: #ef4444; }
-    .kpi-same { color: #94a3b8; }
-    #comparePanel { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out, opacity 0.3s ease; opacity: 0; }
-    #comparePanel.open { max-height: 4000px; opacity: 1; }
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- СУМА УГОД ЗА ДЖЕРЕЛАМИ (Area Chart)                    -->
+<!-- Вставити ПІСЛЯ блоку <!-- ТРАФІК + ВОРОНКА -->          -->
+<!-- тобто після закриваючого </div> того grid-блоку         -->
+<!-- ═══════════════════════════════════════════════════════ -->
 
-    /* ── Мобільна адаптація ── */
-    @media (max-width: 640px) {
-        .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        .kpi-grid > div { padding: 0.75rem !important; }
-        .kpi-grid .text-3xl { font-size: 1.5rem !important; }
-        .funnel-wrap { flex-direction: column !important; align-items: center !important; }
-        .funnel-left { width: 100% !important; height: auto !important; }
-        .funnel-right { width: 100% !important; padding-left: 0 !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 8px !important; height: auto !important; padding-top: 1rem; }
-        .funnel-right > div { flex: 1 1 45% !important; }
-        .funnel-right .absolute { display: none !important; }
-        .cmp-grid { grid-template-columns: repeat(2,1fr) !important; }
-        .header-btns { flex-direction: column !important; width: 100%; }
-        .header-btns button { width: 100% !important; justify-content: center; }
-        .tbl-scroll { font-size: 11px !important; }
-        .tbl-scroll th, .tbl-scroll td { padding: 6px 8px !important; }
-        .mgr-rating-tbl th, .mgr-rating-tbl td { padding: 6px 6px !important; font-size: 11px !important; }
-        .src-expand-tbl th, .src-expand-tbl td { padding: 5px 6px !important; font-size: 11px !important; }
-        .filter-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-        .filter-grid .border-r { border-right: none !important; border-bottom: 1px solid #334155; padding-right: 0 !important; padding-bottom: 12px; }
-        h1 { font-size: 1.4rem !important; }
-    }
-    @media (max-width: 400px) {
-        .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        .funnel-right > div { flex: 1 1 100% !important; }
-    }
-
-    /* Розгортання джерел */
-    .src-children { display: none; }
-    .src-children.open { display: table-row-group; }
-    .src-toggle-btn { cursor: pointer; user-select: none; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #334155; color: #94a3b8; border: 1px solid #475569; transition: all 0.15s; flex-shrink: 0; }
-    .src-toggle-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-    .src-toggle-btn.open { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-    .src-quality-col { display: none; }
-    .src-quality-visible .src-quality-col { display: table-cell; }
-</style>
-</head>
-<body class="bg-dark-bg p-3 md:p-8 font-sans text-dark-text antialiased">
-<div class="max-w-7xl mx-auto">
-
-    
-    <!-- HEADER -->
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-dark-border pb-6 gap-4">
+<div class="bg-dark-card rounded-xl border border-dark-border mb-8 overflow-hidden shadow-xl">
+    <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-            <h1 class="text-3xl font-extrabold text-white uppercase tracking-tight">SD <span class="text-blue-500">Analytics</span></h1>
-            <p class="text-dark-subtle mt-1 text-sm">Синхронізація з вкладкою "МП" + База авансів</p>
+            <h3 class="text-sm font-bold text-white uppercase tracking-widest">📈 Сума виграних угод за джерелами</h3>
+            <p id="areaSubtitle" class="text-xs text-dark-subtle mt-0.5">Динаміка · на основі дати авансу</p>
         </div>
-
-        <div class="header-btns flex flex-wrap items-center gap-3 justify-end">
-            <a href="marketing.html" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center">📈 Маркетинг</a>
-            <a href="costs.html" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm transition flex items-center justify-center md:mr-6">💰 Загальні витрати</a>
-            
-            <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 font-bold shadow-lg text-sm transition flex items-center justify-center">📥 CSV</button>
-            <button id="comparePanelBtn" onclick="toggleComparePanel()" class="bg-purple-700 hover:bg-purple-600 text-white px-5 py-2 rounded-xl font-bold shadow-lg text-sm flex items-center gap-2 transition justify-center">
-                <span>⚖️</span> <span id="compareBtnLabel">Порівняти з періодом</span>
-            </button>
-        </div>
-    </div>
-    <!-- ПАНЕЛЬ ПОРІВНЯННЯ -->
-    <div id="comparePanel">
-        <div class="bg-purple-950/30 rounded-2xl border border-purple-800/50 shadow-xl mb-8 overflow-hidden">
-            <div class="bg-purple-950/60 p-5 border-b border-purple-800/40">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h2 class="text-base font-extrabold text-purple-300 uppercase tracking-wider">⚖️ Порівняння періодів</h2>
-                        <p class="text-xs text-purple-400/70 mt-0.5">Період А — основний фільтр вгорі. Оберіть Період Б та натисніть "Порівняти".</p>
-                    </div>
-                    <div class="flex flex-wrap gap-3 items-end">
-                        <div>
-                            <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Період Б</p>
-                            <div class="flex gap-2 items-center flex-wrap">
-                                <input type="date" id="cmpStartB" class="bg-dark-bg border border-purple-800/60 rounded-lg p-2 text-xs text-white outline-none">
-                                <span class="text-slate-500">—</span>
-                                <input type="date" id="cmpEndB" class="bg-dark-bg border border-purple-800/60 rounded-lg p-2 text-xs text-white outline-none">
-                            </div>
-                        </div>
-                        <button onclick="runComparison()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-lg text-sm transition self-end flex items-center gap-2">⚖️ Порівняти</button>
-                    </div>
-                </div>
-                <div class="mt-4 flex flex-wrap items-center gap-3">
-                    <div class="flex items-center gap-2 bg-blue-900/30 border border-blue-700/50 rounded-xl px-4 py-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                        <div><p class="text-[9px] text-blue-400 font-bold uppercase tracking-widest leading-none mb-0.5">Період А</p><p id="cmpPeriodALabel" class="text-xs font-black text-white">—</p></div>
-                    </div>
-                    <span class="text-slate-500 font-bold text-sm">vs</span>
-                    <div class="flex items-center gap-2 bg-purple-900/30 border border-purple-700/50 rounded-xl px-4 py-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-purple-400 flex-shrink-0"></span>
-                        <div><p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest leading-none mb-0.5">Період Б</p><p id="cmpPeriodBLabel" class="text-xs font-black text-white">Оберіть Період Б</p></div>
-                    </div>
-                </div>
-            </div>
-            <div id="cmpResults" class="hidden">
-                <div id="cmpKpiCards" class="cmp-grid grid grid-cols-2 md:grid-cols-4 gap-4 p-6 border-b border-purple-800/30"></div>
-                <div class="p-4 md:p-6 border-b border-purple-800/30">
-                    <div class="flex flex-wrap gap-3 items-center justify-between mb-6">
-                        <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
-                            <button id="btnCmpSrc" onclick="setCmpView('source')" class="tab-btn active px-4 py-2 text-xs font-bold text-slate-300">📊 По джерелах</button>
-                            <button id="btnCmpMgr" onclick="setCmpView('manager')" class="tab-btn px-4 py-2 text-xs font-bold text-slate-300">👤 По менеджерах</button>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm bg-blue-500"></span> А — всього</span>
-                            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm bg-emerald-500"></span> А — ЦА</span>
-                            <span class="text-slate-600">|</span>
-                            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm bg-purple-500"></span> Б — всього</span>
-                            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm bg-amber-500"></span> Б — ЦА</span>
-                        </div>
-                    </div>
-                    <div class="relative h-[280px] md:h-[320px] mb-8 overflow-x-auto"><canvas id="cmpBarChart"></canvas></div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead class="text-[10px] font-bold uppercase tracking-wider">
-                                <tr>
-                                    <th class="px-3 py-2 bg-slate-900/80"></th>
-                                    <th colspan="3" class="px-3 py-2 text-center text-blue-300 bg-blue-950/40 border-l-2 border-blue-700/60">🔵 Період А <span id="cmpHeadA" class="text-blue-500 font-normal normal-case ml-1 text-[9px]"></span></th>
-                                    <th colspan="3" class="px-3 py-2 text-center text-slate-400 bg-slate-900/60 border-l border-slate-700">↕ Зміна</th>
-                                    <th colspan="3" class="px-3 py-2 text-center text-purple-300 bg-purple-950/40 border-l-2 border-purple-700/60">🟣 Період Б <span id="cmpHeadB" class="text-purple-500 font-normal normal-case ml-1 text-[9px]"></span></th>
-                                </tr>
-                                <tr class="bg-slate-900/60">
-                                    <th class="px-3 py-2 text-left text-slate-400" id="cmpTableHeader">Джерело</th>
-                                    <th class="px-3 py-2 text-center text-blue-400 bg-blue-950/20 border-l-2 border-blue-700/40">Ліди</th>
-                                    <th class="px-3 py-2 text-center text-blue-400 bg-blue-950/20">ЦА</th>
-                                    <th class="px-3 py-2 text-center text-blue-400 bg-blue-950/20">% ЦА</th>
-                                    <th class="px-3 py-2 text-center text-slate-400 border-l border-slate-700/60">Ліди ↕</th>
-                                    <th class="px-3 py-2 text-center text-slate-400">ЦА ↕</th>
-                                    <th class="px-3 py-2 text-center text-slate-400">% ↕</th>
-                                    <th class="px-3 py-2 text-center text-purple-400 bg-purple-950/20 border-l-2 border-purple-700/40">Ліди</th>
-                                    <th class="px-3 py-2 text-center text-purple-400 bg-purple-950/20">ЦА</th>
-                                    <th class="px-3 py-2 text-center text-purple-400 bg-purple-950/20">% ЦА</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cmpDetailTable" class="divide-y divide-purple-900/20"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="p-4 md:p-6">
-                    <button onclick="toggleKpiTable()" class="text-[10px] font-bold text-purple-400 uppercase tracking-widest flex items-center gap-2 mb-4 hover:text-purple-300 transition">
-                        <span id="kpiTableArrow">▶</span> Детальні загальні показники
-                    </button>
-                    <div id="kpiTableWrap" class="hidden overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead><tr class="bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider">
-                                <th class="px-4 py-3 text-left text-slate-400">Показник</th>
-                                <th class="px-4 py-3 text-center text-blue-400">Період А</th>
-                                <th class="px-4 py-3 text-center text-purple-400">Період Б</th>
-                                <th class="px-4 py-3 text-center text-slate-400">Зміна</th>
-                            </tr></thead>
-                            <tbody id="comparisonTableBody" class="divide-y divide-purple-900/30"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
+            <button id="btnAreaSum"   onclick="setAreaMode('sum')"   class="tab-btn active px-4 py-1.5 text-xs font-bold text-slate-300">&#8372; Сума</button>
+            <button id="btnAreaCount" onclick="setAreaMode('count')" class="tab-btn px-4 py-1.5 text-xs font-bold text-slate-300">&#128290; Кількість</button>
         </div>
     </div>
 
-    <!-- ФІЛЬТРИ -->
-    <div class="bg-dark-card p-4 md:p-6 rounded-2xl border border-dark-border shadow-xl mb-6">
-        <div class="filter-grid grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
-            <div class="grid grid-cols-2 gap-2 border-r border-dark-border pr-4 md:pr-6">
-                <div class="col-span-2 text-[10px] font-bold text-blue-400 mb-1 uppercase tracking-widest">Період А</div>
-                <input type="date" id="dateStart" onchange="applyLocalFiltersAndRender()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 md:p-2.5 text-sm text-white outline-none">
-                <input type="date" id="dateEnd"   onchange="applyLocalFiltersAndRender()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 md:p-2.5 text-sm text-white outline-none">
-            </div>
-            <div class="relative">
-                <label class="block text-[10px] font-bold text-dark-subtle mb-1 uppercase tracking-widest">Менеджери</label>
-                <div class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-sm text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('managerDropdown')">
-                    <span id="managerSelectText" class="truncate pr-2">Всі менеджери</span><span class="text-xs">▼</span>
-                </div>
-                <div id="managerDropdown" class="dropdown-content absolute top-full left-0 w-full mt-1 bg-dark-card border border-dark-border rounded-lg shadow-2xl z-50">
-                    <label class="checkbox-label"><input type="checkbox" value="Всі" class="mr-2 mgr-cb" checked onchange="handleCheckboxAll('mgr-cb')"> Всі</label>
-                    <div id="managerOptions"></div>
-                </div>
-            </div>
-            <div class="relative">
-                <label class="block text-[10px] font-bold text-dark-subtle mb-1 uppercase tracking-widest">Джерела (Сирі)</label>
-                <div class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-sm text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('sourceDropdown')">
-                    <span id="sourceSelectText" class="truncate pr-2">Всі джерела</span><span class="text-xs">▼</span>
-                </div>
-                <div id="sourceDropdown" class="dropdown-content absolute top-full left-0 w-full mt-1 bg-dark-card border border-dark-border rounded-lg shadow-2xl z-50">
-                    <label class="checkbox-label"><input type="checkbox" value="Всі" class="mr-2 src-cb" checked onchange="handleCheckboxAll('src-cb')"> Всі</label>
-                    <div id="sourceOptions"></div>
-                </div>
-            </div>
-            <div class="flex items-end">
-                <button onclick="fetchAllData()" class="bg-blue-600 text-white w-full py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-lg text-sm transition-all active:scale-95">🔄 ОНОВИТИ БАЗУ</button>
-            </div>
-        </div>
+    <div id="areaLegendRow" class="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 pt-4 pb-1 min-h-[36px]"></div>
+
+    <div class="relative h-[280px] md:h-[340px] px-2 pb-2">
+        <canvas id="dealAreaChart"></canvas>
     </div>
 
-    <div id="loader" class="hidden text-center text-blue-400 my-8 text-sm uppercase tracking-widest animate-pulse font-bold">⏳ Шукаємо в базі хоча б чєтірє жалкіє пачкі дєняг ...</div>
-
-    <!-- KPI: Всього лідів | В черзі | Опрацьовано | Додзвін | ЦА | % в ЦА | Авансів | Сума угод -->
-    <div class="kpi-grid grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 mb-8">
-        <div class="bg-dark-card p-3 md:p-4 rounded-xl border border-dark-border text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-dark-subtle font-bold uppercase tracking-wider">Всього лідів</p>
-            <p id="kpiTotal" class="text-2xl md:text-3xl font-black text-white mt-1">0</p>
-        </div>
-        <div class="bg-dark-card p-3 md:p-4 rounded-xl border border-dark-border border-b-4 border-b-red-500 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-red-500 font-bold uppercase tracking-wider">В черзі</p>
-            <p id="kpiPending" class="text-2xl md:text-3xl font-black text-white mt-1">0</p>
-        </div>
-        <div class="bg-dark-card p-3 md:p-4 rounded-xl border border-dark-border border-b-4 border-b-blue-500 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-blue-400 font-bold uppercase tracking-wider">Опрацьовано</p>
-            <p class="mt-1 flex items-baseline justify-center gap-1">
-                <span id="kpiProcessed" class="text-2xl md:text-3xl font-black text-white">0</span>
-                <span id="kpiProcessedPerc" class="text-xs font-bold text-blue-400">0%</span>
-            </p>
-        </div>
-        <div class="bg-dark-card p-3 md:p-4 rounded-xl border border-dark-border border-b-4 border-b-amber-500 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-amber-500 font-bold uppercase tracking-wider">Додзвін</p>
-            <p class="mt-1 flex items-baseline justify-center gap-1">
-                <span id="kpiReached" class="text-2xl md:text-3xl font-black text-white">0</span>
-                <span id="kpiReachedPerc" class="text-xs font-bold text-amber-400">0%</span>
-            </p>
-        </div>
-        <div class="bg-dark-card p-3 md:p-4 rounded-xl border border-dark-border border-b-4 border-b-emerald-500 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-emerald-500 font-bold uppercase tracking-wider">ЦА</p>
-            <p id="kpiTarget" class="text-2xl md:text-3xl font-black text-white mt-1">0</p>
-        </div>
-        <div class="bg-emerald-900/30 p-3 md:p-4 rounded-xl border border-emerald-800 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-emerald-300 font-bold uppercase tracking-wider">% в ЦА</p>
-            <p id="kpiConvTarget" class="text-2xl md:text-3xl font-black text-emerald-400 mt-1">0%</p>
-        </div>
-        <div class="bg-orange-900/30 p-3 md:p-4 rounded-xl border border-orange-700 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-orange-300 font-bold uppercase tracking-wider">Авансів</p>
-            <p class="mt-1 flex items-baseline justify-center gap-1">
-                <span id="kpiAdvCount" class="text-2xl md:text-3xl font-black text-orange-300">0</span>
-                <span id="kpiAdvConv" class="text-xs font-bold text-orange-400">0%</span>
-            </p>
-        </div>
-        <div class="bg-orange-900/30 p-3 md:p-4 rounded-xl border border-orange-700 text-center shadow-lg">
-            <p class="text-[9px] md:text-[10px] text-orange-300 font-bold uppercase tracking-wider">Сума угод</p>
-            <p id="kpiAdvSum" class="text-xl md:text-2xl font-black text-orange-300 mt-1">₴0</p>
-        </div>
-    </div>
-
-    <!-- ТРАФІК + ВОРОНКА -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-        <div class="bg-dark-card p-4 md:p-6 rounded-xl border border-dark-border shadow-xl">
-            <h3 class="text-sm md:text-base font-bold text-white mb-4 uppercase tracking-wider text-center">Трафік (Згруповано)</h3>
-            <div class="relative h-[300px] md:h-[380px]"><canvas id="volumeChart"></canvas></div>
-        </div>
-        <div class="bg-dark-card p-4 md:p-6 rounded-xl border border-dark-border shadow-xl flex flex-col">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                <h3 class="text-sm md:text-base font-bold text-white uppercase tracking-wider">Воронка Конверсії</h3>
-                <select id="funnelSourceSelect" onchange="updateFunnelView()" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-white outline-none w-full sm:w-auto font-medium">
-                    <option value="Всі">Всі джерела (Згруповано)</option>
-                </select>
-            </div>
-            <div class="funnel-wrap flex-1 flex flex-row items-center justify-center w-full relative">
-                <div class="funnel-left flex flex-col items-center w-1/2 justify-center gap-1.5 h-[320px]">
-                    <div class="bg-blue-600 h-16 w-full flex items-center justify-center text-white font-extrabold text-base md:text-lg" style="clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);">Ліди: <span id="fValTotal" class="ml-2">0</span></div>
-                    <div class="bg-amber-500 h-16 w-[75%] flex items-center justify-center text-white font-extrabold text-base md:text-lg" style="clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);">Додзвін: <span id="fValReached" class="ml-2">0</span></div>
-                    <div class="bg-emerald-500 h-16 w-[50%] flex items-center justify-center text-white font-extrabold text-base md:text-lg" style="clip-path: polygon(0 0, 100% 0, 75% 100%, 25% 100%);">ЦА: <span id="fValTarget" class="ml-2">0</span></div>
-                    <div class="bg-orange-500 h-16 w-[32%] flex items-center justify-center text-white font-extrabold text-sm md:text-base" style="clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%);">💰 <span id="fValAdv" class="ml-1">0</span></div>
-                </div>
-                <div class="funnel-right w-1/2 flex flex-col justify-center gap-3 pl-6 relative h-[320px]">
-                    <div class="relative"><div class="absolute -left-6 top-1/2 w-6 border-b-2 border-dashed border-slate-500"></div><div class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 shadow-lg text-center"><div class="text-[9px] text-slate-400 mb-1 uppercase">Додзвін (з опрац.)</div><div id="fConvReached" class="text-blue-400 font-bold text-xl">0%</div></div></div>
-                    <div class="relative"><div class="absolute -left-6 top-1/2 w-6 border-b-2 border-dashed border-slate-500"></div><div class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 shadow-lg text-center"><div class="text-[9px] text-slate-400 mb-1 uppercase">В ЦА (з опрац.)</div><div id="fConvTargetStage" class="text-amber-400 font-bold text-xl">0%</div></div></div>
-                    <div class="relative"><div class="absolute -left-6 top-1/2 w-6 border-b-2 border-dashed border-emerald-700"></div><div class="bg-emerald-950/40 border border-emerald-800 rounded-xl px-3 py-2 shadow-lg text-center"><div class="text-[9px] text-emerald-400 mb-1 font-bold uppercase">🏆 Загальна в ЦА</div><div id="fConvTargetTotal" class="text-emerald-400 font-bold text-xl">0%</div></div></div>
-                    <!-- Конверсія авансу: від ЦА -->
-                    <div class="relative"><div class="absolute -left-6 top-1/2 w-6 border-b-2 border-dashed border-orange-700"></div><div class="bg-orange-950/40 border border-orange-700 rounded-xl px-3 py-2 shadow-lg text-center"><div class="text-[9px] text-orange-400 mb-1 font-bold uppercase">💰 ЦА → Аванс</div><div id="fConvAdv" class="text-orange-400 font-bold text-xl">0%</div></div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ПОВТОРНІ ПРОДАЖІ -->
-    <div class="bg-dark-card rounded-xl border border-yellow-700/50 mb-8 overflow-hidden shadow-xl">
-        <div class="bg-yellow-900/20 p-4 border-b border-yellow-700/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-                <h3 class="text-sm font-bold text-yellow-300 uppercase tracking-widest">🔄 Повторні продажі</h3>
-                <p class="text-xs text-yellow-600 mt-0.5">Джерело «Інше» — клієнти поза рекламними каналами</p>
-            </div>
-            <div class="flex items-center gap-6">
-                <div class="text-center">
-                    <p class="text-[10px] text-yellow-500 uppercase font-bold">Кількість</p>
-                    <p id="repeatCount" class="text-2xl font-black text-yellow-300">0</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-[10px] text-yellow-500 uppercase font-bold">Сума угод</p>
-                    <p id="repeatSum" class="text-2xl font-black text-yellow-300">₴0</p>
-                </div>
-            </div>
-        </div>
-        <div class="overflow-x-auto max-h-[250px] overflow-y-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-slate-900 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0">
-                    <tr>
-                        <th class="px-4 py-3 text-left">Менеджер</th>
-                        <th class="px-4 py-3 text-center">Авансів</th>
-                        <th class="px-4 py-3 text-center text-yellow-400">Сума угод</th>
-                    </tr>
-                </thead>
-                <tbody id="repeatTableBody" class="divide-y divide-dark-border/50"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- ПОТРЕБУЄ УВАГИ + РЕЙТИНГ -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
-        <div class="bg-dark-card rounded-xl border border-red-900/40 overflow-hidden shadow-lg flex flex-col">
-            <div class="bg-red-950/40 p-4 border-b border-red-900/40 flex justify-between items-center">
-                <h3 class="text-sm font-bold text-red-400 uppercase tracking-widest flex items-center gap-2"><span class="animate-pulse">⚠️</span> Потребує уваги</h3>
-                <span id="attentionTotalCount" class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
-            </div>
-            <div class="overflow-x-auto flex-1 overflow-y-auto max-h-[300px] md:max-h-[350px]">
-                <table class="min-w-full text-left text-sm">
-                    <thead class="bg-slate-900/80 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0">
-                        <tr><th class="px-4 py-3">Менеджер</th><th class="px-4 py-3 text-center">Зависло</th></tr>
-                    </thead>
-                    <tbody id="attentionTableBody" class="divide-y divide-dark-border/50"></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="bg-dark-card rounded-xl border border-dark-border overflow-hidden shadow-xl lg:col-span-2 flex flex-col">
-            <div class="bg-slate-800 p-4 border-b border-dark-border">
-                <h3 class="text-sm font-bold text-white uppercase tracking-widest">🏆 Рейтинг та Ефективність</h3>
-            </div>
-            <div class="overflow-x-auto flex-1 overflow-y-auto max-h-[300px] md:max-h-[350px]">
-                <table class="mgr-rating-tbl min-w-full text-left text-sm">
-                    <thead class="bg-slate-900 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10">
-                        <tr>
-                            <th class="px-3 py-3 border-b border-dark-border">Менеджер</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center">Лідів</th>
-                            <th class="px-3 py-3 border-b border-dark-border">Прогрес</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center">Додзвін</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center">ЦА</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center text-emerald-400">% ЦА</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center text-orange-400">Авансів</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center text-yellow-400">Конв. продаж</th>
-                            <th class="px-3 py-3 border-b border-dark-border text-center text-orange-300">Сума угод</th>
-                        </tr>
-                    </thead>
-                    <tbody id="managerTableBody" class="divide-y divide-dark-border"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- ДЕТАЛІ МЕНЕДЖЕР → ДЖЕРЕЛО -->
-    <div class="bg-dark-card rounded-xl border border-dark-border mb-8 overflow-visible shadow-xl">
-        <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col md:flex-row justify-between items-start md:items-center gap-3 rounded-t-xl">
-            <h3 class="text-sm font-bold text-white uppercase tracking-widest">📊 Деталі (Менеджер ➔ Джерело)</h3>
-            <div class="flex gap-2 w-full md:w-auto">
-                <div class="relative w-full md:w-44">
-                    <div class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('tblMgrDropdown')">
-                        <span id="tblMgrSelectText" class="truncate pr-2">Всі менеджери</span><span class="text-xs">▼</span>
-                    </div>
-                    <div id="tblMgrDropdown" class="dropdown-content absolute top-full right-0 w-full min-w-[180px] mt-1 bg-dark-card border border-dark-border rounded-lg shadow-2xl z-50">
-                        <label class="checkbox-label text-xs"><input type="checkbox" value="Всі" class="mr-2 tbl-mgr-cb" checked onchange="handleTableCbAll('tbl-mgr-cb')"> Всі</label>
-                        <div id="tblManagerOptions"></div>
-                    </div>
-                </div>
-                <div class="relative w-full md:w-44">
-                    <div class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('tblSrcDropdown')">
-                        <span id="tblSrcSelectText" class="truncate pr-2">Всі джерела</span><span class="text-xs">▼</span>
-                    </div>
-                    <div id="tblSrcDropdown" class="dropdown-content absolute top-full right-0 w-full min-w-[180px] mt-1 bg-dark-card border border-dark-border rounded-lg shadow-2xl z-50">
-                        <label class="checkbox-label text-xs"><input type="checkbox" value="Всі" class="mr-2 tbl-src-cb" checked onchange="handleTableCbAll('tbl-src-cb')"> Всі</label>
-                        <div id="tblSourceOptions"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="overflow-x-auto max-h-[700px] overflow-y-auto rounded-b-xl">
-            <table class="tbl-scroll min-w-full text-left text-sm">
-                <thead class="bg-slate-900 text-dark-subtle font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-md">
-                    <tr>
-                        <th class="px-4 py-4 w-[22%]">Менеджер / Джерело</th>
-                        <th class="px-4 py-4 text-center">Всього</th>
-                        <th class="px-4 py-4 text-center">Опрац.</th>
-                        <th class="px-4 py-4 text-center">Додзвін</th>
-                        <th class="px-4 py-4 text-center text-amber-400">% Додзвін</th>
-                        <th class="px-4 py-4 text-center">ЦА</th>
-                        <th class="px-4 py-4 text-center text-emerald-400">% ЦА</th>
-                        <th class="px-4 py-4 text-center text-orange-400">Авансів</th>
-                        <th class="px-4 py-4 text-center text-orange-300">Сума угод</th>
-                        <th class="px-4 py-4 text-center text-yellow-400">Сер. чек</th>
-                    </tr>
-                </thead>
-                <tbody id="detailTableBody" class="divide-y divide-dark-border/50"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- АНАЛІТИКА ДЖЕРЕЛ — з розгортанням підрядків -->
-    <div class="bg-dark-card rounded-xl border border-dark-border mb-8 shadow-xl overflow-hidden">
-        <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
-            <div class="flex flex-wrap items-center gap-2">
-                <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
-                    <button id="btnSrcMgr" onclick="setSrcView('manager')"
-                        class="tab-btn active px-4 py-1.5 text-xs font-bold text-slate-300">👤 По менеджерах</button>
-                    <button id="btnSrcSrc" onclick="setSrcView('sources')"
-                        class="tab-btn px-4 py-1.5 text-xs font-bold text-slate-300">📂 По джерелах</button>
-                </div>
-                <div class="flex gap-2 text-xs" id="srcExpandBtns">
-                    <button onclick="expandAllSrc(true)"  class="bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">+ Розкрити всі</button>
-                    <button onclick="expandAllSrc(false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold">− Згорнути всі</button>
-                </div>
-                <button id="btnSrcQuality" onclick="toggleSrcQuality()"
-                    class="bg-slate-700 hover:bg-red-700 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition font-bold text-xs">📊 Якість</button>
-            </div>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="src-expand-tbl min-w-full text-sm">
-                <thead class="bg-slate-900 text-dark-subtle text-[10px] font-bold uppercase tracking-wider sticky top-0 z-10">
-                    <tr>
-                        <th class="px-4 py-3 text-left w-[5%]"></th>
-                        <th class="px-4 py-3 text-left">Джерело</th>
-                        <th class="px-4 py-3 text-center">Всього</th>
-                        <th class="px-4 py-3 text-center text-emerald-400">ЦА</th>
-                        <th class="px-4 py-3 text-center text-emerald-400">% ЦА</th>
-                        <th class="px-4 py-3 text-center text-orange-400">Авансів</th>
-                        <th class="px-4 py-3 text-center text-yellow-400">Конв. продаж</th>
-                        <th class="px-4 py-3 text-center text-orange-300">Сума угод</th>
-                        <th class="px-4 py-3 text-center text-yellow-400">Сер. чек</th>
-                        <th class="px-4 py-3 text-center text-amber-400 src-quality-col">Не дозвон</th>
-                        <th class="px-4 py-3 text-center text-red-400 src-quality-col">Неякісні</th>
-                        <th class="px-4 py-3 text-center text-red-400 src-quality-col">% неякісних</th>
-                        <th class="px-4 py-3 text-center">Рейтинг</th>
-                    </tr>
-                </thead>
-                <tbody id="sourceTableBody" class="divide-y divide-dark-border/50"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- АНАЛІТИКА ЯКОСТІ ТА ЗЛИВІВ -->
-    <div class="bg-dark-card rounded-xl border border-red-900/40 mb-8 overflow-visible shadow-xl">
-        <div class="bg-red-950/40 p-4 border-b border-red-900/40 rounded-t-xl">
-            <h3 class="text-sm font-bold text-red-400 uppercase tracking-widest">🗑️ Аналітика якості та зливів</h3>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 p-4 md:p-8">
-            <div class="flex flex-col gap-4">
-                <div class="flex justify-between items-center">
-                    <label class="text-xs font-bold text-slate-400 uppercase">По джерелу:</label>
-                    <select id="badChartSourceSelect" onchange="updateBadAnalysisCharts('source')" class="bg-slate-900 border border-dark-border rounded-lg px-2 py-1 text-xs text-white outline-none w-40 font-medium"><option value="Всі">Всі джерела</option></select>
-                </div>
-                <div class="flex flex-row gap-4 items-center flex-wrap sm:flex-nowrap">
-                    <div class="relative bg-slate-900/30 p-3 rounded-2xl border border-dark-border/50 h-[240px] w-[240px] md:h-[280px] md:w-[280px] flex-shrink-0 flex items-center justify-center mx-auto sm:mx-0">
-                        <canvas id="badSourcePieChart"></canvas>
-                        <button id="backBtnSource" onclick="resetBadChart('source')" class="hidden absolute top-3 right-3 bg-slate-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-600 transition uppercase">⬅ Назад</button>
-                    </div>
-                    <div id="badSourceStats" class="flex flex-col gap-2 flex-1 min-w-[130px] w-full sm:w-auto"></div>
-                </div>
-            </div>
-            <div class="flex flex-col gap-4">
-                <div class="flex justify-between items-center">
-                    <label class="text-xs font-bold text-slate-400 uppercase">По менеджеру:</label>
-                    <select id="badChartMgrSelect" onchange="updateBadAnalysisCharts('mgr')" class="bg-slate-900 border border-dark-border rounded-lg px-2 py-1 text-xs text-white outline-none w-40 font-medium"><option value="Всі">Всі менеджери</option></select>
-                </div>
-                <div class="flex flex-row gap-4 items-center flex-wrap sm:flex-nowrap">
-                    <div class="relative bg-slate-900/30 p-3 rounded-2xl border border-dark-border/50 h-[240px] w-[240px] md:h-[280px] md:w-[280px] flex-shrink-0 flex items-center justify-center mx-auto sm:mx-0">
-                        <canvas id="badMgrPieChart"></canvas>
-                        <button id="backBtnMgr" onclick="resetBadChart('mgr')" class="hidden absolute top-3 right-3 bg-slate-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-600 transition uppercase">⬅ Назад</button>
-                    </div>
-                    <div id="badMgrStats" class="flex flex-col gap-2 flex-1 min-w-[130px] w-full sm:w-auto"></div>
-                </div>
-            </div>
-        </div>
-        <div class="bg-slate-900/60 p-3 md:p-4 border-y border-red-900/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-            <div class="flex items-center gap-3">
-                <h4 class="text-[10px] font-bold text-red-400 uppercase tracking-widest">📋 Список неякісних лідів</h4>
-                <span id="badLeadsCountLabel" class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <select id="badListMgrFilter"    onchange="applyBadLeadsFilters()" class="bg-slate-800 border border-dark-border rounded-lg px-2 py-1.5 text-xs text-white outline-none font-medium"><option value="Всі">Всі менеджери</option></select>
-                <select id="badListSrcFilter"    onchange="applyBadLeadsFilters()" class="bg-slate-800 border border-dark-border rounded-lg px-2 py-1.5 text-xs text-white outline-none font-medium"><option value="Всі">Всі джерела</option></select>
-                <select id="badListReasonFilter" onchange="applyBadLeadsFilters()" class="bg-slate-800 border border-dark-border rounded-lg px-2 py-1.5 text-xs text-white outline-none font-medium"><option value="Всі">Всі причини</option></select>
-                <button onclick="resetBadLeadsFilters()" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition uppercase">✕ Скинути</button>
-            </div>
-        </div>
-        <div class="overflow-x-auto max-h-[400px] md:max-h-[500px] overflow-y-auto">
-            <table class="tbl-scroll min-w-full text-left text-sm">
-                <thead class="bg-slate-950 text-dark-subtle font-bold uppercase text-[10px] sticky top-0 z-10 shadow-md">
-                    <tr>
-                        <th class="px-4 py-3">Менеджер</th>
-                        <th class="px-4 py-3">Джерело</th>
-                        <th class="px-4 py-3">Причина</th>
-                        <th class="px-4 py-3 text-center">Дія</th>
-                    </tr>
-                </thead>
-                <tbody id="badLeadsTableBody" class="divide-y divide-dark-border/50"></tbody>
-            </table>
-        </div>
-    </div>
-
+    <div id="areaSummaryRow" class="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 pb-5 border-t border-dark-border pt-4"></div>
 </div>
+
 <script>
-// ╔══════════════════════════════════════════════════════╗
-// ║  URLs                                                ║
-// ╚══════════════════════════════════════════════════════╝
-const API_URL     = "https://script.google.com/macros/s/AKfycbxASi2q5wK2aYZW2mbhm7Yi-DPqyoEu_QUKkbkh2CGXgtUWokk27Z_BjjpH_24TXtftGQ/exec";
-const API_ADV_URL = "https://script.google.com/macros/s/AKfycbxq4F8snb9kJFPil6q6zTfYvv8dLmQcE5Jiy7qCKhLoUhKVyXy3mPVlqWGp1ck_uFf_Vw/exec";
+(function () {
 
-Chart.register(ChartDataLabels);
-
-const INITIAL_STATUSES = new Set(["новий","сайт","facebook|instagram|tik-tok"]);
-const STATUS_TARGET    = "якісний";
-const STATUS_BAD       = "неякісний";
-const STATUS_NO_CALL   = "не виходить на зв'язок";
-
-let globalRawData      = [];
-let globalAdvData      = [];
-let mainData           = [];
-let mainAdvData        = [];
-let allBadLeads        = [];
-let comparePanelOpen   = false;
-let volumeChartInst    = null;
-let badSourceChartInst = null;
-let badMgrChartInst    = null;
-let badSourceMode      = 'main';
-let badMgrMode         = 'main';
-
-window.onload = () => {
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    const prevStart = new Date(thirtyDaysAgo);
-    prevStart.setDate(prevStart.getDate() - 30);
-    const prevEnd = new Date(thirtyDaysAgo);
-    document.getElementById('dateStart').valueAsDate = thirtyDaysAgo;
-    document.getElementById('dateEnd').valueAsDate   = today;
-    document.getElementById('cmpStartB').valueAsDate = prevStart;
-    document.getElementById('cmpEndB').valueAsDate   = prevEnd;
-    fetchAllData();
-};
-
-async function fetchAllData() {
-    document.getElementById('loader').classList.remove('hidden');
-    try {
-        const [resLeads, resAdv] = await Promise.all([fetch(API_URL), fetch(API_ADV_URL)]);
-        const rawLeads = await resLeads.json();
-        const rawAdv   = await resAdv.json();
-        const cleanData = (arr) => arr.map(obj => {
-            const c = {};
-            for (let k in obj) { let v = obj[k]; if (typeof v === 'string') v = v.trim(); c[k.trim()] = v; }
-            return c;
-        });
-        globalRawData = cleanData(Array.isArray(rawLeads) ? rawLeads : (rawLeads.data || []));
-        globalAdvData = cleanData(Array.isArray(rawAdv)   ? rawAdv   : (rawAdv.data  || []));
-        populateFilters(globalRawData);
-        applyLocalFiltersAndRender();
-    } catch(e) {
-        console.error(e);
-        alert("Помилка підключення до бази!\n\nПеревір у скрипті АВАНСІВ:\n1. Виконувати як: Я (Me)\n2. У кого є доступ: Усі (Anyone)");
-    } finally {
-        document.getElementById('loader').classList.add('hidden');
-    }
-}
-
-// ─── УТИЛІТИ ─────────────────────────────────────────
-function normalizeStatus(l) { return String(l.status||"").trim().toLowerCase(); }
-
-// Для лідів: Дзвінок (крім Савчук) та Інше — null (не показуємо в аналітиці лідів)
-function getParentGroup(row) {
-    let s  = row.source;
-    const mgr = String(row.manager||"").toLowerCase();
-    if (!s || String(s).trim()===""||s==="undefined") return null;
-    s = String(s).trim();
-    const ls = s.toLowerCase();
-    if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
-    if (ls==="дзвінок") return null;
-    if (ls==="інше" || ls==="other") return null;
-    if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
-    if (ls.includes("facebook")&&(ls.includes("wood")||ls.includes("вуд")))          return "Facebook Wood Agency";
-    if (ls.includes("ecoforma")||ls.includes("екоформа")) return "Сайт EcoForma";
-    if (ls.includes("wood")||ls.includes("відповідальним")) return "Сайт Wood Agency";
-    if (ls.includes("дзвінок")&&(ls.includes("ecoforma")||ls.includes("сайт"))) return "Сайт EcoForma";
-    if (ls.includes("olx")) return "OLX";
-    return s;
-}
-
-// Для деталей МП: показуємо всі включно з Дзвінком та Іншим (крім Савчук маппинг)
-function getDetailGroup(row) {
-    let s  = row.source;
-    const mgr = String(row.manager||"").toLowerCase();
-    if (!s || String(s).trim()===""||s==="undefined") return "Інше";
-    s = String(s).trim();
-    const ls = s.toLowerCase();
-    if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
-    if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
-    if (ls.includes("facebook")&&(ls.includes("wood")||ls.includes("вуд")))          return "Facebook Wood Agency";
-    if (ls.includes("ecoforma")||ls.includes("екоформа")) return "Сайт EcoForma";
-    if (ls.includes("wood")||ls.includes("відповідальним")) return "Сайт Wood Agency";
-    if (ls.includes("дзвінок")&&(ls.includes("ecoforma")||ls.includes("сайт"))) return "Сайт EcoForma";
-    if (ls.includes("olx")) return "OLX";
-    return s;
-}
-
-function getAdvGroup(adv) {
-    let s = String(adv['Джерело']||adv.source||"").trim();
-    const mgr = String(adv['Відповідальний']||adv['Менеджер']||adv.manager||"").toLowerCase();
-    if (!s||s==="undefined"||s==="") return "Інше";
-    const ls = s.toLowerCase();
-    if (ls==="інше"||ls==="other"||ls==="") return "Інше";
-    if (ls==="дзвінок" && mgr.includes("савчук")) return "Сайт Wood Agency";
-    if (ls==="дзвінок") return "Дзвінок";
-    if (ls.includes("facebook")&&(ls.includes("ecoforma")||ls.includes("екоформа"))) return "Facebook Ecoforma";
-    if (ls.includes("facebook")&&(ls.includes("wood")||ls.includes("вуд")))          return "Facebook Wood Agency";
-    if (ls.includes("дзвінок")&&(ls.includes("ecoforma")||ls.includes("сайт")))      return "Сайт EcoForma";
-    if (ls.includes("ecoforma")||ls.includes("екоформа")) return "Сайт EcoForma";
-    if (ls.includes("wood")||ls.includes("відповідальним")) return "Сайт Wood Agency";
-    if (ls.includes("olx")) return "OLX";
-    return s;
-}
-
-function parseDate(str) {
-    if (!str) return null;
-    let s = String(str).trim();
-    if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(s)) { const p=s.split(/[. :]/); return new Date(+p[2],+p[1]-1,+p[0]); }
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
-}
-
-function filterByDateRange(data, s, e) {
-    if (!s||!e) return data;
-    const st=new Date(s); st.setHours(0,0,0,0);
-    const en=new Date(e); en.setHours(23,59,59,999);
-    return data.filter(r=>{const d=parseDate(r.dateUpdate||r['Дата авансу']||r['date']);return d&&d>=st&&d<=en;});
-}
-
-function filterAdvByDate(data, s, e) {
-    if (!s||!e) return data;
-    const st=new Date(s); st.setHours(0,0,0,0);
-    const en=new Date(e); en.setHours(23,59,59,999);
-    return data.filter(r=>{const d=parseDate(r['Дата авансу']||r.date||r.dateUpdate||"");return d&&d>=st&&d<=en;});
-}
-
-function matchManager(advMgr, leadMgr) {
-    if (!advMgr||!leadMgr) return false;
-    const a=String(advMgr).trim().toLowerCase(), b=String(leadMgr).trim().toLowerCase();
-    if (a===b) return true;
-    const surA=a.split(/\s+/)[0], surB=b.split(/\s+/)[0];
-    return surA && surB && surA===surB;
-}
-
-function buildAdvIndex(advArr) {
-    const idx = {};
-    advArr.forEach(adv => {
-        const mgr = String(adv['Відповідальний']||adv['Менеджер']||adv.manager||"").trim();
-        const sur = mgr.toLowerCase().split(/\s+/)[0];
-        const grp = getAdvGroup(adv);
-        if (!idx[sur]) idx[sur] = {};
-        if (!idx[sur][grp]) idx[sur][grp] = [];
-        idx[sur][grp].push(adv);
-    });
-    return idx;
-}
-
-function advSum(advArr) {
-    return advArr.reduce((s,a)=>s+parseFloat(String(a['Сума угоди']||a['Сума']||a.dealAmount||0).replace(/\s/g,'')||0),0);
-}
-
-function fmtMoney(n) {
-    if (!n||n===0) return '—';
-    return '₴' + Math.round(n).toLocaleString('uk-UA');
-}
-
-function fmtAvg(sum, count) {
-    if (!count||count===0) return '—';
-    return '₴' + Math.round(sum/count).toLocaleString('uk-UA');
-}
-
-// ─── АНАЛІЗ ──────────────────────────────────────────
-function analyzeData(data) {
-    if (!data||data.length===0) return {total:0,processed:0,pending:0,reached:0,target:0,bad:0,noCall:0,notWorked:0,convReached:"0.0",convTarget:"0.0",convTargetFromProc:"0.0",convBad:"0.0",procPerc:0};
-    const total=data.length;
-    const pl=data.filter(l=>{const s=normalizeStatus(l);return s!==""&&!INITIAL_STATUSES.has(s);});
-    const processed=pl.length, pending=total-processed, procPerc=total>0?Math.round((processed/total)*100):0;
-    const reached=pl.filter(l=>{const s=normalizeStatus(l),r=String(l.reason||"").trim().toLowerCase();return s!==STATUS_NO_CALL&&r!=="не вийшов на зв'язок";}).length;
-    const target=data.filter(l=>normalizeStatus(l)===STATUS_TARGET).length;
-    const bad=data.filter(l=>normalizeStatus(l)===STATUS_BAD).length;
-    const noCall=data.filter(l=>normalizeStatus(l)===STATUS_NO_CALL).length;
-    const notWorked=data.filter(l=>INITIAL_STATUSES.has(normalizeStatus(l))).length;
-    return {total,processed,pending,reached,target,bad,noCall,notWorked,procPerc,
-        convReached:processed>0?((reached/processed)*100).toFixed(1):"0.0",
-        convTarget:total>0?((target/total)*100).toFixed(1):"0.0",
-        convTargetFromProc:processed>0?((target/processed)*100).toFixed(1):"0.0",
-        convBad:total>0?((bad/total)*100).toFixed(1):"0.0"};
-}
-
-// ─── ФІЛЬТРИ ─────────────────────────────────────────
-function populateFilters(data) {
-    const managers=new Set(), sources=new Set();
-    data.forEach(l=>{
-        managers.add(l.manager?String(l.manager).trim():"Невідомий менеджер");
-        let s=l.source?String(l.source).trim():"Інше"; if(s===""||s==="undefined")s="Інше"; sources.add(s);
-    });
-    const md=document.getElementById('managerOptions'); md.innerHTML='';
-    Array.from(managers).sort().forEach(m=>{md.innerHTML+=`<label class="checkbox-label"><input type="checkbox" value="${m}" class="mr-2 mgr-cb" onchange="handleCheckboxSingle('mgr-cb')"> ${m}</label>`;});
-    const sd=document.getElementById('sourceOptions'); sd.innerHTML='';
-    Array.from(sources).sort().forEach(s=>{sd.innerHTML+=`<label class="checkbox-label"><input type="checkbox" value="${s}" class="mr-2 src-cb" onchange="handleCheckboxSingle('src-cb')"> ${s}</label>`;});
-    document.querySelector('.mgr-cb[value="Всі"]').checked=true;
-    document.querySelector('.src-cb[value="Всі"]').checked=true;
-    updateSelectText('mgr-cb'); updateSelectText('src-cb');
-    const grouped=new Set();
-    data.forEach(l=>{const g=getParentGroup(l);if(g)grouped.add(g);});
-    const bs=document.getElementById('badChartSourceSelect');
-    bs.innerHTML='<option value="Всі">Всі джерела (Згруповано)</option>';
-    Array.from(grouped).sort().forEach(g=>{bs.innerHTML+=`<option value="${g}">${g}</option>`;});
-    const bm=document.getElementById('badChartMgrSelect');
-    bm.innerHTML='<option value="Всі">Всі менеджери</option>';
-    Array.from(managers).sort().forEach(m=>{bm.innerHTML+=`<option value="${m}">${m}</option>`;});
-}
-
-function applyLocalFiltersAndRender() {
-    const mgrs=getSelectedValues('mgr-cb'), srcs=getSelectedValues('src-cb');
-    const sDate=document.getElementById('dateStart').value, eDate=document.getElementById('dateEnd').value;
-    mainData=filterByDateRange(globalRawData,sDate,eDate);
-    if(!mgrs.includes("Всі")) mainData=mainData.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
-    if(!srcs.includes("Всі")) mainData=mainData.filter(r=>srcs.includes(r.source?String(r.source).trim():"Інше"));
-    mainAdvData = filterAdvByDate(globalAdvData, sDate, eDate);
-    if (!mgrs.includes("Всі")) mainAdvData=mainAdvData.filter(a=>mgrs.some(m=>matchManager(String(a['Відповідальний']||a['Менеджер']||"").trim(),m)));
-    renderMetrics(mainData, mainAdvData);
-    drawVolumeChart(mainData);
-    updateFunnelSelector(mainData, mainAdvData);
-    renderTables(mainData, mainAdvData);
-    renderSourceTable(mainData, mainAdvData);
-    renderRepeatSales(mainAdvData);
-    updateBadAnalysisCharts('source');
-    updateBadAnalysisCharts('mgr');
-    renderBadLeadsList(mainData);
-    if (comparePanelOpen) {
-        document.getElementById('cmpPeriodALabel').innerText = sDate&&eDate?`${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}`:'—';
-        document.getElementById('cmpResults').classList.add('hidden');
-    }
-}
-
-// ─── KPI ─────────────────────────────────────────────
-function renderMetrics(data, advData) {
-    const m=analyzeData(data);
-    document.getElementById('kpiTotal').innerText=m.total;
-    document.getElementById('kpiPending').innerText=m.pending;
-    document.getElementById('kpiProcessed').innerText=m.processed;
-    document.getElementById('kpiProcessedPerc').innerText=(m.total>0?((m.processed/m.total)*100).toFixed(1):0)+"%";
-    document.getElementById('kpiReached').innerText=m.reached;
-    document.getElementById('kpiReachedPerc').innerText=m.convReached+"%";
-    document.getElementById('kpiTarget').innerText=m.target;
-    document.getElementById('kpiConvTarget').innerText=m.convTarget+"%";
-    const advMain=advData.filter(a=>getAdvGroup(a)!=="Інше");
-    const advCount=advMain.length, advTotal=advSum(advMain);
-    // % авансів від ЦА
-    const convAdv=m.target>0?((advCount/m.target)*100).toFixed(1):"0.0";
-    document.getElementById('kpiAdvCount').innerText=advCount;
-    document.getElementById('kpiAdvConv').innerText=convAdv+"%";
-    document.getElementById('kpiAdvSum').innerText=fmtMoney(advTotal);
-}
-
-// ─── ТРАФІК ──────────────────────────────────────────
-function drawVolumeChart(data) {
-    const gm={};
-    data.forEach(l=>{const p=getParentGroup(l);if(p)gm[p]=(gm[p]||0)+1;});
-    const labels=Object.keys(gm).sort((a,b)=>gm[b]-gm[a]), totals=labels.map(k=>gm[k]);
-    if(volumeChartInst) volumeChartInst.destroy();
-    volumeChartInst=new Chart(document.getElementById('volumeChart'),{
-        type:'doughnut',
-        data:{labels,datasets:[{data:totals,backgroundColor:['#6366f1','#8b5cf6','#ec4899','#f43f5e','#eab308','#10b981','#3b82f6'],borderColor:'#1e293b',borderWidth:2}]},
-        options:{maintainAspectRatio:false,plugins:{datalabels:{color:'#fff',font:{weight:'bold',size:11}},legend:{position:'bottom',labels:{color:'#f1f5f9',boxWidth:10,font:{size:10}}}}}
-    });
-}
-
-// ─── ВОРОНКА ─────────────────────────────────────────
-function updateFunnelSelector(data, advData) {
-    const p=new Set();
-    data.forEach(l=>{const g=getParentGroup(l);if(g)p.add(g);});
-    const sel=document.getElementById('funnelSourceSelect');
-    sel.innerHTML=`<option value="Всі">Всі джерела (Згруповано)</option>`;
-    Array.from(p).sort().forEach(x=>{sel.innerHTML+=`<option value="${x}">${x}</option>`;});
-    updateFunnelView();
-}
-
-function updateFunnelView() {
-    const ps=document.getElementById('funnelSourceSelect').value;
-    const d  = ps==="Всі" ? mainData : mainData.filter(l=>getParentGroup(l)===ps);
-    const adv= ps==="Всі"
-        ? mainAdvData.filter(a=>getAdvGroup(a)!=="Інше")
-        : mainAdvData.filter(a=>getAdvGroup(a)===ps);
-    const a=analyzeData(d);
-    const advCount=adv.length;
-    // Конверсія авансу від ЦА (а не від лідів)
-    const convAdv=a.target>0?((advCount/a.target)*100).toFixed(1):"0.0";
-    document.getElementById('fValTotal').innerText=a.total;
-    document.getElementById('fValReached').innerText=a.reached;
-    document.getElementById('fValTarget').innerText=a.target;
-    document.getElementById('fValAdv').innerText=advCount;
-    document.getElementById('fConvReached').innerText=a.convReached+"%";
-    document.getElementById('fConvTargetStage').innerText=a.convTargetFromProc+"%";
-    document.getElementById('fConvTargetTotal').innerText=a.convTarget+"%";
-    document.getElementById('fConvAdv').innerText=convAdv+"%";
-}
-
-// ─── ПОВТОРНІ ПРОДАЖІ ─────────────────────────────────
-function renderRepeatSales(advData) {
-    const repeats=advData.filter(a=>getAdvGroup(a)==="Інше");
-    document.getElementById('repeatCount').innerText=repeats.length;
-    document.getElementById('repeatSum').innerText=fmtMoney(advSum(repeats));
-    const byMgr={};
-    repeats.forEach(a=>{
-        const mgr=String(a['Відповідальний']||a['Менеджер']||"Невідомий").trim();
-        if(!byMgr[mgr])byMgr[mgr]={count:0,sum:0};
-        byMgr[mgr].count++;
-        byMgr[mgr].sum+=parseFloat(String(a['Сума угоди']||a['Сума']||0).replace(/\s/g,'')||0);
-    });
-    const rows=Object.entries(byMgr).sort((a,b)=>b[1].sum-a[1].sum);
-    document.getElementById('repeatTableBody').innerHTML=rows.length===0
-        ?'<tr><td colspan="3" class="p-6 text-center text-slate-500">Повторних продажів немає</td></tr>'
-        :rows.map(([mgr,s])=>`<tr class="hover:bg-yellow-900/10 transition"><td class="px-4 py-3 font-medium text-slate-200">${mgr}</td><td class="px-4 py-3 text-center font-bold text-yellow-300">${s.count}</td><td class="px-4 py-3 text-center font-bold text-yellow-400">${fmtMoney(s.sum)}</td></tr>`).join('');
-}
-
-// ─── ТАБЛИЦІ ─────────────────────────────────────────
-function renderTables(data, advData) {
-    const pl=data.filter(l=>{const s=normalizeStatus(l);return s===""||INITIAL_STATUSES.has(s);});
-    document.getElementById('attentionTotalCount').innerText=pl.length;
-    const ab=document.getElementById('attentionTableBody');
-    if(pl.length===0){ab.innerHTML=`<tr><td colspan="2" class="px-4 py-8 text-center text-emerald-400 font-bold">🎉 Немає завислих лідів!</td></tr>`;}
-    else{
-        const pbm={};
-        pl.forEach(l=>{const m=l.manager?String(l.manager).trim():"Невідомий";pbm[m]=(pbm[m]||0)+1;});
-        ab.innerHTML=Object.keys(pbm).map(m=>({name:m,count:pbm[m]})).sort((a,b)=>b.count-a.count)
-            .map(m=>`<tr class="hover:bg-slate-800/50 transition"><td class="px-4 py-3 font-bold text-slate-200">${m.name}</td><td class="px-4 py-3 text-center font-black text-red-400 bg-red-900/10">${m.count}</td></tr>`).join('');
-    }
-    const advIdx=buildAdvIndex(advData.filter(a=>getAdvGroup(a)!=="Інше"));
-    const mm={};
-    data.forEach(l=>{const m=l.manager?String(l.manager).trim():"Невідомий";if(!mm[m])mm[m]=[];mm[m].push(l);});
-    const ml=Object.keys(mm).map(n=>({name:n,...analyzeData(mm[n])})).sort((a,b)=>parseFloat(b.convTarget)-parseFloat(a.convTarget));
-    document.getElementById('managerTableBody').innerHTML=ml.map((m,i)=>{
-        const sur=m.name.toLowerCase().split(/\s+/)[0];
-        const mAdvAll=Object.values(advIdx[sur]||{}).flat();
-        const advCount=mAdvAll.length, advTotal=advSum(mAdvAll);
-        // % від ЦА
-        const convSale=m.target>0?((advCount/m.target)*100).toFixed(1):"0.0";
-        return `<tr class="${parseFloat(m.convTarget)>=40?'bg-emerald-500/10 border-l-4 border-l-emerald-500':'hover:bg-slate-800/50'}">
-            <td class="px-3 py-3 font-bold text-white">${i===0?'👑 ':''}${m.name}</td>
-            <td class="px-3 py-3 text-center">${m.total}</td>
-            <td class="px-3 py-3 min-w-[100px]"><div class="flex items-center gap-1.5"><div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width:${m.procPerc}%"></div></div><span class="text-[10px] font-bold text-blue-300 whitespace-nowrap">${m.processed}/${m.total}</span></div></td>
-            <td class="px-3 py-3 text-center font-bold text-amber-400">${m.reached}</td>
-            <td class="px-3 py-3 text-center font-bold text-emerald-400">${m.target}</td>
-            <td class="px-3 py-3 text-center font-extrabold text-white bg-emerald-500/20">${m.convTarget}%</td>
-            <td class="px-3 py-3 text-center font-bold text-orange-300">${advCount||'—'}</td>
-            <td class="px-3 py-3 text-center font-bold text-yellow-400">${advCount>0?convSale+'%':'—'}</td>
-            <td class="px-3 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(advTotal)}</td>
-        </tr>`;
-    }).join('');
-    updateTableFilterOptions(data); applyTableFilters();
-}
-
-function updateTableFilterOptions(data) {
-    const mgrs=new Set(),srcs=new Set();
-    data.forEach(l=>{mgrs.add(l.manager?String(l.manager).trim():"Невідомий менеджер");let s=l.source?String(l.source).trim():"Інше";if(s===""||s==="undefined")s="Інше";srcs.add(s);});
-    const cm=getSelectedValues('tbl-mgr-cb'),cs=getSelectedValues('tbl-src-cb');
-    const md=document.getElementById('tblManagerOptions');md.innerHTML='';
-    Array.from(mgrs).sort().forEach(m=>{md.innerHTML+=`<label class="checkbox-label text-xs"><input type="checkbox" value="${m}" class="mr-2 tbl-mgr-cb" ${cm.includes(m)?'checked':''} onchange="handleTableCbSingle('tbl-mgr-cb')"> ${m}</label>`;});
-    const sd=document.getElementById('tblSourceOptions');sd.innerHTML='';
-    Array.from(srcs).sort().forEach(s=>{sd.innerHTML+=`<label class="checkbox-label text-xs"><input type="checkbox" value="${s}" class="mr-2 tbl-src-cb" ${cs.includes(s)?'checked':''} onchange="handleTableCbSingle('tbl-src-cb')"> ${s}</label>`;});
-    if(cm.includes("Всі")||cm.length===0) document.querySelector('.tbl-mgr-cb[value="Всі"]').checked=true;
-    if(cs.includes("Всі")||cs.length===0) document.querySelector('.tbl-src-cb[value="Всі"]').checked=true;
-    updateSelectTextTbl('tbl-mgr-cb');updateSelectTextTbl('tbl-src-cb');
-}
-
-function applyTableFilters() {
-    const mf=getSelectedValues('tbl-mgr-cb'),sf=getSelectedValues('tbl-src-cb');
-    let f=mainData;
-    if(!mf.includes("Всі")) f=f.filter(l=>mf.includes(l.manager?String(l.manager).trim():"Невідомий менеджер"));
-    if(!sf.includes("Всі")) f=f.filter(l=>sf.includes(l.source?String(l.source).trim():"Інше"));
-    renderDetailTableHTML(f, mainAdvData);
-}
-
-function renderDetailTableHTML(data, advData) {
-    const advIdx=buildAdvIndex(advData.filter(a=>getAdvGroup(a)!=="Інше"));
-    const mg={};
-    data.forEach(l=>{
-        const m=l.manager?String(l.manager).trim():"Невідомий";
-        const g=getDetailGroup(l); // включає Дзвінок та Інше
-        const r=l.source?String(l.source).trim():"Інше";
-        if(!mg[m])mg[m]={};if(!mg[m][g])mg[m][g]={};if(!mg[m][g][r])mg[m][g][r]=[];mg[m][g][r].push(l);
-    });
-    let h="";
-    Object.keys(mg).sort().forEach(mgr=>{
-        const sur=mgr.toLowerCase().split(/\s+/)[0];
-        h+=`<tr class="bg-slate-800/80 border-t-4 border-slate-900"><td colspan="9" class="px-4 py-3 text-base font-black text-blue-400">👤 ${mgr}</td></tr>`;
-        let all=[];
-        Object.keys(mg[mgr]).sort().forEach(gn=>{
-            const sub=mg[mgr][gn],sk=Object.keys(sub);
-            let gl=[]; sk.forEach(k=>{gl.push(...sub[k]);all.push(...sub[k]);});
-            const ps=analyzeData(gl);
-            const grpAdvArr=(advIdx[sur]&&advIdx[sur][gn])?advIdx[sur][gn]:[];
-            const grpAdvCount=grpAdvArr.length, grpAdvSum=advSum(grpAdvArr);
-            if((gn==="Сайт EcoForma"||gn==="Сайт Wood Agency")&&sk.length>1){
-                sk.sort().forEach(on=>{const os=analyzeData(sub[on]);h+=`<tr class="hover:bg-slate-800/50 text-sm"><td class="px-4 py-2 pl-10 text-slate-400">↳ ${on}</td><td class="px-4 py-2 text-center text-slate-500">${os.total}</td><td class="px-4 py-2 text-center text-blue-300/60">${os.processed}</td><td class="px-4 py-2 text-center text-amber-400/60">${os.reached}</td><td class="px-4 py-2 text-center text-amber-400/60">${os.convReached}%</td><td class="px-4 py-2 text-center text-emerald-400/60">${os.target}</td><td class="px-4 py-2 text-center text-emerald-400/60">${os.convTarget}%</td><td class="px-4 py-2 text-center text-slate-500">—</td><td class="px-4 py-2 text-center text-slate-500">—</td></tr>`;});
-                h+=`<tr class="bg-slate-800/40 font-bold border-y border-slate-700/50 text-sm"><td class="px-4 py-2 pl-6 text-slate-300">∑ ${gn}</td><td class="px-4 py-2 text-center text-white">${ps.total}</td><td class="px-4 py-2 text-center text-blue-300">${ps.processed}</td><td class="px-4 py-2 text-center text-amber-400">${ps.reached}</td><td class="px-4 py-2 text-center text-amber-400">${ps.convReached}%</td><td class="px-4 py-2 text-center text-emerald-400">${ps.target}</td><td class="px-4 py-2 text-center text-emerald-400">${ps.convTarget}%</td><td class="px-4 py-2 text-center text-orange-300 font-bold">${grpAdvCount||'—'}</td><td class="px-4 py-2 text-center text-orange-300 font-bold bg-orange-900/10">${fmtMoney(grpAdvSum)}</td><td class="px-4 py-2 text-center text-yellow-400 font-bold">${fmtAvg(grpAdvSum,grpAdvCount)}</td></tr>`;
-            } else {
-                h+=`<tr class="hover:bg-slate-800 text-sm border-y border-slate-700/30"><td class="px-4 py-2 pl-6 text-slate-200">${sk[0]||gn}</td><td class="px-4 py-2 text-center text-slate-300 font-bold">${ps.total}</td><td class="px-4 py-2 text-center text-blue-300">${ps.processed}</td><td class="px-4 py-2 text-center text-amber-400">${ps.reached}</td><td class="px-4 py-2 text-center text-amber-400 font-bold">${ps.convReached}%</td><td class="px-4 py-2 text-center text-emerald-400">${ps.target}</td><td class="px-4 py-2 text-center text-emerald-400 font-bold">${ps.convTarget}%</td><td class="px-4 py-2 text-center text-orange-300 font-bold">${grpAdvCount||'—'}</td><td class="px-4 py-2 text-center text-orange-300 font-bold bg-orange-900/10">${fmtMoney(grpAdvSum)}</td><td class="px-4 py-2 text-center text-yellow-400 font-bold">${fmtAvg(grpAdvSum,grpAdvCount)}</td></tr>`;
-            }
-        });
-        const ms=analyzeData(all);
-        const mAdvAll=Object.values(advIdx[sur]||{}).flat();
-        const mAdvCount=mAdvAll.length, mAdvSum=advSum(mAdvAll);
-        h+=`<tr class="bg-blue-900/10 font-black text-sm uppercase border-y border-slate-700/50"><td class="px-4 py-3 text-right text-blue-400">Всього:</td><td class="px-4 py-3 text-center text-white">${ms.total}</td><td class="px-4 py-3 text-center text-blue-300">${ms.processed}</td><td class="px-4 py-3 text-center text-amber-400">${ms.reached}</td><td class="px-4 py-3 text-center text-amber-400/80">${ms.convReached}%</td><td class="px-4 py-3 text-center text-emerald-400">${ms.target}</td><td class="px-4 py-3 text-center text-emerald-400">${ms.convTarget}%</td><td class="px-4 py-3 text-center text-orange-300">${mAdvCount||'—'}</td><td class="px-4 py-3 text-center text-orange-300 bg-orange-900/10">${fmtMoney(mAdvSum)}</td><td class="px-4 py-3 text-center text-yellow-400">${fmtAvg(mAdvSum,mAdvCount)}</td></tr>`;
-    });
-    document.getElementById('detailTableBody').innerHTML=h||'<tr><td colspan="10" class="p-8 text-center text-slate-500 uppercase font-bold">Дані відсутні</td></tr>';
-}
-
-// ─── АНАЛІТИКА ДЖЕРЕЛ з розгортанням ─────────────────
-let srcViewMode = 'manager';
-let srcQualityVisible = false;
-
-function toggleSrcQuality() {
-    srcQualityVisible = !srcQualityVisible;
-    const tbl = document.querySelector('.src-expand-tbl');
-    const btn = document.getElementById('btnSrcQuality');
-    if (tbl) tbl.classList.toggle('src-quality-visible', srcQualityVisible);
-    if (btn) {
-        btn.textContent = srcQualityVisible ? '📊 Сховати якість' : '📊 Якість';
-        btn.classList.toggle('bg-red-800', srcQualityVisible);
-        btn.classList.toggle('text-white', srcQualityVisible);
-        btn.classList.toggle('bg-slate-700', !srcQualityVisible);
-    }
-}
-
-function setSrcView(mode) {
-    srcViewMode = mode;
-    document.getElementById('btnSrcMgr').classList.toggle('active', mode==='manager');
-    document.getElementById('btnSrcSrc').classList.toggle('active', mode==='sources');
-    document.getElementById('srcExpandBtns').style.display = mode==='manager' ? 'flex' : 'none';
-    renderSourceTable(mainData, mainAdvData);
-}
-
-function srcRowMain(rc, btnHtml, label, s, grpAdvCount, grpAdvSum, stars) {
-    const convSale = s.target>0 ? ((grpAdvCount/s.target)*100).toFixed(1)+'%' : '—';
-    return `<tr class="${rc} border-b border-dark-border/40 text-sm transition hover:bg-slate-800/20">
-        <td class="px-4 py-3 text-center">${btnHtml}</td>
-        <td class="px-4 py-3 font-bold text-slate-200">${label}</td>
-        <td class="px-4 py-3 text-center text-slate-300">${s.total}</td>
-        <td class="px-4 py-3 text-center text-emerald-400 font-bold">${s.target}</td>
-        <td class="px-4 py-3 text-center font-extrabold ${parseFloat(s.convTarget)>=30?'text-emerald-400':'text-slate-400'}">${s.convTarget}%</td>
-        <td class="px-4 py-3 text-center font-bold text-orange-300">${grpAdvCount||'—'}</td>
-        <td class="px-4 py-3 text-center font-bold text-yellow-400">${convSale}</td>
-        <td class="px-4 py-3 text-center font-bold text-orange-300 bg-orange-900/10">${fmtMoney(grpAdvSum)}</td>
-        <td class="px-4 py-3 text-center font-bold text-yellow-400">${fmtAvg(grpAdvSum,grpAdvCount)}</td>
-        <td class="px-4 py-3 text-center text-amber-400 src-quality-col">${s.noCall}</td>
-        <td class="px-4 py-3 text-center text-red-400 font-bold src-quality-col">${s.bad}</td>
-        <td class="px-4 py-3 text-center font-bold src-quality-col ${parseFloat(s.convBad)>=40?'text-red-400':'text-slate-400'}">${s.convBad}%</td>
-        <td class="px-4 py-3 text-center text-amber-300 text-xs tracking-widest">${stars}</td>
-    </tr>`;
-}
-
-function srcRowSub(parentId, label, ms, advC, advS) {
-    const convSale = ms.target>0 ? ((advC/ms.target)*100).toFixed(1)+'%' : '—';
-    return `<tr data-parent="${parentId}" style="display:none" class="bg-slate-900/50 text-xs border-b border-slate-800/60 hover:bg-slate-800/40 transition">
-        <td class="px-4 py-2"></td>
-        <td class="px-4 py-2 pl-8 text-slate-400">↳ ${label}</td>
-        <td class="px-4 py-2 text-center text-slate-400">${ms.total}</td>
-        <td class="px-4 py-2 text-center text-emerald-400/70">${ms.target}</td>
-        <td class="px-4 py-2 text-center text-slate-400">${ms.convTarget}%</td>
-        <td class="px-4 py-2 text-center text-orange-300/70">${advC||'—'}</td>
-        <td class="px-4 py-2 text-center text-yellow-400/70">${convSale}</td>
-        <td class="px-4 py-2 text-center text-orange-300/70 bg-orange-900/5">${fmtMoney(advS)}</td>
-        <td class="px-4 py-2 text-center text-yellow-400/70">${fmtAvg(advS,advC)}</td>
-        <td class="px-4 py-2 text-center text-amber-400/70 src-quality-col">${ms.noCall}</td>
-        <td class="px-4 py-2 text-center text-red-400/70 src-quality-col">${ms.bad}</td>
-        <td class="px-4 py-2 text-center text-slate-400 src-quality-col">${ms.convBad}%</td>
-        <td class="px-4 py-2"></td>
-    </tr>`;
-}
-
-function renderSourceTable(data, advData) {
-    const advMainData=advData.filter(a=>getAdvGroup(a)!=="Інше");
-    const advByGroup={};
-    advMainData.forEach(a=>{const g=getAdvGroup(a);if(!advByGroup[g])advByGroup[g]=[];advByGroup[g].push(a);});
-
-    const sm={};
-    data.forEach(l=>{const g=getParentGroup(l);if(g){if(!sm[g])sm[g]=[];sm[g].push(l);}});
-
-    const stats=Object.keys(sm).map(s=>({src:s,...analyzeData(sm[s])})).sort((a,b)=>parseFloat(b.convTarget)-parseFloat(a.convTarget));
-    const maxCT=Math.max(...stats.map(s=>parseFloat(s.convTarget)),0);
-    const maxBad=Math.max(...stats.map(s=>parseFloat(s.convBad)),0);
-
-    const advIdx2=buildAdvIndex(advMainData);
-    let html='';
-
-    if (srcViewMode === 'manager') {
-        // Підгрупи по менеджеру
-        const smBySub={};
-        data.forEach(l=>{
-            const g=getParentGroup(l); if(!g) return;
-            const mgr=l.manager?String(l.manager).trim():"Невідомий";
-            if(!smBySub[g])smBySub[g]={};
-            if(!smBySub[g][mgr])smBySub[g][mgr]=[];
-            smBySub[g][mgr].push(l);
-        });
-
-        stats.forEach((s,idx)=>{
-            const isTop=parseFloat(s.convTarget)===maxCT&&maxCT>0;
-            const isWorst=parseFloat(s.convBad)===maxBad&&maxBad>0&&stats.length>1;
-            const stars='★'.repeat(Math.min(5,Math.round(parseFloat(s.convTarget)/20)))+'☆'.repeat(5-Math.min(5,Math.round(parseFloat(s.convTarget)/20)));
-            const rc=isTop?'bg-emerald-900/10 border-l-4 border-l-emerald-500':isWorst?'bg-red-900/10 border-l-4 border-l-red-500':'';
-            const grpAdv=advByGroup[s.src]||[];
-            const grpAdvCount=grpAdv.length, grpAdvSum=advSum(grpAdv);
-            const childId='src-m-'+idx;
-            const subs=smBySub[s.src]||{};
-            const hasSubs=Object.keys(subs).length>1;
-            const btnHtml=hasSubs
-                ? `<button class="src-toggle-btn" id="btn-${childId}" onclick="toggleSrcChildren('${childId}')">+</button>`
-                : '<span class="text-slate-700">·</span>';
-
-            html+=srcRowMain(rc, btnHtml, (isTop?'🏆 ':'')+s.src, s, grpAdvCount, grpAdvSum, stars);
-
-            if(hasSubs){
-                Object.keys(subs).sort().forEach(mgr=>{
-                    const ms=analyzeData(subs[mgr]);
-                    const sur=mgr.toLowerCase().split(' ')[0];
-                    const mgrAdv=(advIdx2[sur]&&advIdx2[sur][s.src])?advIdx2[sur][s.src]:[];
-                    html+=srcRowSub(childId, mgr, ms, mgrAdv.length, advSum(mgrAdv));
-                });
-            }
-        });
-
-    } else {
-        // По джерелах: підрядки = сирі канали всередині групи
-        const smByRaw={};
-        data.forEach(l=>{
-            const g=getParentGroup(l); if(!g) return;
-            const raw=l.source?String(l.source).trim():"Інше";
-            if(!smByRaw[g])smByRaw[g]={};
-            if(!smByRaw[g][raw])smByRaw[g][raw]=[];
-            smByRaw[g][raw].push(l);
-        });
-        const advByRaw={};
-        advMainData.forEach(a=>{
-            const raw=String(a['Джерело']||a.source||'').trim();
-            if(!advByRaw[raw])advByRaw[raw]=[];
-            advByRaw[raw].push(a);
-        });
-
-        stats.forEach((s,idx)=>{
-            const isTop=parseFloat(s.convTarget)===maxCT&&maxCT>0;
-            const isWorst=parseFloat(s.convBad)===maxBad&&maxBad>0&&stats.length>1;
-            const stars='★'.repeat(Math.min(5,Math.round(parseFloat(s.convTarget)/20)))+'☆'.repeat(5-Math.min(5,Math.round(parseFloat(s.convTarget)/20)));
-            const rc=isTop?'bg-emerald-900/10 border-l-4 border-l-emerald-500':isWorst?'bg-red-900/10 border-l-4 border-l-red-500':'';
-            const grpAdv=advByGroup[s.src]||[];
-            const grpAdvCount=grpAdv.length, grpAdvSum=advSum(grpAdv);
-            const childId='src-s-'+idx;
-            const rawKeys=Object.keys(smByRaw[s.src]||{}).sort();
-            const hasSubs=rawKeys.length>1;
-            const btnHtml=hasSubs
-                ? `<button class="src-toggle-btn" id="btn-${childId}" onclick="toggleSrcChildren('${childId}')">+</button>`
-                : '<span class="text-slate-700">·</span>';
-
-            html+=srcRowMain(rc, btnHtml, (isTop?'🏆 ':'')+'∑ '+s.src, s, grpAdvCount, grpAdvSum, stars);
-
-            if(hasSubs){
-                rawKeys.forEach(raw=>{
-                    const rs=analyzeData(smByRaw[s.src][raw]);
-                    const rawAdv=advByRaw[raw]||[];
-                    html+=srcRowSub(childId, raw, rs, rawAdv.length, advSum(rawAdv));
-                });
-            }
-        });
-    }
-
-    document.getElementById('sourceTableBody').innerHTML=html||'<tr><td colspan="12" class="p-8 text-center text-slate-500">Дані відсутні</td></tr>';
-}
-
-function toggleSrcChildren(id) {
-    const btn=document.getElementById('btn-'+id);
-    const rows=document.querySelectorAll('[data-parent="'+id+'"]');
-    if(!rows.length||!btn) return;
-    const isOpen=btn.classList.toggle('open');
-    btn.textContent=isOpen?'\u2212':'+';
-    rows.forEach(r=>r.style.display=isOpen?'':'none');
-}
-
-function expandAllSrc(open) {
-    document.querySelectorAll('.src-toggle-btn').forEach(btn=>{
-        const id=btn.id.replace('btn-','');
-        const rows=document.querySelectorAll('[data-parent="'+id+'"]');
-        btn.classList.toggle('open', open);
-        btn.textContent=open?'\u2212':'+';
-        rows.forEach(r=>r.style.display=open?'':'none');
-    });
-}
-
-// ═══════════════════════════════════════════════════════
-// ПАНЕЛЬ ПОРІВНЯННЯ
-// ═══════════════════════════════════════════════════════
-function toggleComparePanel() {
-    comparePanelOpen=!comparePanelOpen;
-    const panel=document.getElementById('comparePanel');
-    panel.classList.toggle('open',comparePanelOpen);
-    document.getElementById('comparePanelBtn').classList.toggle('bg-purple-700',!comparePanelOpen);
-    document.getElementById('comparePanelBtn').classList.toggle('bg-purple-500',comparePanelOpen);
-    document.getElementById('compareBtnLabel').innerText=comparePanelOpen?'Закрити порівняння ✕':'Порівняти з періодом';
-    if(comparePanelOpen){
-        const sDate=document.getElementById('dateStart').value,eDate=document.getElementById('dateEnd').value;
-        document.getElementById('cmpPeriodALabel').innerText=sDate&&eDate?`${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}`:'—';
-        document.getElementById('cmpResults').classList.add('hidden');
-    }
-}
-
-function formatDisplayDate(str) {
-    if(!str) return '—';
-    return new Date(str).toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit',year:'numeric'});
-}
-
-let cmpView='source', cmpBarInst=null, _cmpDataA=[], _cmpDataB=[];
-
-function setCmpView(v) {
-    cmpView=v;
-    document.getElementById('btnCmpSrc').classList.toggle('active',v==='source');
-    document.getElementById('btnCmpMgr').classList.toggle('active',v==='manager');
-    document.getElementById('cmpTableHeader').innerText=v==='source'?'Джерело':'Менеджер';
-    renderCmpBarChart(_cmpDataA,_cmpDataB);
-    renderCmpDetailTable(_cmpDataA,_cmpDataB);
-}
-
-function toggleKpiTable() {
-    const wrap=document.getElementById('kpiTableWrap'),arrow=document.getElementById('kpiTableArrow');
-    arrow.innerText=wrap.classList.toggle('hidden')?'▶':'▼';
-}
-
-function runComparison() {
-    const sDate=document.getElementById('dateStart').value,eDate=document.getElementById('dateEnd').value;
-    const sB=document.getElementById('cmpStartB').value,eB=document.getElementById('cmpEndB').value;
-    if(!sB||!eB){alert('Оберіть дати Періоду Б');return;}
-    document.getElementById('cmpPeriodALabel').innerText=sDate&&eDate?`${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}`:'—';
-    document.getElementById('cmpPeriodBLabel').innerText=`${formatDisplayDate(sB)} — ${formatDisplayDate(eB)}`;
-    const headA=document.getElementById('cmpHeadA'),headB=document.getElementById('cmpHeadB');
-    if(headA) headA.innerText=sDate&&eDate?`(${formatDisplayDate(sDate)}–${formatDisplayDate(eDate)})`:'';
-    if(headB) headB.innerText=`(${formatDisplayDate(sB)}–${formatDisplayDate(eB)})`;
-    const mgrs=getSelectedValues('mgr-cb');
-    let dataA=filterByDateRange(globalRawData,sDate,eDate);
-    let dataB=filterByDateRange(globalRawData,sB,eB);
-    if(!mgrs.includes("Всі")){
-        dataA=dataA.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
-        dataB=dataB.filter(r=>mgrs.includes(r.manager?String(r.manager).trim():"Невідомий менеджер"));
-    }
-    _cmpDataA=dataA; _cmpDataB=dataB;
-    const mA=analyzeData(dataA),mB=analyzeData(dataB);
-    const kpiItems=[
-        {label:'Всього лідів',aVal:mA.total, bVal:mB.total, type:'num'},
-        {label:'ЦА',          aVal:mA.target,bVal:mB.target,type:'num'},
-        {label:'% ЦА',        aVal:parseFloat(mA.convTarget),bVal:parseFloat(mB.convTarget),type:'perc'},
-        {label:'Неякісні',    aVal:mA.bad,   bVal:mB.bad,   type:'num',inv:true},
+    const SRC_COLORS = {
+        'Сайт Wood Agency':    { line: '#818cf8', fill: 'rgba(129,140,248,0.30)' },
+        'Сайт EcoForma':       { line: '#f59e0b', fill: 'rgba(245,158,11,0.28)'  },
+        'Facebook Wood Agency':{ line: '#ec4899', fill: 'rgba(236,72,153,0.25)'  },
+        'Facebook Ecoforma':   { line: '#a78bfa', fill: 'rgba(167,139,250,0.25)' },
+        'OLX':                 { line: '#34d399', fill: 'rgba(52,211,153,0.25)'  },
+        'Дзвінок':             { line: '#fb923c', fill: 'rgba(251,146,60,0.25)'  },
+        'Інше':                { line: '#64748b', fill: 'rgba(100,116,139,0.20)' },
+    };
+    const FALLBACKS = [
+        { line: '#60a5fa', fill: 'rgba(96,165,250,0.25)'  },
+        { line: '#f472b6', fill: 'rgba(244,114,182,0.25)' },
+        { line: '#4ade80', fill: 'rgba(74,222,128,0.25)'  },
+        { line: '#facc15', fill: 'rgba(250,204,21,0.25)'  },
     ];
-    document.getElementById('cmpKpiCards').innerHTML=kpiItems.map(item=>{
-        const diff=item.aVal-item.bVal,sf=item.type==='perc'?'%':'';
-        let arrow='',cls='text-slate-400',bg='bg-slate-800/40',border='border-slate-700/50';
-        if(diff>0&&!item.inv){arrow='▲';cls='text-emerald-400';bg='bg-emerald-900/20';border='border-emerald-800/50';}
-        if(diff>0&& item.inv){arrow='▲';cls='text-red-400';    bg='bg-red-900/20';    border='border-red-800/50';}
-        if(diff<0&&!item.inv){arrow='▼';cls='text-red-400';    bg='bg-red-900/20';    border='border-red-800/50';}
-        if(diff<0&& item.inv){arrow='▼';cls='text-emerald-400';bg='bg-emerald-900/20';border='border-emerald-800/50';}
-        return `<div class="${bg} rounded-xl p-3 md:p-4 border ${border}"><p class="text-[9px] text-slate-400 uppercase tracking-widest font-bold mb-2">${item.label}</p><div class="flex items-end justify-between gap-1"><div><p class="text-[9px] text-blue-400 font-bold mb-0.5">А</p><p class="text-xl md:text-2xl font-black text-white">${item.aVal}${sf}</p></div><div class="text-center pb-1"><p class="text-base font-black ${cls}">${arrow}${Math.abs(diff).toFixed(item.type==='perc'?1:0)}${sf}</p></div><div class="text-right"><p class="text-[9px] text-purple-400 font-bold mb-0.5">Б</p><p class="text-xl md:text-2xl font-black text-slate-300">${item.bVal}${sf}</p></div></div></div>`;
-    }).join('');
-    const rows=[
-        {label:'📊 Всього лідів',a:mA.total,    b:mB.total,    type:'num'},
-        {label:'✅ Опрацьовано', a:mA.processed,b:mB.processed,type:'num'},
-        {label:'📵 В черзі',     a:mA.pending,  b:mB.pending,  type:'num',inv:true},
-        {label:'📞 Додзвін',     a:mA.reached,  b:mB.reached,  type:'num'},
-        {label:'% Додзвін',      a:parseFloat(mA.convReached),b:parseFloat(mB.convReached),type:'perc'},
-        {label:'🏆 ЦА',          a:mA.target,   b:mB.target,   type:'num'},
-        {label:'% ЦА',           a:parseFloat(mA.convTarget), b:parseFloat(mB.convTarget), type:'perc'},
-        {label:'❌ Неякісні',    a:mA.bad,      b:mB.bad,      type:'num',inv:true},
-        {label:'% зливів',       a:parseFloat(mA.convBad),   b:parseFloat(mB.convBad),    type:'perc',inv:true},
-    ];
-    document.getElementById('comparisonTableBody').innerHTML=rows.map(row=>{
-        const diff=row.a-row.b,dp=row.b>0?((diff/row.b)*100).toFixed(1):'—';
-        let arrow='',cls='kpi-same';
-        if(diff>0){arrow='▲';cls=row.inv?'kpi-down':'kpi-up';}
-        if(diff<0){arrow='▼';cls=row.inv?'kpi-up':'kpi-down';}
-        const sf=row.type==='perc'?'%':'';
-        return `<tr class="hover:bg-slate-800/30 border-b border-purple-900/20"><td class="px-4 py-3 font-medium text-slate-200">${row.label}</td><td class="px-4 py-3 text-center font-bold text-blue-300">${row.a}${sf}</td><td class="px-4 py-3 text-center font-bold text-purple-300">${row.b}${sf}</td><td class="px-4 py-3 text-center font-black ${cls}">${arrow} ${Math.abs(diff).toFixed(row.type==='perc'?1:0)}${sf}${dp!=='—'?` (${dp}%)`:''}
-        </td></tr>`;
-    }).join('');
-    renderCmpBarChart(dataA,dataB);
-    renderCmpDetailTable(dataA,dataB);
-    const results=document.getElementById('cmpResults');
-    results.classList.remove('hidden');
-    setTimeout(()=>results.scrollIntoView({behavior:'smooth',block:'start'}),100);
-}
+    let _fbIdx = 0;
+    const colorOf = (src) => SRC_COLORS[src] || FALLBACKS[(_fbIdx++) % FALLBACKS.length];
 
-function renderCmpBarChart(dataA,dataB) {
-    if(cmpBarInst)cmpBarInst.destroy();
-    const ctx=document.getElementById('cmpBarChart').getContext('2d');
-    const getKey=l=>cmpView==='source'?getParentGroup(l)||(l.source||"Інше"):(l.manager?String(l.manager).trim():"Невідомий");
-    const allKeys=[...new Set([...dataA.map(getKey),...dataB.map(getKey)])].filter(Boolean).sort();
-    const groupA={},groupB={};
-    dataA.forEach(l=>{const k=getKey(l);if(!groupA[k])groupA[k]=[];groupA[k].push(l);});
-    dataB.forEach(l=>{const k=getKey(l);if(!groupB[k])groupB[k]=[];groupB[k].push(l);});
-    const sDate=document.getElementById('dateStart').value,eDate=document.getElementById('dateEnd').value;
-    const sB=document.getElementById('cmpStartB').value,eB=document.getElementById('cmpEndB').value;
-    const labelA=sDate&&eDate?`${formatDisplayDate(sDate)}–${formatDisplayDate(eDate)}`:'А';
-    const labelB=sB&&eB?`${formatDisplayDate(sB)}–${formatDisplayDate(eB)}`:'Б';
-    cmpBarInst=new Chart(ctx,{type:'bar',data:{labels:allKeys,datasets:[
-        {label:`А — всього (${labelA})`,data:allKeys.map(k=>(groupA[k]||[]).length),backgroundColor:'rgba(59,130,246,0.75)',borderColor:'#3b82f6',borderWidth:1},
-        {label:`А — ЦА (${labelA})`,   data:allKeys.map(k=>(groupA[k]||[]).filter(l=>normalizeStatus(l)===STATUS_TARGET).length),backgroundColor:'rgba(16,185,129,0.75)',borderColor:'#10b981',borderWidth:1},
-        {label:`Б — всього (${labelB})`,data:allKeys.map(k=>(groupB[k]||[]).length),backgroundColor:'rgba(168,85,247,0.75)',borderColor:'#a855f7',borderWidth:1},
-        {label:`Б — ЦА (${labelB})`,   data:allKeys.map(k=>(groupB[k]||[]).filter(l=>normalizeStatus(l)===STATUS_TARGET).length),backgroundColor:'rgba(245,158,11,0.75)',borderColor:'#f59e0b',borderWidth:1},
-    ]},options:{maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:30},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'},beginAtZero:true}}}});
-}
+    let areaMode      = 'sum';
+    let areaChartInst = null;
 
-function renderCmpDetailTable(dataA,dataB) {
-    const getKey=l=>cmpView==='source'?getParentGroup(l)||(l.source||"Інше"):(l.manager?String(l.manager).trim():"Невідомий");
-    const groupA={},groupB={};
-    dataA.forEach(l=>{const k=getKey(l);if(!groupA[k])groupA[k]=[];groupA[k].push(l);});
-    dataB.forEach(l=>{const k=getKey(l);if(!groupB[k])groupB[k]=[];groupB[k].push(l);});
-    const allKeys=[...new Set([...Object.keys(groupA),...Object.keys(groupB)])].filter(Boolean).sort();
-    document.getElementById('cmpDetailTable').innerHTML=allKeys.map(k=>{
-        const stA=analyzeData(groupA[k]||[]),stB=analyzeData(groupB[k]||[]);
-        const dLeads=stA.total-stB.total,dCA=stA.target-stB.target,dPct=parseFloat(stA.convTarget)-parseFloat(stB.convTarget);
-        const diffCell=(val,inv=false,suffix='')=>{
-            if(val===0)return`<span class="text-slate-500 text-xs">—</span>`;
-            const up=val>0,good=inv?!up:up,cls=good?'text-emerald-400':'text-red-400',arrow=up?'▲':'▼';
-            return `<span class="${cls} font-bold">${arrow}${Math.abs(val).toFixed(suffix?1:0)}${suffix}</span>`;
-        };
-        return `<tr class="hover:bg-purple-900/10 border-b border-purple-900/20 text-sm">
-            <td class="px-3 py-3 font-bold text-slate-200">${k}</td>
-            <td class="px-3 py-3 text-center text-blue-300 font-bold bg-blue-950/15 border-l-2 border-blue-700/30">${stA.total}</td>
-            <td class="px-3 py-3 text-center text-emerald-300 font-bold bg-blue-950/15">${stA.target}</td>
-            <td class="px-3 py-3 text-center text-blue-200 bg-blue-950/15">${stA.convTarget}%</td>
-            <td class="px-3 py-3 text-center border-l border-slate-700/40">${diffCell(dLeads)}</td>
-            <td class="px-3 py-3 text-center">${diffCell(dCA)}</td>
-            <td class="px-3 py-3 text-center">${diffCell(dPct,false,'%')}</td>
-            <td class="px-3 py-3 text-center text-purple-300 font-bold bg-purple-950/15 border-l-2 border-purple-700/30">${stB.total}</td>
-            <td class="px-3 py-3 text-center text-purple-200 bg-purple-950/15">${stB.target}</td>
-            <td class="px-3 py-3 text-center text-purple-200 bg-purple-950/15">${stB.convTarget}%</td>
-        </tr>`;
-    }).join('')||'<tr><td colspan="10" class="p-6 text-center text-slate-500 text-xs">Немає даних</td></tr>';
-}
+    function advGroup(a) {
+        let s  = String(a['Джерело'] || a.source || '').trim();
+        const m = String(a['Відповідальний'] || a['Менеджер'] || a.manager || '').toLowerCase();
+        const ls = s.toLowerCase();
+        if (!s || ls === 'undefined' || ls === '') return 'Інше';
+        if (ls === 'інше' || ls === 'other') return 'Інше';
+        if (ls === 'дзвінок' && m.includes('савчук')) return 'Сайт Wood Agency';
+        if (ls === 'дзвінок') return 'Дзвінок';
+        if (ls.includes('facebook') && (ls.includes('ecoforma') || ls.includes('екоформа'))) return 'Facebook Ecoforma';
+        if (ls.includes('facebook') && (ls.includes('wood')    || ls.includes('вуд')))       return 'Facebook Wood Agency';
+        if (ls.includes('дзвінок')  && (ls.includes('ecoforma')|| ls.includes('сайт')))      return 'Сайт EcoForma';
+        if (ls.includes('ecoforma') || ls.includes('екоформа')) return 'Сайт EcoForma';
+        if (ls.includes('wood')     || ls.includes('відповідальним')) return 'Сайт Wood Agency';
+        if (ls.includes('olx')) return 'OLX';
+        return s;
+    }
 
-// ═══════════════════════════════════════════════════════
-// ДІАГРАМИ ЯКОСТІ
-// ═══════════════════════════════════════════════════════
-function updateBadAnalysisCharts(type) {
-    const selId=type==='source'?'badChartSourceSelect':'badChartMgrSelect';
-    const val=document.getElementById(selId).value;
-    let f=mainData;
-    if(val!=="Всі") f=type==='source'?mainData.filter(l=>getParentGroup(l)===val):mainData.filter(l=>String(l.manager||"").trim()===val);
-    const total=f.length,target=f.filter(l=>normalizeStatus(l)===STATUS_TARGET).length,bad=f.filter(l=>normalizeStatus(l)===STATUS_BAD).length,noCall=f.filter(l=>normalizeStatus(l)===STATUS_NO_CALL).length,notWorked=f.filter(l=>INITIAL_STATUSES.has(normalizeStatus(l))).length;
-    const unknown=total-target-bad-noCall-notWorked;
-    const convTarget=total>0?((target/total)*100).toFixed(1):"0.0";
-    const labels=["Якісні","Неякісні","Не виходить на зв'язок","Не опрацьовані","Потребує уточнення !"];
-    const counts=[target,bad,noCall,notWorked,unknown];
-    const colors=["#10b981","#ef4444","#f59e0b","#3b82f6","#475569"];
-    const icons=["✅","❌","📵","🔵","⚠️"];
-    const statsId=type==='source'?'badSourceStats':'badMgrStats';
-    const se=document.getElementById(statsId);
-    se.innerHTML=`<div class="bg-slate-800/60 rounded-xl px-3 py-2 border border-slate-700/50 mb-1"><p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-0.5">Всього лідів</p><p class="text-2xl font-black text-white">${total}</p></div>
-    ${labels.map((lb,i)=>{if(counts[i]===0)return'';const perc=total>0?Math.round((counts[i]/total)*100):0;const tc=['text-emerald-400','text-red-400','text-amber-400','text-blue-400','text-slate-400'][i];const bc=['border-emerald-800','border-red-900','border-amber-800','border-blue-900','border-slate-700'][i];const bg=['bg-emerald-900/20','bg-red-900/20','bg-amber-900/20','bg-blue-900/20','bg-slate-800/40'][i];return `<div class="${bg} rounded-lg px-3 py-2 border ${bc} flex items-center justify-between gap-2"><div class="flex items-center gap-2 min-w-0"><span class="text-sm">${icons[i]}</span><span class="text-[11px] text-slate-300 font-medium truncate">${lb.replace(' !','')}</span></div><div class="flex items-baseline gap-1 flex-shrink-0"><span class="${tc} font-black text-lg">${counts[i]}</span><span class="${tc} text-[10px] font-bold opacity-70">${perc}%</span></div></div>`;}).join('')}
-    <div class="bg-emerald-900/30 rounded-xl px-3 py-2 border border-emerald-800 mt-1"><p class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold mb-0.5">🏆 Конверсія в ЦА</p><p class="text-2xl font-black text-emerald-400">${convTarget}%</p></div>`;
-    renderPie(type,labels,counts,colors,f);
-}
+    function toDateStr(raw) {
+        if (!raw) return null;
+        const s = String(raw).trim();
+        if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(s)) {
+            const p = s.split(/[. :]/);
+            const d = new Date(+p[2], +p[1]-1, +p[0]);
+            return isNaN(d) ? null : d.toISOString().slice(0, 10);
+        }
+        const d = new Date(s);
+        return isNaN(d) ? null : d.toISOString().slice(0, 10);
+    }
 
-function renderPie(type,labels,counts,colors,fd) {
-    const cid=type==='source'?'badSourcePieChart':'badMgrPieChart';
-    const ctx=document.getElementById(cid).getContext('2d');
-    let ci=type==='source'?badSourceChartInst:badMgrChartInst;
-    if(ci)ci.destroy();
-    const total=counts.reduce((a,b)=>a+b,0);
-    const ni=new Chart(ctx,{type:'pie',data:{labels,datasets:[{data:counts,backgroundColor:colors,borderColor:'#1e293b',borderWidth:2}]},options:{maintainAspectRatio:false,layout:{padding:8},plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>{const lb=c.label||'',v=c.parsed||0,p=total>0?((v/total)*100).toFixed(1):0;if(lb.includes('Потребує уточнення'))return[` ${v} лідів (${p}%)`,' ⚠️ Перегляньте базу.',' Потребує уточнення статусу!'];return ` ${lb}: ${v} (${p}%)`;}}},datalabels:{color:'#fff',font:{weight:'bold',size:10},formatter:(v,c)=>{if(v===0||total===0)return null;const p=Math.round((v/total)*100);const lb=c.chart.data.labels[c.dataIndex];if(lb.includes('Потребує уточнення'))return`!\n(${p}%)`;return`${p}%`;}}},onClick:(evt,item)=>{if(item.length>0){const idx=item[0].index;const lb=labels[idx];if(lb==='Неякісні'&&(type==='source'?badSourceMode:badMgrMode)==='main')showDrillDown(type,fd);}}}});
-    if(type==='source'){badSourceChartInst=ni;badSourceMode='main';document.getElementById('backBtnSource').classList.add('hidden');}
-    else{badMgrChartInst=ni;badMgrMode='main';document.getElementById('backBtnMgr').classList.add('hidden');}
-}
+    function getGranularity(s, e) {
+        if (!s || !e) return 'day';
+        const diff = (new Date(e) - new Date(s)) / 86400000;
+        if (diff <= 35)  return 'day';
+        if (diff <= 120) return 'week';
+        return 'month';
+    }
 
-function showDrillDown(type,data) {
-    const bl=data.filter(l=>normalizeStatus(l)===STATUS_BAD);
-    const rm={};bl.forEach(l=>{const r=l.reason?String(l.reason).trim():"Не вказано";rm[r]=(rm[r]||0)+1;});
-    const labels=Object.keys(rm),counts=Object.values(rm),colors=['#ef4444','#f87171','#fca5a5','#fee2e2','#991b1b','#7f1d1d'];
-    const ci=type==='source'?badSourceChartInst:badMgrChartInst;
-    ci.data.labels=labels.map(l=>"Причина: "+l);ci.data.datasets[0].data=counts;ci.data.datasets[0].backgroundColor=colors;ci.update();
-    if(type==='source'){badSourceMode='drilldown';document.getElementById('backBtnSource').classList.remove('hidden');}
-    else{badMgrMode='drilldown';document.getElementById('backBtnMgr').classList.remove('hidden');}
-}
-function resetBadChart(type){updateBadAnalysisCharts(type);}
+    function bucketKey(dateStr, gran) {
+        const d = new Date(dateStr + 'T00:00:00');
+        if (gran === 'month') return dateStr.slice(0, 7);
+        if (gran === 'week') {
+            const day = d.getDay() || 7;
+            const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+            return mon.toISOString().slice(0, 10);
+        }
+        return dateStr;
+    }
 
-// ─── СПИСОК НЕЯКІСНИХ ────────────────────────────────
-function renderBadLeadsList(data) {
-    allBadLeads=data.filter(l=>normalizeStatus(l)===STATUS_BAD);
-    const managers=new Set(allBadLeads.map(l=>l.manager?String(l.manager).trim():"Невідомий"));
-    const sources =new Set(allBadLeads.map(l=>l.source?String(l.source).trim():"Інше"));
-    const reasons =new Set(allBadLeads.map(l=>l.reason?String(l.reason).trim():"Не вказано"));
-    const ms=document.getElementById('badListMgrFilter'),curM=ms.value;
-    const ss=document.getElementById('badListSrcFilter'),curS=ss.value;
-    const rs=document.getElementById('badListReasonFilter'),curR=rs.value;
-    ms.innerHTML='<option value="Всі">Всі менеджери</option>';
-    Array.from(managers).sort().forEach(m=>{ms.innerHTML+=`<option value="${m}" ${curM===m?'selected':''}>${m}</option>`;});
-    ss.innerHTML='<option value="Всі">Всі джерела</option>';
-    Array.from(sources).sort().forEach(s=>{ss.innerHTML+=`<option value="${s}" ${curS===s?'selected':''}>${s}</option>`;});
-    rs.innerHTML='<option value="Всі">Всі причини</option>';
-    Array.from(reasons).sort().forEach(r=>{rs.innerHTML+=`<option value="${r}" ${curR===r?'selected':''}>${r}</option>`;});
-    applyBadLeadsFilters();
-}
-function applyBadLeadsFilters() {
-    const mv=document.getElementById('badListMgrFilter').value,sv=document.getElementById('badListSrcFilter').value,rv=document.getElementById('badListReasonFilter').value;
-    let f=allBadLeads;
-    if(mv!=="Всі")f=f.filter(l=>(l.manager?String(l.manager).trim():"Невідомий")===mv);
-    if(sv!=="Всі")f=f.filter(l=>(l.source?String(l.source).trim():"Інше")===sv);
-    if(rv!=="Всі")f=f.filter(l=>(l.reason?String(l.reason).trim():"Не вказано")===rv);
-    renderBadLeadsTable(f);
-}
-function resetBadLeadsFilters() {
-    document.getElementById('badListMgrFilter').value='Всі';
-    document.getElementById('badListSrcFilter').value='Всі';
-    document.getElementById('badListReasonFilter').value='Всі';
-    renderBadLeadsTable(allBadLeads);
-}
-function renderBadLeadsTable(leads) {
-    const tb=document.getElementById('badLeadsTableBody');
-    document.getElementById('badLeadsCountLabel').innerText=leads.length;
-    if(leads.length===0){tb.innerHTML='<tr><td colspan="4" class="p-8 text-center text-slate-500 uppercase font-bold">Неякісних лідів не знайдено</td></tr>';return;}
-    tb.innerHTML=leads.map(l=>{
-        const lnk=l.link&&String(l.link).startsWith('http')?l.link:'#';
-        const reason=l.reason?String(l.reason).trim():'---';
-        return `<tr class="hover:bg-red-500/5 transition"><td class="px-4 py-3 font-medium text-slate-200">${l.manager||'---'}</td><td class="px-4 py-3 text-slate-400 text-xs">${l.source||'---'}</td><td class="px-4 py-3"><span class="text-red-400 font-bold text-xs px-2 py-0.5 bg-red-900/20 rounded">${reason}</span></td><td class="px-4 py-3 text-center"><a href="${lnk}" target="_blank" class="${lnk!=='#'?'bg-blue-600 hover:bg-blue-500':'bg-slate-700 opacity-30 cursor-not-allowed'} text-white text-[10px] font-bold px-3 py-1.5 rounded transition inline-block">${lnk!=='#'?'В CRM ➔':'Без лінка'}</a></td></tr>`;
-    }).join('');
-}
+    function bucketLabel(key, gran) {
+        if (gran === 'month') {
+            const [y, m] = key.split('-');
+            return new Date(+y, +m-1, 1).toLocaleDateString('uk-UA', { month: 'short', year: '2-digit' });
+        }
+        if (gran === 'week') {
+            const d = new Date(key + 'T00:00:00');
+            const end = new Date(d); end.setDate(d.getDate() + 6);
+            return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' })
+                + '\u2013' + end.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' });
+        }
+        return new Date(key + 'T00:00:00').toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
+    }
 
-// ─── УТИЛІТИ UI ──────────────────────────────────────
-function toggleDropdown(id){document.getElementById(id).classList.toggle('show');}
-window.onclick=(e)=>{if(!e.target.closest('.relative'))document.querySelectorAll('.dropdown-content').forEach(el=>el.classList.remove('show'));};
-function handleCheckboxAll(c){document.querySelectorAll(`.${c}:not([value="Всі"])`).forEach(cb=>cb.checked=false);updateSelectText(c);applyLocalFiltersAndRender();}
-function handleCheckboxSingle(c){const a=document.querySelector(`.${c}[value="Всі"]`);const n=Array.from(document.querySelectorAll(`.${c}:not([value="Всі"]):checked`)).length;a.checked=(n===0);updateSelectText(c);applyLocalFiltersAndRender();}
-function handleTableCbAll(c){document.querySelectorAll(`.${c}:not([value="Всі"])`).forEach(cb=>cb.checked=false);updateSelectTextTbl(c);applyTableFilters();}
-function handleTableCbSingle(c){const a=document.querySelector(`.${c}[value="Всі"]`);const n=Array.from(document.querySelectorAll(`.${c}:not([value="Всі"]):checked`)).length;a.checked=(n===0);updateSelectTextTbl(c);applyTableFilters();}
-function updateSelectText(c){const v=Array.from(document.querySelectorAll(`.${c}:checked`)).map(cb=>cb.value);document.getElementById(c==='mgr-cb'?'managerSelectText':'sourceSelectText').innerText=v.includes("Всі")?"Всі":(v.length>2?"Обрано: "+v.length:v.join(", "));}
-function updateSelectTextTbl(c){const v=Array.from(document.querySelectorAll(`.${c}:checked`)).map(cb=>cb.value);const id=c==='tbl-mgr-cb'?'tblMgrSelectText':'tblSrcSelectText';const def=c==='tbl-mgr-cb'?'Всі менеджери':'Всі джерела';document.getElementById(id).innerText=v.includes("Всі")?def:(v.length>2?"Обрано: "+v.length:v.join(", "));}
-function getSelectedValues(c){const v=Array.from(document.querySelectorAll(`.${c}:checked`)).map(cb=>cb.value);return v.includes("Всі")?["Всі"]:v;}
-function exportToCSV(){let csv="data:text/csv;charset=utf-8,\uFEFFМенеджер,Джерело,Статус,Причина\n"+mainData.map(r=>`"${r.manager||''}","${r.source||''}","${r.status||''}","${r.reason||''}"`).join("\n");const l=document.createElement("a");l.href=encodeURI(csv);l.download="SD_Report.csv";l.click();}
+    window.renderAreaChart = function (advData) {
+        _fbIdx = 0;
+
+        const startStr = document.getElementById('dateStart').value;
+        const endStr   = document.getElementById('dateEnd').value;
+        const gran     = getGranularity(startStr, endStr);
+        const granLabel = { day: 'по днях', week: 'по тижнях', month: 'по місяцях' }[gran];
+        document.getElementById('areaSubtitle').innerText = 'Динаміка ' + granLabel + ' \u00B7 на основі дати авансу';
+
+        const bucketMap = {};
+        const srcSet    = new Set();
+
+        advData.forEach(a => {
+            const grp     = advGroup(a);
+            const dateStr = toDateStr(a['Дата авансу'] || a.date || a.dateUpdate || '');
+            if (!dateStr) return;
+            const bk  = bucketKey(dateStr, gran);
+            const val = parseFloat(String(a['Сума угоди'] || a['Сума'] || a.dealAmount || 0).replace(/\s/g, '')) || 0;
+            if (!bucketMap[bk]) bucketMap[bk] = {};
+            if (!bucketMap[bk][grp]) bucketMap[bk][grp] = { sum: 0, count: 0 };
+            bucketMap[bk][grp].sum   += val;
+            bucketMap[bk][grp].count += 1;
+            srcSet.add(grp);
+        });
+
+        const allBuckets = Object.keys(bucketMap).sort();
+        const sources    = Array.from(srcSet).sort();
+
+        if (allBuckets.length === 0) {
+            if (areaChartInst) { areaChartInst.destroy(); areaChartInst = null; }
+            document.getElementById('areaLegendRow').innerHTML =
+                '<span class="text-xs text-slate-500">Немає даних авансів у вибраному діапазоні</span>';
+            document.getElementById('areaSummaryRow').innerHTML = '';
+            return;
+        }
+
+        const datasets = sources.map(src => {
+            const c = colorOf(src);
+            return {
+                label: src,
+                data:  allBuckets.map(bk => bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0),
+                backgroundColor: c.fill,
+                borderColor:     c.line,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointRadius:      allBuckets.length <= 20 ? 4 : 2,
+                pointHoverRadius: 7,
+                pointBackgroundColor: c.line,
+                pointBorderColor: '#0f172a',
+                pointBorderWidth: 1.5,
+            };
+        });
+
+        if (areaChartInst) areaChartInst.destroy();
+        const ctx = document.getElementById('dealAreaChart').getContext('2d');
+        areaChartInst = new Chart(ctx, {
+            type: 'line',
+            data: { labels: allBuckets.map(bk => bucketLabel(bk, gran)), datasets },
+            options: {
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    datalabels: { display: false },
+                    legend:     { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        borderColor:     '#334155',
+                        borderWidth: 1,
+                        titleColor: '#94a3b8',
+                        bodyColor:  '#f1f5f9',
+                        padding: 14,
+                        itemSort: (a, b) => b.parsed.y - a.parsed.y,
+                        callbacks: {
+                            label: function(ctx) {
+                                const v = ctx.parsed.y;
+                                if (!v) return null;
+                                return areaMode === 'sum'
+                                    ? ' ' + ctx.dataset.label + ': \u20B4' + Math.round(v).toLocaleString('uk-UA')
+                                    : ' ' + ctx.dataset.label + ': ' + v + ' угод';
+                            },
+                            footer: function(items) {
+                                const total = items.reduce((s, i) => s + i.parsed.y, 0);
+                                if (!total) return '';
+                                return areaMode === 'sum'
+                                    ? 'Разом: \u20B4' + Math.round(total).toLocaleString('uk-UA')
+                                    : 'Разом: ' + total + ' угод';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 },
+                        grid:  { color: 'rgba(255,255,255,0.04)' }
+                    },
+                    y: {
+                        stacked: true,
+                        ticks: {
+                            color: '#94a3b8', font: { size: 10 },
+                            callback: function(v) {
+                                if (areaMode !== 'sum') return v;
+                                if (v >= 1000000) return '\u20B4' + (v/1000000).toFixed(1) + 'M';
+                                if (v >= 1000)    return '\u20B4' + (v/1000).toFixed(0) + 'k';
+                                return '\u20B4' + v;
+                            }
+                        },
+                        grid: { color: 'rgba(255,255,255,0.06)' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Легенда
+        document.getElementById('areaLegendRow').innerHTML = sources.map(src => {
+            const c = colorOf(src);
+            return '<span class="flex items-center gap-1.5 text-xs text-slate-300 font-medium">'
+                + '<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:' + c.line + '"></span>'
+                + src + '</span>';
+        }).join('');
+
+        // Підсумки
+        const totals = {};
+        sources.forEach(src => {
+            totals[src] = { sum: 0, count: 0 };
+            allBuckets.forEach(bk => {
+                if (bucketMap[bk][src]) {
+                    totals[src].sum   += bucketMap[bk][src].sum;
+                    totals[src].count += bucketMap[bk][src].count;
+                }
+            });
+        });
+
+        document.getElementById('areaSummaryRow').innerHTML = sources.map(src => {
+            const c   = colorOf(src);
+            const t   = totals[src];
+            const avg = t.count ? Math.round(t.sum / t.count).toLocaleString('uk-UA') : 0;
+            return '<div class="bg-slate-900/60 rounded-xl px-3 py-2.5 border border-slate-700/50">'
+                + '<div class="flex items-center gap-1.5 mb-1">'
+                + '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + c.line + '"></span>'
+                + '<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">' + src + '</span>'
+                + '</div>'
+                + '<span class="text-base font-black text-white block">\u20B4' + Math.round(t.sum).toLocaleString('uk-UA') + '</span>'
+                + '<span class="text-[10px] text-slate-500">' + t.count + ' угод \u00B7 сер. \u20B4' + avg + '</span>'
+                + '</div>';
+        }).join('');
+    };
+
+    window.setAreaMode = function (mode) {
+        areaMode = mode;
+        document.getElementById('btnAreaSum').classList.toggle('active', mode === 'sum');
+        document.getElementById('btnAreaCount').classList.toggle('active', mode === 'count');
+        renderAreaChart(window.mainAdvData || []);
+    };
+
+    // Підключення до циклу рендеру дашборду
+    const _orig = window.applyLocalFiltersAndRender;
+    window.applyLocalFiltersAndRender = function () {
+        _orig();
+        renderAreaChart(window.mainAdvData || []);
+    };
+
+})();
 </script>
-</body>
-</html>
