@@ -1160,6 +1160,12 @@ function renderCampaignsView() {
     const campIdx = buildCampaignIndex(dStart, dEnd);
     const entries = Object.values(campIdx);
 
+    // Діагностика
+    const diagEl = document.getElementById('diagBox');
+    diagEl.innerHTML = `🔬 Кампанії: <b>${entries.length}</b> | Spend рядків: <b>${globalSpend.length}</b> | Ліди з UTM: <b>${globalLeads.filter(l=>l.utm).length}</b>`;
+    diagEl.style.display = 'block';
+    setTimeout(() => { diagEl.style.display = 'none'; }, 8000);
+
     // Панелі
     const CAMP_PANELS = [
         { key: 'fb_eco',    label: 'Facebook Ecoforma',    color: 'blue',    icon: '📘' },
@@ -1167,6 +1173,9 @@ function renderCampaignsView() {
         { key: 'site_eco',  label: 'Сайт EcoForma',        color: 'emerald', icon: '🌿' },
         { key: 'site_wood', label: 'Сайт Wood Agency',     color: 'cyan',    icon: '🌐' },
     ];
+
+    // Групуємо по панелях
+    const panels = {};
     CAMP_PANELS.forEach(p => { panels[p.key] = []; });
 
     entries.forEach(camp => {
