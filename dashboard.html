@@ -1510,22 +1510,39 @@ function renderAreaChart(advData) {
         return;
     }
 
+    // Накопичуємо дані вручну для справжнього stacked area
+    var rawValues = {};
+    sources.forEach(function(src) {
+        rawValues[src] = allBuckets.map(function(bk) {
+            return bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0;
+        });
+    });
+    var stackedValues = {};
+    allBuckets.forEach(function(bk, bi) {
+        var cumul = 0;
+        sources.forEach(function(src) {
+            cumul += rawValues[src][bi];
+            if (!stackedValues[src]) stackedValues[src] = [];
+            stackedValues[src][bi] = cumul;
+        });
+    });
+
     const datasets = sources.map(function(src, idx) {
         const c = areaColorOf(src);
         return {
             label: src,
-            data:  allBuckets.map(function(bk) { return bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0; }),
+            data: stackedValues[src],
+            _raw: rawValues[src],
             backgroundColor: c.fill,
             borderColor:     c.line,
             borderWidth: 2,
-            fill: 'origin',
+            fill: idx === 0 ? 'origin' : '-1',
             tension: 0.4,
             pointRadius:      allBuckets.length <= 20 ? 3 : 1,
             pointHoverRadius: 6,
             pointBackgroundColor: c.line,
             pointBorderColor: '#0f172a',
             pointBorderWidth: 1.5,
-            stack: 'area',
         };
     });
 
@@ -1549,13 +1566,17 @@ function renderAreaChart(advData) {
                     itemSort: function(a, b) { return b.parsed.y - a.parsed.y; },
                     callbacks: {
                         label: function(ctx) {
-                            const v = ctx.parsed.y; if (!v) return null;
+                            var raw = ctx.dataset._raw ? ctx.dataset._raw[ctx.dataIndex] : ctx.parsed.y;
+                            if (!raw) return null;
                             return areaMode === 'sum'
-                                ? ' ' + ctx.dataset.label + ': \u20B4' + Math.round(v).toLocaleString('uk-UA')
-                                : ' ' + ctx.dataset.label + ': ' + v + ' угод';
+                                ? ' ' + ctx.dataset.label + ': \u20B4' + Math.round(raw).toLocaleString('uk-UA')
+                                : ' ' + ctx.dataset.label + ': ' + raw + ' угод';
                         },
                         footer: function(items) {
-                            const total = items.reduce(function(s, i) { return s + i.parsed.y; }, 0);
+                            var total = items.reduce(function(s, i) {
+                                var raw = i.dataset._raw ? i.dataset._raw[i.dataIndex] : i.parsed.y;
+                                return s + (raw || 0);
+                            }, 0);
                             if (!total) return '';
                             return areaMode === 'sum'
                                 ? 'Разом: \u20B4' + Math.round(total).toLocaleString('uk-UA')
@@ -1565,9 +1586,8 @@ function renderAreaChart(advData) {
                 }
             },
             scales: {
-                x: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                x: { ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 }, grid: { color: 'rgba(255,255,255,0.04)' } },
                 y: {
-                    stacked: true,
                     ticks: { color: '#94a3b8', font: { size: 10 }, callback: function(v) {
                         if (areaMode !== 'sum') return v;
                         if (v >= 1000000) return '\u20B4' + (v/1000000).toFixed(1) + 'M';
