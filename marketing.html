@@ -168,6 +168,15 @@
     </div>
 </div>
 
+<!-- АНАЛІТИКА ПО ДНЯХ ТИЖНЯ -->
+<div id="weekdayContainer" style="display:none" class="bg-dark-card rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8 max-w-[1600px] mx-auto transition-colors duration-300">
+    <div class="bg-[#131c2e] px-6 py-4 border-b border-slate-700 flex flex-wrap gap-4 justify-between items-center">
+        <h2 class="text-lg font-black text-white uppercase tracking-wider">📅 Активність по днях тижня</h2>
+        <div class="text-[10px] text-slate-500 font-bold">Клікни на джерело щоб побачити деталізацію</div>
+    </div>
+    <div class="p-5" id="weekdayContent"></div>
+</div>
+
 <!-- ЗАГАЛЬНІ ВИТРАТИ -->
 <div id="costsContainer" style="display:none" class="bg-dark-card rounded-2xl border border-yellow-800/50 shadow-2xl overflow-hidden mb-8 max-w-[1600px] mx-auto px-3 md:px-6">
     <div class="bg-yellow-950/30 px-6 py-4 border-b border-yellow-800/40 flex flex-wrap gap-4 justify-between items-center">
@@ -537,6 +546,23 @@ function render() {
 
     renderActiveView();
     if (currentTab === 'campaigns') renderCampaignsView();
+
+    // Аналітика по днях тижня — тільки для не-кампаній вкладок
+    if (currentTab !== 'campaigns') {
+        const allVisibleLeads = globalLeads.filter(l => {
+            const d = parseDate(l.date);
+            if (d < dStart || d > dEnd) return false;
+            const cat = classify(l.source, l.utm, l.manager);
+            if (!cat || cat === 'repeat') return false;
+            const f = findChild(l.source, l.manager, l.utm);
+            const grp = SOURCE_GROUPS.find(g => g.key === f.gk);
+            if (!grp) return false;
+            return isGroupVisible(grp);
+        });
+        renderWeekdayAnalytics(allVisibleLeads);
+    } else {
+        document.getElementById('weekdayContainer').style.display = 'none';
+    }
 }
 
 // ============================================================
@@ -1487,7 +1513,207 @@ function renderCostsView() {
     `;
 }
 
-window.onload = () => {
+// ============================================================
+// АНАЛІТИКА ПО ДНЯХ ТИЖНЯ
+// ============================================================
+const DAYS_UA = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const DAYS_FULL = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+// Порядок: Пн-Нд (індекси в Date: 0=Нд, 1=Пн...6=Сб)
+const DAY_ORDER = [1,2,3,4,5,6,0];
+
+let activeWeekdaySource = null; // null = загальне, або ключ групи
+
+function renderWeekdayAnalytics(leads) {
+    const container = document.getElementById('weekdayContainer');
+    const content   = document.getElementById('weekdayContent');
+    if (!leads || leads.length === 0) { container.style.display = 'none'; return; }
+    container.style.display = '';
+
+    // Збираємо дані по днях для кожної групи і її дітей
+    function buildDayData(leadsList) {
+        // { dayIndex: { total, target } }
+        const days = {};
+        DAY_ORDER.forEach(d => { days[d] = { total: 0, target: 0 }; });
+        leadsList.forEach(l => {
+            const d = parseDate(l.date);
+            const day = d.getDay();
+            if (!days[day]) days[day] = { total: 0, target: 0 };
+            days[day].total++;
+            if (l.status.toLowerCase() === STATUS_TARGET) days[day].target++;
+        });
+        return days;
+    }
+
+    // Групи для поточної вкладки
+    const groups = SOURCE_GROUPS.filter(grp => isGroupVisible(grp));
+    const cats   = getVisibleCats();
+
+    // Загальні ліди (вже відфільтровані по даті і табу)
+    const totalDays = buildDayData(leads);
+    const maxTotal  = Math.max(...DAY_ORDER.map(d => totalDays[d]?.total || 0), 1);
+    const maxTarget = Math.max(...DAY_ORDER.map(d => totalDays[d]?.target || 0), 1);
+
+    // Знаходимо найкращий день по ЦА
+    const bestDay = DAY_ORDER.reduce((best, d) =>
+        (totalDays[d]?.target || 0) > (totalDays[best]?.target || 0) ? d : best, DAY_ORDER[0]);
+
+    // Рендер теплової карти + барів для групи лідів
+    function renderHeatmap(dayData, maxT, maxCA, compact = false) {
+        const h = compact ? 40 : 60;
+        return DAY_ORDER.map(d => {
+            const total  = dayData[d]?.total  || 0;
+            const target = dayData[d]?.target || 0;
+            const wTotal  = maxT  > 0 ? (total  / maxT  * 100).toFixed(1) : 0;
+            const wTarget = maxCA > 0 ? (target / maxCA * 100).toFixed(1) : 0;
+            const isB = d === bestDay && !compact;
+            return `
+            <div class="flex flex-col items-center gap-1 flex-1 min-w-0">
+                <div class="text-[9px] font-black ${isB ? 'text-emerald-400' : 'text-slate-500'} uppercase">${DAYS_UA[d]}</div>
+                <div class="w-full flex flex-col gap-0.5" style="height:${h}px; justify-content:flex-end">
+                    <div class="w-full rounded-t-sm transition-all" style="height:${wTotal}%;background:rgba(59,130,246,0.5);min-height:${total?2:0}px" title="Ліди: ${total}"></div>
+                    <div class="w-full rounded-t-sm transition-all" style="height:${wTarget}%;background:rgba(16,185,129,0.8);min-height:${target?2:0}px" title="ЦА: ${target}"></div>
+                </div>
+                <div class="text-[10px] font-black ${isB ? 'text-emerald-300' : 'text-slate-300'}">${target||'—'}</div>
+                <div class="text-[9px] text-slate-500">${total}</div>
+            </div>`;
+        }).join('');
+    }
+
+    // Кнопки джерел
+    function sourceBtn(key, label, active) {
+        return `<button onclick="toggleWeekdaySource('${key}')"
+            class="tab-btn px-3 py-1.5 text-xs font-bold rounded-lg border border-transparent transition
+            ${active ? 'tab-active' : 'text-slate-400 hover:bg-slate-800'}">${label}</button>`;
+    }
+
+    const sourceBtns = [
+        sourceBtn('__all__', '🌐 Загальне', activeWeekdaySource === null || activeWeekdaySource === '__all__'),
+        ...groups.map(g => sourceBtn(g.key, g.label, activeWeekdaySource === g.key))
+    ].join('');
+
+    // Загальна хітмапа
+    let html = `
+        <div class="flex flex-wrap gap-2 mb-5">${sourceBtns}</div>
+
+        <!-- Легенда -->
+        <div class="flex gap-4 mb-4 text-[10px] font-bold">
+            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:rgba(59,130,246,0.5)"></span>Ліди</div>
+            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block bg-emerald-500/80"></span>Цільові (ЦА)</div>
+        </div>
+    `;
+
+    const currentKey = activeWeekdaySource === '__all__' ? null : activeWeekdaySource;
+
+    if (!currentKey) {
+        // Загальне — всі джерела разом
+        const bestDayLabel = DAYS_FULL[bestDay];
+        const bestCA = totalDays[bestDay]?.target || 0;
+        html += `
+        <div class="mb-4 flex items-center gap-3 bg-emerald-900/20 border border-emerald-800/40 rounded-xl px-4 py-3">
+            <span class="text-xl">🏆</span>
+            <span class="text-emerald-300 font-black text-sm">Найбільше ЦА у <b>${bestDayLabel}</b> — ${bestCA} цільових лідів</span>
+        </div>
+        <div class="bg-slate-900/40 rounded-xl p-4 border border-slate-700/40">
+            <div class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-3">Всі джерела</div>
+            <div class="flex gap-2">${renderHeatmap(totalDays, maxTotal, maxTarget)}</div>
+        </div>`;
+
+        // Під-карти по кожній групі
+        html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">`;
+        groups.forEach(grp => {
+            let gLeads = [];
+            cats.forEach(cat => {
+                if (leadsIdx[cat]?.[grp.key]) gLeads.push(...Object.values(leadsIdx[cat][grp.key].children).flat());
+            });
+            if (gLeads.length === 0) return;
+            const gDays   = buildDayData(gLeads);
+            const gMaxT   = Math.max(...DAY_ORDER.map(d => gDays[d]?.total  || 0), 1);
+            const gMaxCA  = Math.max(...DAY_ORDER.map(d => gDays[d]?.target || 0), 1);
+            html += `
+            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-700/40 cursor-pointer hover:border-slate-500/60 transition"
+                 onclick="toggleWeekdaySource('${grp.key}')">
+                <div class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-2">${grp.label}</div>
+                <div class="flex gap-1.5">${renderHeatmap(gDays, gMaxT, gMaxCA, true)}</div>
+            </div>`;
+        });
+        html += `</div>`;
+
+    } else {
+        // Деталізація по конкретній групі
+        const grp = SOURCE_GROUPS.find(g => g.key === currentKey);
+        if (!grp) return;
+
+        let gLeads = [];
+        cats.forEach(cat => {
+            if (leadsIdx[cat]?.[grp.key]) gLeads.push(...Object.values(leadsIdx[cat][grp.key].children).flat());
+        });
+        const gDays  = buildDayData(gLeads);
+        const gMaxT  = Math.max(...DAY_ORDER.map(d => gDays[d]?.total  || 0), 1);
+        const gMaxCA = Math.max(...DAY_ORDER.map(d => gDays[d]?.target || 0), 1);
+        const grpBestDay = DAY_ORDER.reduce((best, d) =>
+            (gDays[d]?.target || 0) > (gDays[best]?.target || 0) ? d : best, DAY_ORDER[0]);
+
+        html += `
+        <div class="mb-4 flex items-center gap-3 bg-emerald-900/20 border border-emerald-800/40 rounded-xl px-4 py-3">
+            <span class="text-xl">🏆</span>
+            <span class="text-emerald-300 font-black text-sm">${grp.label} — найбільше ЦА у <b>${DAYS_FULL[grpBestDay]}</b> (${gDays[grpBestDay]?.target || 0})</span>
+        </div>
+
+        <!-- Загальна карта групи -->
+        <div class="bg-slate-900/40 rounded-xl p-4 border border-slate-700/40 mb-4">
+            <div class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-3">${grp.label} — загальне</div>
+            <div class="flex gap-2">${renderHeatmap(gDays, gMaxT, gMaxCA)}</div>
+        </div>
+
+        <!-- Компоненти -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">`;
+
+        grp.children.forEach(ch => {
+            // Фільтруємо по вкладці
+            if (currentTab === 'ads' && !ch.isPaid)  return;
+            if (currentTab === 'org' &&  ch.isPaid)  return;
+
+            const correctCat = ch.isPaid ? 'ads' : 'organic';
+            const chLeads = leadsIdx[correctCat]?.[grp.key]?.children?.[ch.key] || [];
+            if (chLeads.length === 0) return;
+
+            const chDays = buildDayData(chLeads);
+            const chMaxT  = Math.max(...DAY_ORDER.map(d => chDays[d]?.total  || 0), 1);
+            const chMaxCA = Math.max(...DAY_ORDER.map(d => chDays[d]?.target || 0), 1);
+            const badge = ch.isPaid
+                ? '<span class="text-[9px] bg-blue-900/40 text-blue-400 px-1.5 py-0.5 rounded ml-1">реклама</span>'
+                : '<span class="text-[9px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded ml-1">органіка</span>';
+
+            html += `
+            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-700/40">
+                <div class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-2 flex items-center">
+                    ${ch.label}${badge}
+                </div>
+                <div class="flex gap-1.5">${renderHeatmap(chDays, chMaxT, chMaxCA, true)}</div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    content.innerHTML = html;
+}
+
+function toggleWeekdaySource(key) {
+    activeWeekdaySource = (activeWeekdaySource === key) ? null : key;
+    // Перерендер з поточними лідами
+    const s = document.getElementById('dateStart').value;
+    const e = document.getElementById('dateEnd').value;
+    if (!s || !e) return;
+    const dStart = new Date(s); dStart.setHours(0,0,0,0);
+    const dEnd   = new Date(e); dEnd.setHours(23,59,59,999);
+    const leads  = globalLeads.filter(l => {
+        const d = parseDate(l.date);
+        if (d < dStart || d > dEnd) return false;
+        const cat = classify(l.source, l.utm, l.manager);
+        return cat && cat !== 'repeat';
+    });
+    renderWeekdayAnalytics(leads);
+}
     const today = new Date(), ago = new Date();
     ago.setDate(today.getDate() - 30);
     document.getElementById('dateStart').valueAsDate = ago;
