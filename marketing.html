@@ -200,30 +200,7 @@
         <h2 class="text-lg font-black text-white uppercase tracking-wider">🔬 Детальний звіт по кампаніях</h2>
         <div class="flex gap-4 sm:gap-6 flex-wrap" id="campKpiRow"></div>
     </div>
-    <div class="p-4">
-        <div class="mb-4 flex flex-wrap gap-3 items-center">
-            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Джерело:</div>
-            <div id="campSourceFilter" class="flex flex-wrap gap-2"></div>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-slate-900/50 text-dark-subtle text-[10px] font-bold uppercase tracking-wider">
-                    <tr>
-                        <th class="px-4 py-3 text-left">Кампанія</th>
-                        <th class="px-2 py-3 text-center">Ліди</th>
-                        <th class="px-2 py-3 text-center text-amber-400">Дзв</th>
-                        <th class="px-2 py-3 text-center text-emerald-400">ЦА</th>
-                        <th class="px-2 py-3 text-center text-orange-400">Прод</th>
-                        <th class="px-2 py-3 text-right text-yellow-400">Сума угод</th>
-                        <th class="px-2 py-3 text-right text-purple-400">Витрачено ₴</th>
-                        <th class="px-2 py-3 text-right text-purple-300">Ціна ліда</th>
-                        <th class="px-4 py-3 text-right text-emerald-300">Ціна ЦА</th>
-                    </tr>
-                </thead>
-                <tbody id="campTableBody" class="divide-y divide-dark-border/20"></tbody>
-            </table>
-        </div>
-    </div>
+    <div class="p-4" id="campPanelsContainer"></div>
 </div>
 
 <script>
@@ -1318,9 +1295,8 @@ function renderCampaignsView() {
         </div>`;
     });
 
-    document.getElementById('campTableBody').innerHTML = `<tr><td colspan="11"><div class="p-4">${panelsHtml}</div></td></tr>`;
-    document.getElementById('campSourceFilter').innerHTML = ''; // фільтр тепер не потрібен
-    document.getElementById('campKpiRow'); // вже заповнено вище
+    document.getElementById('campPanelsContainer').innerHTML = panelsHtml || '<div class="p-8 text-center text-slate-400 font-bold">📭 Немає даних за вибраний період</div>';
+    document.getElementById('campSourceFilter') && (document.getElementById('campSourceFilter').innerHTML = '');
 }
 
 // ============================================================
