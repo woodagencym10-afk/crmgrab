@@ -983,24 +983,6 @@ function setTab(tabName) {
 // Панелі: FB Ecoforma | FB Wood Agency | Сайт EcoForma | Сайт Wood Agency
 // ============================================================
 
-// Хардкод маппінг: utm_campaign → Campaign Name (виключення з правил)
-const UTM_HARDMAP = {
-    // FB Ecoforma — регіональні кампанії
-    'lead_saite_rivnenska':          'KP | Lead Saite | ADV | Рівненська | 18.01.26',
-    'lead_saite_lviv':               'KP | Lead Saite | ADV | Львівська | 18.01.26',
-    'lead_saite_volynska':           'KP | Lead Saite | ADV | Волинська | 18.01.26',
-    'lead_saite_zakarpatska':        'KP | Lead Saite | ADV | Закарпатська | 18.01.26',
-    'lead_saite_ternopilska':        'KP | Lead Saite | ADV | Тернопільська | 18.01.26',
-    'lead_saite_5oblastey_11_03_26': 'KP | Lead Saite | ADV | 5 областей 2 | New | 11.03.26',
-    'lead_saite_lviv_24_03_26':      'KP | Lead Saite Сертифікати | ADV | Львівська | 24.03.26',
-    'lead_saite_volynska_24_03_26':  'KP | Lead Saite Сертифікати | ADV | Волинська | 24.03.26',
-    'lead_saite_rivnenska_24_03_26': 'KP | Lead Saite Сертифікати | ADV | Рівненська | 24.03.26',
-    'lead_saite_ternopil_24_03_26':  'KP | Lead Saite Сертифікати | ADV | Тернопільська | 24.03.26',
-    // Сайт EcoForma (Google Ads)
-    'vagonka': 'KP | LAND | Вагонка | Search | 5 Областей | 21.08',
-    'washop_20_03_26':                 'KP | WA.shop Adv+ | 20.03.26',
-    'wastore_20_03_26':                'KP | WA.store Adv+ | 20.03.26',
-};
 
 // Визначення панелі по Source зі Spend (колонка B)
 const SPEND_PANEL_MAP = [
@@ -1034,51 +1016,6 @@ const PANEL_COLORS = {
     cyan:    { border: 'border-cyan-800/50',    header: 'bg-cyan-950/40',    badge: 'bg-cyan-900/30 text-cyan-300',    dot: 'bg-cyan-400' },
 };
 
-function tokenize(str) {
-    return String(str || '').toLowerCase().replace(/[|_\-\s\.\,\+]+/g,' ').split(' ').map(t=>t.trim()).filter(t=>t.length>1);
-}
-
-// Маппінг utm → Campaign Name
-function matchUtmToCampaign(utm, utmSource, allCampaignNames) {
-    if (!utm && !utmSource) return null;
-
-    const utmLow = (utm || '').toLowerCase().trim();
-    const srcLow = (utmSource || '').toLowerCase().trim();
-
-    // 1. Хардкод маппінг по utm_campaign
-    if (utmLow && UTM_HARDMAP[utmLow]) {
-        const target = UTM_HARDMAP[utmLow];
-        const found  = allCampaignNames.find(c => c === target);
-        if (found) return found;
-    }
-
-    // 2. Хардкод по utm_source (Wood Agency без utm_campaign)
-    if (!utm && srcLow && UTM_HARDMAP[srcLow]) {
-        const target = UTM_HARDMAP[srcLow];
-        const found  = allCampaignNames.find(c => c === target);
-        if (found) return found;
-    }
-
-    if (!utm) return null;
-
-    // 3. Точний збіг: Campaign Name містить utm як окреме слово/сегмент
-    // (для нових кампаній де utm вписаний прямо в назву через пробіл або |)
-    const exactInName = allCampaignNames.find(c => {
-        const cLow = c.toLowerCase();
-        if (utmLow.length <= 5) return false;
-        // Перевіряємо що utm стоїть як окремий сегмент (після пробілу або | або на початку)
-        const pattern = new RegExp('(^|[\\s|])' + utmLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[\\s|])', 'i');
-        return pattern.test(c);
-    });
-    if (exactInName) return exactInName;
-
-    // 4. Точний збіг навпаки: utm = Campaign Name (повністю)
-    const fullMatch = allCampaignNames.find(c => c.toLowerCase() === utmLow);
-    if (fullMatch) return fullMatch;
-
-    // НЕ використовуємо токенний матчинг — занадто багато хибних збігів
-    return null;
-}
 
 function buildCampaignIndex(dStart, dEnd) {
     const idx = {};
@@ -1153,7 +1090,7 @@ function renderCampaignsView() {
 
     // Діагностика
     const diagEl = document.getElementById('diagBox');
-    diagEl.innerHTML = `🔬 Кампанії: <b>${entries.length}</b> | Spend рядків: <b>${globalSpend.length}</b> | Ліди з UTM: <b>${globalLeads.filter(l=>l.utm).length}</b>`;
+    diagEl.innerHTML = `🔬 Кампанії: <b>${entries.length}</b> | Spend рядків: <b>${globalSpend.length}</b> | Ліди з campaign_name: <b>${globalLeads.filter(l=>l.campaignName).length}</b>`;
     diagEl.style.display = 'block';
     setTimeout(() => { diagEl.style.display = 'none'; }, 8000);
 
