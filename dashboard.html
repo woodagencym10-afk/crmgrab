@@ -322,541 +322,7 @@
     <div id="areaSummaryRow" class="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 pb-5 border-t border-dark-border pt-4"></div>
 </div>
 
-<script>
-(function () {
 
-    const SRC_COLORS = {
-        'Сайт Wood Agency':    { line: '#818cf8', fill: 'rgba(129,140,248,0.30)' },
-        'Сайт EcoForma':       { line: '#f59e0b', fill: 'rgba(245,158,11,0.28)'  },
-        'Facebook Wood Agency':{ line: '#ec4899', fill: 'rgba(236,72,153,0.25)'  },
-        'Facebook Ecoforma':   { line: '#a78bfa', fill: 'rgba(167,139,250,0.25)' },
-        'OLX':                 { line: '#34d399', fill: 'rgba(52,211,153,0.25)'  },
-        'Дзвінок':             { line: '#fb923c', fill: 'rgba(251,146,60,0.25)'  },
-        'Інше':                { line: '#64748b', fill: 'rgba(100,116,139,0.20)' },
-    };
-    const FALLBACKS = [
-        { line: '#60a5fa', fill: 'rgba(96,165,250,0.25)'  },
-        { line: '#f472b6', fill: 'rgba(244,114,182,0.25)' },
-        { line: '#4ade80', fill: 'rgba(74,222,128,0.25)'  },
-        { line: '#facc15', fill: 'rgba(250,204,21,0.25)'  },
-    ];
-    let _fbIdx = 0;
-    const colorOf = (src) => SRC_COLORS[src] || FALLBACKS[(_fbIdx++) % FALLBACKS.length];
-
-    let areaMode      = 'sum';
-    let areaChartInst = null;
-
-    function advGroup(a) {
-        let s  = String(a['Джерело'] || a.source || '').trim();
-        const m = String(a['Відповідальний'] || a['Менеджер'] || a.manager || '').toLowerCase();
-        const ls = s.toLowerCase();
-        if (!s || ls === 'undefined' || ls === '') return 'Інше';
-        if (ls === 'інше' || ls === 'other') return 'Інше';
-        if (ls === 'дзвінок' && m.includes('савчук')) return 'Сайт Wood Agency';
-        if (ls === 'дзвінок') return 'Дзвінок';
-        if (ls.includes('facebook') && (ls.includes('ecoforma') || ls.includes('екоформа'))) return 'Facebook Ecoforma';
-        if (ls.includes('facebook') && (ls.includes('wood')    || ls.includes('вуд')))       return 'Facebook Wood Agency';
-        if (ls.includes('дзвінок')  && (ls.includes('ecoforma')|| ls.includes('сайт')))      return 'Сайт EcoForma';
-        if (ls.includes('ecoforma') || ls.includes('екоформа')) return 'Сайт EcoForma';
-        if (ls.includes('wood')     || ls.includes('відповідальним')) return 'Сайт Wood Agency';
-        if (ls.includes('olx')) return 'OLX';
-        return s;
-    }
-
-    function toDateStr(raw) {
-        if (!raw) return null;
-        const s = String(raw).trim();
-        if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(s)) {
-            const p = s.split(/[. :]/);
-            const d = new Date(+p[2], +p[1]-1, +p[0]);
-            return isNaN(d) ? null : d.toISOString().slice(0, 10);
-        }
-        const d = new Date(s);
-        return isNaN(d) ? null : d.toISOString().slice(0, 10);
-    }
-
-    function getGranularity(s, e) {
-        if (!s || !e) return 'day';
-        const diff = (new Date(e) - new Date(s)) / 86400000;
-        if (diff <= 35)  return 'day';
-        if (diff <= 120) return 'week';
-        return 'month';
-    }
-
-    function bucketKey(dateStr, gran) {
-        const d = new Date(dateStr + 'T00:00:00');
-        if (gran === 'month') return dateStr.slice(0, 7);
-        if (gran === 'week') {
-            const day = d.getDay() || 7;
-            const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
-            return mon.toISOString().slice(0, 10);
-        }
-        return dateStr;
-    }
-
-    function bucketLabel(key, gran) {
-        if (gran === 'month') {
-            const [y, m] = key.split('-');
-            return new Date(+y, +m-1, 1).toLocaleDateString('uk-UA', { month: 'short', year: '2-digit' });
-        }
-        if (gran === 'week') {
-            const d = new Date(key + 'T00:00:00');
-            const end = new Date(d); end.setDate(d.getDate() + 6);
-            return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' })
-                + '\u2013' + end.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' });
-        }
-        return new Date(key + 'T00:00:00').toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
-    }
-
-    window.renderAreaChart = function (advData) {
-        _fbIdx = 0;
-
-        const startStr = document.getElementById('dateStart').value;
-        const endStr   = document.getElementById('dateEnd').value;
-        const gran     = getGranularity(startStr, endStr);
-        const granLabel = { day: 'по днях', week: 'по тижнях', month: 'по місяцях' }[gran];
-        document.getElementById('areaSubtitle').innerText = 'Динаміка ' + granLabel + ' \u00B7 на основі дати авансу';
-
-        const bucketMap = {};
-        const srcSet    = new Set();
-
-        advData.forEach(a => {
-            const grp     = advGroup(a);
-            const dateStr = toDateStr(a['Дата авансу'] || a.date || a.dateUpdate || '');
-            if (!dateStr) return;
-            const bk  = bucketKey(dateStr, gran);
-            const val = parseFloat(String(a['Сума угоди'] || a['Сума'] || a.dealAmount || 0).replace(/\s/g, '')) || 0;
-            if (!bucketMap[bk]) bucketMap[bk] = {};
-            if (!bucketMap[bk][grp]) bucketMap[bk][grp] = { sum: 0, count: 0 };
-            bucketMap[bk][grp].sum   += val;
-            bucketMap[bk][grp].count += 1;
-            srcSet.add(grp);
-        });
-
-        const allBuckets = Object.keys(bucketMap).sort();
-        const sources    = Array.from(srcSet).sort();
-
-        if (allBuckets.length === 0) {
-            if (areaChartInst) { areaChartInst.destroy(); areaChartInst = null; }
-            document.getElementById('areaLegendRow').innerHTML =
-                '<span class="text-xs text-slate-500">Немає даних авансів у вибраному діапазоні</span>';
-            document.getElementById('areaSummaryRow').innerHTML = '';
-            return;
-        }
-
-        const datasets = sources.map(src => {
-            const c = colorOf(src);
-            return {
-                label: src,
-                data:  allBuckets.map(bk => bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0),
-                backgroundColor: c.fill,
-                borderColor:     c.line,
-                borderWidth: 2.5,
-                fill: true,
-                tension: 0.4,
-                pointRadius:      allBuckets.length <= 20 ? 4 : 2,
-                pointHoverRadius: 7,
-                pointBackgroundColor: c.line,
-                pointBorderColor: '#0f172a',
-                pointBorderWidth: 1.5,
-            };
-        });
-
-        if (areaChartInst) areaChartInst.destroy();
-        const ctx = document.getElementById('dealAreaChart').getContext('2d');
-        areaChartInst = new Chart(ctx, {
-            type: 'line',
-            data: { labels: allBuckets.map(bk => bucketLabel(bk, gran)), datasets },
-            options: {
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    datalabels: { display: false },
-                    legend:     { display: false },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        borderColor:     '#334155',
-                        borderWidth: 1,
-                        titleColor: '#94a3b8',
-                        bodyColor:  '#f1f5f9',
-                        padding: 14,
-                        itemSort: (a, b) => b.parsed.y - a.parsed.y,
-                        callbacks: {
-                            label: function(ctx) {
-                                const v = ctx.parsed.y;
-                                if (!v) return null;
-                                return areaMode === 'sum'
-                                    ? ' ' + ctx.dataset.label + ': \u20B4' + Math.round(v).toLocaleString('uk-UA')
-                                    : ' ' + ctx.dataset.label + ': ' + v + ' угод';
-                            },
-                            footer: function(items) {
-                                const total = items.reduce((s, i) => s + i.parsed.y, 0);
-                                if (!total) return '';
-                                return areaMode === 'sum'
-                                    ? 'Разом: \u20B4' + Math.round(total).toLocaleString('uk-UA')
-                                    : 'Разом: ' + total + ' угод';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 },
-                        grid:  { color: 'rgba(255,255,255,0.04)' }
-                    },
-                    y: {
-                        stacked: true,
-                        ticks: {
-                            color: '#94a3b8', font: { size: 10 },
-                            callback: function(v) {
-                                if (areaMode !== 'sum') return v;
-                                if (v >= 1000000) return '\u20B4' + (v/1000000).toFixed(1) + 'M';
-                                if (v >= 1000)    return '\u20B4' + (v/1000).toFixed(0) + 'k';
-                                return '\u20B4' + v;
-                            }
-                        },
-                        grid: { color: 'rgba(255,255,255,0.06)' },
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Легенда
-        document.getElementById('areaLegendRow').innerHTML = sources.map(src => {
-            const c = colorOf(src);
-            return '<span class="flex items-center gap-1.5 text-xs text-slate-300 font-medium">'
-                + '<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:' + c.line + '"></span>'
-                + src + '</span>';
-        }).join('');
-
-        // Підсумки
-        const totals = {};
-        sources.forEach(src => {
-            totals[src] = { sum: 0, count: 0 };
-            allBuckets.forEach(bk => {
-                if (bucketMap[bk][src]) {
-                    totals[src].sum   += bucketMap[bk][src].sum;
-                    totals[src].count += bucketMap[bk][src].count;
-                }
-            });
-        });
-
-        document.getElementById('areaSummaryRow').innerHTML = sources.map(src => {
-            const c   = colorOf(src);
-            const t   = totals[src];
-            const avg = t.count ? Math.round(t.sum / t.count).toLocaleString('uk-UA') : 0;
-            return '<div class="bg-slate-900/60 rounded-xl px-3 py-2.5 border border-slate-700/50">'
-                + '<div class="flex items-center gap-1.5 mb-1">'
-                + '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + c.line + '"></span>'
-                + '<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">' + src + '</span>'
-                + '</div>'
-                + '<span class="text-base font-black text-white block">\u20B4' + Math.round(t.sum).toLocaleString('uk-UA') + '</span>'
-                + '<span class="text-[10px] text-slate-500">' + t.count + ' угод \u00B7 сер. \u20B4' + avg + '</span>'
-                + '</div>';
-        }).join('');
-    };
-
-    <!-- СУМА УГОД ЗА ДЖЕРЕЛАМИ (Area Chart) -->
-<!-- Вставити після блоку ТРАФІК + ВОРОНКА, перед ПОВТОРНІ ПРОДАЖІ -->
-
-<div class="bg-dark-card rounded-xl border border-dark-border mb-8 overflow-hidden shadow-xl">
-    <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-            <h3 class="text-sm font-bold text-white uppercase tracking-widest">📈 Сума виграних угод за джерелами</h3>
-            <p id="areaSubtitle" class="text-xs text-dark-subtle mt-0.5">Динаміка · на основі дати авансу</p>
-        </div>
-        <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
-            <button id="btnAreaSum"   onclick="setAreaMode('sum')"   class="tab-btn active px-4 py-1.5 text-xs font-bold text-slate-300">&#8372; Сума</button>
-            <button id="btnAreaCount" onclick="setAreaMode('count')" class="tab-btn px-4 py-1.5 text-xs font-bold text-slate-300">&#128290; Кількість</button>
-        </div>
-    </div>
-
-    <div id="areaLegendRow" class="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 pt-4 pb-1 min-h-[36px]"></div>
-
-    <div class="relative h-[280px] md:h-[340px] px-2 pb-2">
-        <canvas id="dealAreaChart"></canvas>
-    </div>
-
-    <div id="areaSummaryRow" class="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 pb-5 border-t border-dark-border pt-4"></div>
-</div>
-
-<script>
-(function () {
-
-    var SRC_COLORS = {
-        'Сайт Wood Agency':     { line: '#818cf8', fill: 'rgba(129,140,248,0.30)' },
-        'Сайт EcoForma':        { line: '#f59e0b', fill: 'rgba(245,158,11,0.28)'  },
-        'Facebook Wood Agency': { line: '#ec4899', fill: 'rgba(236,72,153,0.25)'  },
-        'Facebook Ecoforma':    { line: '#a78bfa', fill: 'rgba(167,139,250,0.25)' },
-        'OLX':                  { line: '#34d399', fill: 'rgba(52,211,153,0.25)'  },
-        'Дзвінок':              { line: '#fb923c', fill: 'rgba(251,146,60,0.25)'  },
-        'Інше':                 { line: '#64748b', fill: 'rgba(100,116,139,0.20)' },
-    };
-    var FALLBACKS = [
-        { line: '#60a5fa', fill: 'rgba(96,165,250,0.25)'  },
-        { line: '#f472b6', fill: 'rgba(244,114,182,0.25)' },
-        { line: '#4ade80', fill: 'rgba(74,222,128,0.25)'  },
-        { line: '#facc15', fill: 'rgba(250,204,21,0.25)'  },
-    ];
-    var _fbIdx = 0;
-
-    function colorOf(src) {
-        if (SRC_COLORS[src]) return SRC_COLORS[src];
-        return FALLBACKS[(_fbIdx++) % FALLBACKS.length];
-    }
-
-    var areaMode = 'sum';
-    var areaChartInst = null;
-
-    function advGroup(a) {
-        var s  = String(a['Джерело'] || a.source || '').trim();
-        var m  = String(a['Відповідальний'] || a['Менеджер'] || a.manager || '').toLowerCase();
-        var ls = s.toLowerCase();
-        if (!s || ls === 'undefined' || ls === '') return 'Інше';
-        if (ls === 'інше' || ls === 'other') return 'Інше';
-        if (ls === 'дзвінок' && m.includes('савчук')) return 'Сайт Wood Agency';
-        if (ls === 'дзвінок') return 'Дзвінок';
-        if (ls.includes('facebook') && (ls.includes('ecoforma') || ls.includes('екоформа'))) return 'Facebook Ecoforma';
-        if (ls.includes('facebook') && (ls.includes('wood')     || ls.includes('вуд')))      return 'Facebook Wood Agency';
-        if (ls.includes('дзвінок')  && (ls.includes('ecoforma') || ls.includes('сайт')))     return 'Сайт EcoForma';
-        if (ls.includes('ecoforma') || ls.includes('екоформа')) return 'Сайт EcoForma';
-        if (ls.includes('wood')     || ls.includes('відповідальним')) return 'Сайт Wood Agency';
-        if (ls.includes('olx')) return 'OLX';
-        return s;
-    }
-
-    function toDateStr(raw) {
-        if (!raw) return null;
-        var s = String(raw).trim();
-        if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(s)) {
-            var p = s.split(/[. :]/);
-            var d = new Date(+p[2], +p[1]-1, +p[0]);
-            return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
-        }
-        var d2 = new Date(s);
-        return isNaN(d2.getTime()) ? null : d2.toISOString().slice(0, 10);
-    }
-
-    function getGranularity(s, e) {
-        if (!s || !e) return 'day';
-        var diff = (new Date(e) - new Date(s)) / 86400000;
-        if (diff <= 35)  return 'day';
-        if (diff <= 120) return 'week';
-        return 'month';
-    }
-
-    function bucketKey(dateStr, gran) {
-        var d = new Date(dateStr + 'T00:00:00');
-        if (gran === 'month') return dateStr.slice(0, 7);
-        if (gran === 'week') {
-            var day = d.getDay() || 7;
-            var mon = new Date(d);
-            mon.setDate(d.getDate() - day + 1);
-            return mon.toISOString().slice(0, 10);
-        }
-        return dateStr;
-    }
-
-    function bucketLabel(key, gran) {
-        if (gran === 'month') {
-            var parts = key.split('-');
-            return new Date(+parts[0], +parts[1]-1, 1)
-                .toLocaleDateString('uk-UA', { month: 'short', year: '2-digit' });
-        }
-        if (gran === 'week') {
-            var d   = new Date(key + 'T00:00:00');
-            var end = new Date(d);
-            end.setDate(d.getDate() + 6);
-            return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' })
-                + '\u2013'
-                + end.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' });
-        }
-        return new Date(key + 'T00:00:00')
-            .toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
-    }
-
-    function renderAreaChart(advData) {
-        _fbIdx = 0;
-
-        var startStr = document.getElementById('dateStart').value;
-        var endStr   = document.getElementById('dateEnd').value;
-        var gran     = getGranularity(startStr, endStr);
-        var granLabels = { day: 'по днях', week: 'по тижнях', month: 'по місяцях' };
-        document.getElementById('areaSubtitle').innerText =
-            'Динаміка ' + granLabels[gran] + ' \u00B7 на основі дати авансу';
-
-        var bucketMap = {};
-        var srcSet    = {};
-
-        (advData || []).forEach(function(a) {
-            var grp     = advGroup(a);
-            var dateStr = toDateStr(a['Дата авансу'] || a.date || a.dateUpdate || '');
-            if (!dateStr) return;
-            var bk  = bucketKey(dateStr, gran);
-            var val = parseFloat(String(a['Сума угоди'] || a['Сума'] || a.dealAmount || 0).replace(/\s/g, '')) || 0;
-            if (!bucketMap[bk]) bucketMap[bk] = {};
-            if (!bucketMap[bk][grp]) bucketMap[bk][grp] = { sum: 0, count: 0 };
-            bucketMap[bk][grp].sum   += val;
-            bucketMap[bk][grp].count += 1;
-            srcSet[grp] = true;
-        });
-
-        var allBuckets = Object.keys(bucketMap).sort();
-        var sources    = Object.keys(srcSet).sort();
-
-        var legendEl  = document.getElementById('areaLegendRow');
-        var summaryEl = document.getElementById('areaSummaryRow');
-
-        if (allBuckets.length === 0) {
-            if (areaChartInst) { areaChartInst.destroy(); areaChartInst = null; }
-            legendEl.innerHTML  = '<span class="text-xs text-slate-500">Немає даних авансів у вибраному діапазоні</span>';
-            summaryEl.innerHTML = '';
-            return;
-        }
-
-        var datasets = sources.map(function(src) {
-            var c = colorOf(src);
-            return {
-                label: src,
-                data:  allBuckets.map(function(bk) {
-                    return bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0;
-                }),
-                backgroundColor:    c.fill,
-                borderColor:        c.line,
-                borderWidth:        2.5,
-                fill:               true,
-                tension:            0.4,
-                pointRadius:        allBuckets.length <= 20 ? 4 : 2,
-                pointHoverRadius:   7,
-                pointBackgroundColor: c.line,
-                pointBorderColor:   '#0f172a',
-                pointBorderWidth:   1.5,
-            };
-        });
-
-        if (areaChartInst) areaChartInst.destroy();
-        var ctx = document.getElementById('dealAreaChart').getContext('2d');
-        areaChartInst = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels:   allBuckets.map(function(bk) { return bucketLabel(bk, gran); }),
-                datasets: datasets
-            },
-            options: {
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    datalabels: { display: false },
-                    legend:     { display: false },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        borderColor:     '#334155',
-                        borderWidth:     1,
-                        titleColor:      '#94a3b8',
-                        bodyColor:       '#f1f5f9',
-                        padding:         14,
-                        itemSort: function(a, b) { return b.parsed.y - a.parsed.y; },
-                        callbacks: {
-                            label: function(ctx) {
-                                var v = ctx.parsed.y;
-                                if (!v) return null;
-                                if (areaMode === 'sum')
-                                    return ' ' + ctx.dataset.label + ': \u20B4' + Math.round(v).toLocaleString('uk-UA');
-                                return ' ' + ctx.dataset.label + ': ' + v + ' угод';
-                            },
-                            footer: function(items) {
-                                var total = items.reduce(function(s, i) { return s + i.parsed.y; }, 0);
-                                if (!total) return '';
-                                if (areaMode === 'sum')
-                                    return 'Разом: \u20B4' + Math.round(total).toLocaleString('uk-UA');
-                                return 'Разом: ' + total + ' угод';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 },
-                        grid:  { color: 'rgba(255,255,255,0.04)' }
-                    },
-                    y: {
-                        stacked: true,
-                        ticks: {
-                            color: '#94a3b8',
-                            font:  { size: 10 },
-                            callback: function(v) {
-                                if (areaMode !== 'sum') return v;
-                                if (v >= 1000000) return '\u20B4' + (v/1000000).toFixed(1) + 'M';
-                                if (v >= 1000)    return '\u20B4' + (v/1000).toFixed(0) + 'k';
-                                return '\u20B4' + v;
-                            }
-                        },
-                        grid:        { color: 'rgba(255,255,255,0.06)' },
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Легенда
-        legendEl.innerHTML = sources.map(function(src) {
-            var c = colorOf(src);
-            return '<span class="flex items-center gap-1.5 text-xs text-slate-300 font-medium">'
-                + '<span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:' + c.line + '"></span>'
-                + src + '</span>';
-        }).join('');
-
-        // Підсумки
-        var totals = {};
-        sources.forEach(function(src) {
-            totals[src] = { sum: 0, count: 0 };
-            allBuckets.forEach(function(bk) {
-                if (bucketMap[bk][src]) {
-                    totals[src].sum   += bucketMap[bk][src].sum;
-                    totals[src].count += bucketMap[bk][src].count;
-                }
-            });
-        });
-
-        summaryEl.innerHTML = sources.map(function(src) {
-            var c   = colorOf(src);
-            var t   = totals[src];
-            var avg = t.count ? Math.round(t.sum / t.count).toLocaleString('uk-UA') : 0;
-            return '<div class="bg-slate-900/60 rounded-xl px-3 py-2.5 border border-slate-700/50">'
-                + '<div class="flex items-center gap-1.5 mb-1">'
-                + '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + c.line + '"></span>'
-                + '<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">' + src + '</span>'
-                + '</div>'
-                + '<span class="text-base font-black text-white block">\u20B4' + Math.round(t.sum).toLocaleString('uk-UA') + '</span>'
-                + '<span class="text-[10px] text-slate-500">' + t.count + ' угод \u00B7 сер. \u20B4' + avg + '</span>'
-                + '</div>';
-        }).join('');
-    }
-
-    // Перемикач Сума / Кількість
-    window.setAreaMode = function(mode) {
-        areaMode = mode;
-        document.getElementById('btnAreaSum').classList.toggle('active', mode === 'sum');
-        document.getElementById('btnAreaCount').classList.toggle('active', mode === 'count');
-        renderAreaChart(mainAdvData || []);
-    };
-
-    // Підключення до циклу оновлення дашборду
-    var _origApply = applyLocalFiltersAndRender;
-    applyLocalFiltersAndRender = function() {
-        _origApply();
-        renderAreaChart(mainAdvData || []);
-    };
-
-    var _origFetch = fetchAllData;
-    fetchAllData = async function() {
-        await _origFetch();
-        renderAreaChart(mainAdvData || []);
-    };
-
-})();
-</script>
 
     <!-- ПОВТОРНІ ПРОДАЖІ -->
     <div class="bg-dark-card rounded-xl border border-yellow-700/50 mb-8 overflow-hidden shadow-xl">
@@ -935,7 +401,10 @@
     <!-- ДЕТАЛІ МЕНЕДЖЕР → ДЖЕРЕЛО -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-8 overflow-visible shadow-xl">
         <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col md:flex-row justify-between items-start md:items-center gap-3 rounded-t-xl">
-            <h3 class="text-sm font-bold text-white uppercase tracking-widest">📊 Деталі (Менеджер ➔ Джерело)</h3>
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">📊 Деталі (Менеджер ➔ Джерело)</h3>
+                <button onclick="openCmpModal('detail')" class="bg-purple-700 hover:bg-purple-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">⚖️ Порівняти</button>
+            </div>
             <div class="flex gap-2 w-full md:w-auto">
                 <div class="relative w-full md:w-44">
                     <div class="bg-slate-900 border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer flex justify-between items-center hover:bg-slate-800 transition" onclick="toggleDropdown('tblMgrDropdown')">
@@ -981,7 +450,10 @@
     <!-- АНАЛІТИКА ДЖЕРЕЛ — з розгортанням підрядків -->
     <div class="bg-dark-card rounded-xl border border-dark-border mb-8 shadow-xl overflow-hidden">
         <div class="bg-slate-800 p-4 border-b border-dark-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest">🎯 Аналітика джерел</h3>
+                <button onclick="openCmpModal('sources')" class="bg-purple-700 hover:bg-purple-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">⚖️ Порівняти</button>
+            </div>
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex bg-slate-900 rounded-lg overflow-hidden border border-dark-border">
                     <button id="btnSrcMgr" onclick="setSrcView('manager')"
@@ -1317,6 +789,7 @@ function applyLocalFiltersAndRender() {
     updateBadAnalysisCharts('source');
     updateBadAnalysisCharts('mgr');
     renderBadLeadsList(mainData);
+    renderAreaChart(mainAdvData);
     if (comparePanelOpen) {
         document.getElementById('cmpPeriodALabel').innerText = sDate&&eDate?`${formatDisplayDate(sDate)} — ${formatDisplayDate(eDate)}`:'—';
         document.getElementById('cmpResults').classList.add('hidden');
@@ -1911,6 +1384,231 @@ function renderBadLeadsTable(leads) {
     }).join('');
 }
 
+
+// ═══════════════════════════════════════════════════════
+// AREA CHART — Сума угод за джерелами
+// ═══════════════════════════════════════════════════════
+const AREA_SRC_COLORS = {
+    'Сайт Wood Agency':     { line: '#818cf8', fill: 'rgba(129,140,248,0.30)' },
+    'Сайт EcoForma':        { line: '#f59e0b', fill: 'rgba(245,158,11,0.28)'  },
+    'Facebook Wood Agency': { line: '#ec4899', fill: 'rgba(236,72,153,0.25)'  },
+    'Facebook Ecoforma':    { line: '#a78bfa', fill: 'rgba(167,139,250,0.25)' },
+    'OLX':                  { line: '#34d399', fill: 'rgba(52,211,153,0.25)'  },
+    'Дзвінок':              { line: '#fb923c', fill: 'rgba(251,146,60,0.25)'  },
+    'Інше':                 { line: '#64748b', fill: 'rgba(100,116,139,0.20)' },
+};
+const AREA_FALLBACKS = [
+    { line: '#60a5fa', fill: 'rgba(96,165,250,0.25)'  },
+    { line: '#f472b6', fill: 'rgba(244,114,182,0.25)' },
+    { line: '#4ade80', fill: 'rgba(74,222,128,0.25)'  },
+    { line: '#facc15', fill: 'rgba(250,204,21,0.25)'  },
+];
+let _areaFbIdx = 0;
+let areaMode = 'sum';
+let areaChartInst = null;
+
+function areaColorOf(src) {
+    if (AREA_SRC_COLORS[src]) return AREA_SRC_COLORS[src];
+    return AREA_FALLBACKS[(_areaFbIdx++) % AREA_FALLBACKS.length];
+}
+
+function areaAdvGroup(a) {
+    let s  = String(a['Джерело'] || a.source || '').trim();
+    const m = String(a['Відповідальний'] || a['Менеджер'] || a.manager || '').toLowerCase();
+    const ls = s.toLowerCase();
+    if (!s || ls === 'undefined' || ls === '') return 'Інше';
+    if (ls === 'інше' || ls === 'other') return 'Інше';
+    if (ls === 'дзвінок' && m.includes('савчук')) return 'Сайт Wood Agency';
+    if (ls === 'дзвінок') return 'Дзвінок';
+    if (ls.includes('facebook') && (ls.includes('ecoforma') || ls.includes('екоформа'))) return 'Facebook Ecoforma';
+    if (ls.includes('facebook') && (ls.includes('wood') || ls.includes('вуд'))) return 'Facebook Wood Agency';
+    if (ls.includes('дзвінок') && (ls.includes('ecoforma') || ls.includes('сайт'))) return 'Сайт EcoForma';
+    if (ls.includes('ecoforma') || ls.includes('екоформа')) return 'Сайт EcoForma';
+    if (ls.includes('wood') || ls.includes('відповідальним')) return 'Сайт Wood Agency';
+    if (ls.includes('olx')) return 'OLX';
+    return s;
+}
+
+function areaToDateStr(raw) {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(s)) {
+        const p = s.split(/[. :]/);
+        const d = new Date(+p[2], +p[1]-1, +p[0]);
+        return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+function areaGetGran(s, e) {
+    if (!s || !e) return 'day';
+    const diff = (new Date(e) - new Date(s)) / 86400000;
+    if (diff <= 35)  return 'day';
+    if (diff <= 120) return 'week';
+    return 'month';
+}
+
+function areaBucketKey(dateStr, gran) {
+    const d = new Date(dateStr + 'T00:00:00');
+    if (gran === 'month') return dateStr.slice(0, 7);
+    if (gran === 'week') {
+        const day = d.getDay() || 7;
+        const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+        return mon.toISOString().slice(0, 10);
+    }
+    return dateStr;
+}
+
+function areaBucketLabel(key, gran) {
+    if (gran === 'month') {
+        const p = key.split('-');
+        return new Date(+p[0], +p[1]-1, 1).toLocaleDateString('uk-UA', { month: 'short', year: '2-digit' });
+    }
+    if (gran === 'week') {
+        const d = new Date(key + 'T00:00:00');
+        const end = new Date(d); end.setDate(d.getDate() + 6);
+        return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' })
+            + '\u2013' + end.toLocaleDateString('uk-UA', { day:'2-digit', month:'short' });
+    }
+    return new Date(key + 'T00:00:00').toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
+}
+
+function renderAreaChart(advData) {
+    _areaFbIdx = 0;
+    const startStr = document.getElementById('dateStart').value;
+    const endStr   = document.getElementById('dateEnd').value;
+    const gran     = areaGetGran(startStr, endStr);
+    const granLabels = { day: 'по днях', week: 'по тижнях', month: 'по місяцях' };
+    document.getElementById('areaSubtitle').innerText = 'Динаміка ' + granLabels[gran] + ' \u00B7 на основі дати авансу';
+
+    const bucketMap = {};
+    const srcSet    = {};
+
+    (advData || []).forEach(function(a) {
+        const grp     = areaAdvGroup(a);
+        const dateStr = areaToDateStr(a['Дата авансу'] || a.date || a.dateUpdate || '');
+        if (!dateStr) return;
+        const bk  = areaBucketKey(dateStr, gran);
+        const val = parseFloat(String(a['Сума угоди'] || a['Сума'] || a.dealAmount || 0).replace(/\s/g, '')) || 0;
+        if (!bucketMap[bk]) bucketMap[bk] = {};
+        if (!bucketMap[bk][grp]) bucketMap[bk][grp] = { sum: 0, count: 0 };
+        bucketMap[bk][grp].sum   += val;
+        bucketMap[bk][grp].count += 1;
+        srcSet[grp] = true;
+    });
+
+    const allBuckets = Object.keys(bucketMap).sort();
+    const sources    = Object.keys(srcSet).sort();
+    const legendEl   = document.getElementById('areaLegendRow');
+    const summaryEl  = document.getElementById('areaSummaryRow');
+
+    if (allBuckets.length === 0) {
+        if (areaChartInst) { areaChartInst.destroy(); areaChartInst = null; }
+        legendEl.innerHTML  = '<span class="text-xs text-slate-500">Немає даних авансів у вибраному діапазоні</span>';
+        summaryEl.innerHTML = '';
+        return;
+    }
+
+    const datasets = sources.map(function(src) {
+        const c = areaColorOf(src);
+        return {
+            label: src,
+            data:  allBuckets.map(function(bk) { return bucketMap[bk][src] ? bucketMap[bk][src][areaMode] : 0; }),
+            backgroundColor: c.fill,
+            borderColor:     c.line,
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.4,
+            pointRadius:      allBuckets.length <= 20 ? 4 : 2,
+            pointHoverRadius: 7,
+            pointBackgroundColor: c.line,
+            pointBorderColor: '#0f172a',
+            pointBorderWidth: 1.5,
+        };
+    });
+
+    if (areaChartInst) areaChartInst.destroy();
+    const ctx = document.getElementById('dealAreaChart').getContext('2d');
+    areaChartInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels:   allBuckets.map(function(bk) { return areaBucketLabel(bk, gran); }),
+            datasets: datasets
+        },
+        options: {
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                datalabels: { display: false },
+                legend:     { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
+                    titleColor: '#94a3b8', bodyColor: '#f1f5f9', padding: 14,
+                    itemSort: function(a, b) { return b.parsed.y - a.parsed.y; },
+                    callbacks: {
+                        label: function(ctx) {
+                            const v = ctx.parsed.y; if (!v) return null;
+                            return areaMode === 'sum'
+                                ? ' ' + ctx.dataset.label + ': \u20B4' + Math.round(v).toLocaleString('uk-UA')
+                                : ' ' + ctx.dataset.label + ': ' + v + ' угод';
+                        },
+                        footer: function(items) {
+                            const total = items.reduce(function(s, i) { return s + i.parsed.y; }, 0);
+                            if (!total) return '';
+                            return areaMode === 'sum'
+                                ? 'Разом: \u20B4' + Math.round(total).toLocaleString('uk-UA')
+                                : 'Разом: ' + total + ' угод';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 30, autoSkip: true, maxTicksLimit: 16 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: {
+                    stacked: true,
+                    ticks: { color: '#94a3b8', font: { size: 10 }, callback: function(v) {
+                        if (areaMode !== 'sum') return v;
+                        if (v >= 1000000) return '\u20B4' + (v/1000000).toFixed(1) + 'M';
+                        if (v >= 1000)    return '\u20B4' + (v/1000).toFixed(0) + 'k';
+                        return '\u20B4' + v;
+                    }},
+                    grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true
+                }
+            }
+        }
+    });
+
+    legendEl.innerHTML = sources.map(function(src) {
+        const c = areaColorOf(src);
+        return '<span class="flex items-center gap-1.5 text-xs text-slate-300 font-medium"><span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:' + c.line + '"></span>' + src + '</span>';
+    }).join('');
+
+    const totals = {};
+    sources.forEach(function(src) {
+        totals[src] = { sum: 0, count: 0 };
+        allBuckets.forEach(function(bk) {
+            if (bucketMap[bk][src]) { totals[src].sum += bucketMap[bk][src].sum; totals[src].count += bucketMap[bk][src].count; }
+        });
+    });
+    summaryEl.innerHTML = sources.map(function(src) {
+        const c = areaColorOf(src); const t = totals[src];
+        const avg = t.count ? Math.round(t.sum / t.count).toLocaleString('uk-UA') : 0;
+        return '<div class="bg-slate-900/60 rounded-xl px-3 py-2.5 border border-slate-700/50">'
+            + '<div class="flex items-center gap-1.5 mb-1"><span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + c.line + '"></span>'
+            + '<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">' + src + '</span></div>'
+            + '<span class="text-base font-black text-white block">\u20B4' + Math.round(t.sum).toLocaleString('uk-UA') + '</span>'
+            + '<span class="text-[10px] text-slate-500">' + t.count + ' угод \u00B7 сер. \u20B4' + avg + '</span></div>';
+    }).join('');
+}
+
+function setAreaMode(mode) {
+    areaMode = mode;
+    document.getElementById('btnAreaSum').classList.toggle('active', mode === 'sum');
+    document.getElementById('btnAreaCount').classList.toggle('active', mode === 'count');
+    renderAreaChart(mainAdvData || []);
+}
+
 // ─── УТИЛІТИ UI ──────────────────────────────────────
 function toggleDropdown(id){document.getElementById(id).classList.toggle('show');}
 window.onclick=(e)=>{if(!e.target.closest('.relative'))document.querySelectorAll('.dropdown-content').forEach(el=>el.classList.remove('show'));};
@@ -1921,9 +1619,314 @@ function handleTableCbSingle(c){const a=document.querySelector(`.${c}[value="В�
 function updateSelectText(c){const v=Array.from(document.querySelectorAll(`.${c}:checked`)).map(cb=>cb.value);document.getElementById(c==='mgr-cb'?'managerSelectText':'sourceSelectText').innerText=v.includes("Всі")?"Всі":(v.length>2?"Обрано: "+v.length:v.join(", "));}
 function updateSelectTextTbl(c){const v=Array.from(document.querySelectorAll(`.${c}:checked`)).map(cb=>cb.value);const id=c==='tbl-mgr-cb'?'tblMgrSelectText':'tblSrcSelectText';const def=c==='tbl-mgr-cb'?'Всі менеджери':'Всі джерела';document.getElementById(id).innerText=v.includes("Всі")?def:(v.length>2?"Обрано: "+v.length:v.join(", "));}
 function getSelectedValues(c){const v=Array.from(document.querySelectorAll(`.${c}:checked`)).map(cb=>cb.value);return v.includes("Всі")?["Всі"]:v;}
+
+// ═══════════════════════════════════════════════════════
+// БЛОКОВЕ ПОРІВНЯННЯ (Деталі / Аналітика джерел)
+// ═══════════════════════════════════════════════════════
+let _cmpBlockMode = 'detail'; // 'detail' | 'sources'
+
+function openCmpModal(mode) {
+    _cmpBlockMode = mode;
+    const sDate = document.getElementById('dateStart').value;
+    const eDate = document.getElementById('dateEnd').value;
+    const fmt = str => str ? new Date(str).toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+
+    document.getElementById('cmpModalTitle').innerText = mode === 'detail'
+        ? '⚖️ Порівняння: Деталі менеджерів'
+        : '⚖️ Порівняння: Аналітика джерел';
+    document.getElementById('cmpModalSubtitle').innerText = 'Оберіть Період Б і натисніть Порівняти';
+    document.getElementById('cmpModalPeriodA').innerText = fmt(sDate) + ' — ' + fmt(eDate);
+
+    // Підставити попередній місяць як Б за замовчуванням
+    if (sDate && eDate) {
+        const s = new Date(sDate), e = new Date(eDate);
+        const diff = e - s;
+        const bEnd = new Date(s); bEnd.setDate(bEnd.getDate() - 1);
+        const bStart = new Date(bEnd.getTime() - diff);
+        document.getElementById('cmpModalStartB').valueAsDate = bStart;
+        document.getElementById('cmpModalEndB').valueAsDate   = bEnd;
+    }
+
+    document.getElementById('cmpModalResults').classList.add('hidden');
+    const modal = document.getElementById('cmpModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeCmpModal(e) {
+    if (e && e.target !== document.getElementById('cmpModal')) return;
+    const modal = document.getElementById('cmpModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function runBlockComparison() {
+    const sDate = document.getElementById('dateStart').value;
+    const eDate = document.getElementById('dateEnd').value;
+    const sBDate = document.getElementById('cmpModalStartB').value;
+    const eBDate = document.getElementById('cmpModalEndB').value;
+    if (!sBDate || !eBDate) { alert('Оберіть Період Б'); return; }
+
+    const fmt = str => str ? new Date(str).toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+    document.getElementById('cmpModalSubtitle').innerText =
+        fmt(sDate) + ' — ' + fmt(eDate) + '  vs  ' + fmt(sBDate) + ' — ' + fmt(eBDate);
+
+    // Фільтруємо дані для обох періодів
+    const dataA    = filterByDateRange(globalRawData,  sDate,  eDate);
+    const dataB    = filterByDateRange(globalRawData,  sBDate, eBDate);
+    const advDataA = filterAdvByDate(globalAdvData, sDate,  eDate);
+    const advDataB = filterAdvByDate(globalAdvData, sBDate, eBDate);
+
+    if (_cmpBlockMode === 'detail') {
+        renderDetailComparison(dataA, dataB, advDataA, advDataB, sDate, eDate, sBDate, eBDate);
+    } else {
+        renderSourceComparison(dataA, dataB, advDataA, advDataB, sDate, eDate, sBDate, eBDate);
+    }
+
+    document.getElementById('cmpModalResults').classList.remove('hidden');
+}
+
+function cmpKpiCard(label, valA, valB, suffix, inv) {
+    const diff = valA - valB;
+    let arrow = '', cls = 'text-slate-400', bg = 'bg-slate-800/60', border = 'border-slate-700/50';
+    if (diff > 0 && !inv) { arrow='▲'; cls='text-emerald-400'; bg='bg-emerald-900/20'; border='border-emerald-800/50'; }
+    if (diff > 0 &&  inv) { arrow='▲'; cls='text-red-400';     bg='bg-red-900/20';     border='border-red-800/50'; }
+    if (diff < 0 && !inv) { arrow='▼'; cls='text-red-400';     bg='bg-red-900/20';     border='border-red-800/50'; }
+    if (diff < 0 &&  inv) { arrow='▼'; cls='text-emerald-400'; bg='bg-emerald-900/20'; border='border-emerald-800/50'; }
+    const absD = Math.abs(diff);
+    const dispD = Number.isInteger(absD) ? absD : absD.toFixed(1);
+    return `<div class="${bg} rounded-xl p-3 border ${border}">
+        <p class="text-[9px] text-slate-400 uppercase tracking-widest font-bold mb-2">${label}</p>
+        <div class="flex items-end justify-between gap-1">
+            <div><p class="text-[9px] text-blue-400 font-bold mb-0.5">А</p><p class="text-xl font-black text-white">${typeof valA==='number'&&!Number.isInteger(valA)?valA.toFixed(1):valA}${suffix}</p></div>
+            <div class="text-center pb-0.5"><p class="text-sm font-black ${cls}">${arrow}${dispD}${suffix}</p></div>
+            <div class="text-right"><p class="text-[9px] text-purple-400 font-bold mb-0.5">Б</p><p class="text-xl font-black text-slate-300">${typeof valB==='number'&&!Number.isInteger(valB)?valB.toFixed(1):valB}${suffix}</p></div>
+        </div>
+    </div>`;
+}
+
+function cmpSummaryText(kpis) {
+    const lines = [];
+    kpis.forEach(k => {
+        const diff = k.a - k.b;
+        if (diff === 0) return;
+        const dir = diff > 0 ? 'зросла' : 'впала';
+        const good = (diff > 0) !== !!k.inv;
+        const emoji = good ? '✅' : '⚠️';
+        const pct = k.b > 0 ? Math.abs(Math.round((diff/k.b)*100)) : null;
+        lines.push(`${emoji} <b>${k.label}</b>: ${dir} на ${Math.abs(Number.isInteger(diff)?diff:diff.toFixed(1))}${k.suffix}${pct?' ('+pct+'%)':''}`);
+    });
+    if (!lines.length) return '✅ Показники не змінились між періодами.';
+    return lines.join('<br>');
+}
+
+function renderDetailComparison(dataA, dataB, advA, advB, sA, eA, sB, eB) {
+    const fmt = str => str ? new Date(str).toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit'}) : '—';
+    const advIdxA = buildAdvIndex(advA.filter(a=>getAdvGroup(a)!=='Інше'));
+    const advIdxB = buildAdvIndex(advB.filter(a=>getAdvGroup(a)!=='Інше'));
+
+    // Групуємо по менеджерах
+    const mmA={}, mmB={};
+    dataA.forEach(l=>{const m=l.manager?String(l.manager).trim():'Невідомий';if(!mmA[m])mmA[m]=[];mmA[m].push(l);});
+    dataB.forEach(l=>{const m=l.manager?String(l.manager).trim():'Невідомий';if(!mmB[m])mmB[m]=[];mmB[m].push(l);});
+
+    const allMgrs = [...new Set([...Object.keys(mmA),...Object.keys(mmB)])].sort();
+
+    // Загальні KPI
+    const totA = analyzeData(dataA), totB = analyzeData(dataB);
+    const advMainA = advA.filter(a=>getAdvGroup(a)!=='Інше');
+    const advMainB = advB.filter(a=>getAdvGroup(a)!=='Інше');
+    const advCntA = advMainA.length, advSumA = advSum(advMainA);
+    const advCntB = advMainB.length, advSumB = advSum(advMainB);
+    const convSaleA = totA.target>0 ? parseFloat(((advCntA/totA.target)*100).toFixed(1)) : 0;
+    const convSaleB = totB.target>0 ? parseFloat(((advCntB/totB.target)*100).toFixed(1)) : 0;
+
+    const kpis = [
+        {label:'Лідів',         a:totA.total,  b:totB.total,  suffix:'',  inv:false},
+        {label:'ЦА',            a:totA.target, b:totB.target, suffix:'',  inv:false},
+        {label:'% ЦА',          a:parseFloat(totA.convTarget), b:parseFloat(totB.convTarget), suffix:'%', inv:false},
+        {label:'Продажів',      a:advCntA,     b:advCntB,     suffix:'',  inv:false},
+        {label:'Сума угод',     a:Math.round(advSumA/1000), b:Math.round(advSumB/1000), suffix:'k₴', inv:false},
+        {label:'Конв. продаж',  a:convSaleA,   b:convSaleB,   suffix:'%', inv:false},
+    ];
+
+    document.getElementById('cmpModalKpi').innerHTML = kpis.map(k=>cmpKpiCard(k.label,k.a,k.b,k.suffix,k.inv)).join('');
+    document.getElementById('cmpModalSummary').innerHTML = '📋 <b>Підсумок:</b><br>' + cmpSummaryText(kpis);
+
+    // Таблиця по менеджерах
+    document.getElementById('cmpModalTableHead').innerHTML = `<tr>
+        <th class="px-3 py-2 text-left text-slate-400">Менеджер</th>
+        <th class="px-3 py-2 text-center text-blue-400 bg-blue-950/20" colspan="3">🔵 А (${fmt(sA)}–${fmt(eA)})</th>
+        <th class="px-3 py-2 text-center text-purple-400 bg-purple-950/20" colspan="3">🟣 Б (${fmt(sB)}–${fmt(eB)})</th>
+        <th class="px-3 py-2 text-center text-slate-400" colspan="2">↕ Зміна</th>
+    </tr><tr class="bg-slate-900/60 text-[9px]">
+        <th class="px-3 py-2"></th>
+        <th class="px-3 py-2 text-center text-blue-300 bg-blue-950/10">Ліди</th>
+        <th class="px-3 py-2 text-center text-blue-300 bg-blue-950/10">ЦА</th>
+        <th class="px-3 py-2 text-center text-blue-300 bg-blue-950/10">% ЦА</th>
+        <th class="px-3 py-2 text-center text-purple-300 bg-purple-950/10">Ліди</th>
+        <th class="px-3 py-2 text-center text-purple-300 bg-purple-950/10">ЦА</th>
+        <th class="px-3 py-2 text-center text-purple-300 bg-purple-950/10">% ЦА</th>
+        <th class="px-3 py-2 text-center text-slate-400">Ліди ↕</th>
+        <th class="px-3 py-2 text-center text-slate-400">ЦА ↕</th>
+    </tr>`;
+
+    const diffCell = (val) => {
+        if(val===0) return '<span class="text-slate-500">—</span>';
+        const cls = val>0?'text-emerald-400':'text-red-400';
+        return `<span class="${cls} font-bold">${val>0?'▲':'▼'}${Math.abs(val)}</span>`;
+    };
+
+    document.getElementById('cmpModalTableBody').innerHTML = allMgrs.map(mgr => {
+        const mA = analyzeData(mmA[mgr]||[]);
+        const mB = analyzeData(mmB[mgr]||[]);
+        const dL = mA.total - mB.total, dCA = mA.target - mB.target;
+        return `<tr class="hover:bg-slate-800/30 text-xs">
+            <td class="px-3 py-2.5 font-bold text-slate-200">${mgr}</td>
+            <td class="px-3 py-2.5 text-center text-blue-200 bg-blue-950/10">${mA.total}</td>
+            <td class="px-3 py-2.5 text-center text-blue-200 bg-blue-950/10">${mA.target}</td>
+            <td class="px-3 py-2.5 text-center text-blue-200 bg-blue-950/10">${mA.convTarget}%</td>
+            <td class="px-3 py-2.5 text-center text-purple-200 bg-purple-950/10">${mB.total}</td>
+            <td class="px-3 py-2.5 text-center text-purple-200 bg-purple-950/10">${mB.target}</td>
+            <td class="px-3 py-2.5 text-center text-purple-200 bg-purple-950/10">${mB.convTarget}%</td>
+            <td class="px-3 py-2.5 text-center">${diffCell(dL)}</td>
+            <td class="px-3 py-2.5 text-center">${diffCell(dCA)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function renderSourceComparison(dataA, dataB, advA, advB, sA, eA, sB, eB) {
+    const fmt = str => str ? new Date(str).toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit'}) : '—';
+
+    const smA={}, smB={};
+    dataA.forEach(l=>{const g=getParentGroup(l);if(g){if(!smA[g])smA[g]=[];smA[g].push(l);}});
+    dataB.forEach(l=>{const g=getParentGroup(l);if(g){if(!smB[g])smB[g]=[];smB[g].push(l);}});
+
+    const advByGrpA={}, advByGrpB={};
+    advA.filter(a=>getAdvGroup(a)!=='Інше').forEach(a=>{const g=getAdvGroup(a);if(!advByGrpA[g])advByGrpA[g]=[];advByGrpA[g].push(a);});
+    advB.filter(a=>getAdvGroup(a)!=='Інше').forEach(a=>{const g=getAdvGroup(a);if(!advByGrpB[g])advByGrpB[g]=[];advByGrpB[g].push(a);});
+
+    const allSrcs = [...new Set([...Object.keys(smA),...Object.keys(smB)])].sort();
+
+    // Загальні KPI
+    const totA = analyzeData(dataA), totB = analyzeData(dataB);
+    const advMainA = advA.filter(a=>getAdvGroup(a)!=='Інше');
+    const advMainB = advB.filter(a=>getAdvGroup(a)!=='Інше');
+    const advCntA = advMainA.length, advSumA = advSum(advMainA);
+    const advCntB = advMainB.length, advSumB = advSum(advMainB);
+    const convSaleA = totA.target>0 ? parseFloat(((advCntA/totA.target)*100).toFixed(1)) : 0;
+    const convSaleB = totB.target>0 ? parseFloat(((advCntB/totB.target)*100).toFixed(1)) : 0;
+
+    const kpis = [
+        {label:'Лідів',         a:totA.total,  b:totB.total,  suffix:'',  inv:false},
+        {label:'ЦА',            a:totA.target, b:totB.target, suffix:'',  inv:false},
+        {label:'% ЦА',          a:parseFloat(totA.convTarget), b:parseFloat(totB.convTarget), suffix:'%', inv:false},
+        {label:'Продажів',      a:advCntA,     b:advCntB,     suffix:'',  inv:false},
+        {label:'Сума угод',     a:Math.round(advSumA/1000), b:Math.round(advSumB/1000), suffix:'k₴', inv:false},
+        {label:'Конв. продаж',  a:convSaleA,   b:convSaleB,   suffix:'%', inv:false},
+    ];
+
+    document.getElementById('cmpModalKpi').innerHTML = kpis.map(k=>cmpKpiCard(k.label,k.a,k.b,k.suffix,k.inv)).join('');
+    document.getElementById('cmpModalSummary').innerHTML = '📋 <b>Підсумок:</b><br>' + cmpSummaryText(kpis);
+
+    document.getElementById('cmpModalTableHead').innerHTML = `<tr>
+        <th class="px-3 py-2 text-left text-slate-400">Джерело</th>
+        <th class="px-3 py-2 text-center text-blue-400 bg-blue-950/20" colspan="3">🔵 А (${fmt(sA)}–${fmt(eA)})</th>
+        <th class="px-3 py-2 text-center text-purple-400 bg-purple-950/20" colspan="3">🟣 Б (${fmt(sB)}–${fmt(eB)})</th>
+        <th class="px-3 py-2 text-center text-slate-400" colspan="2">↕ Зміна</th>
+    </tr><tr class="bg-slate-900/60 text-[9px]">
+        <th class="px-3 py-2"></th>
+        <th class="px-3 py-2 text-center text-blue-300 bg-blue-950/10">Ліди</th>
+        <th class="px-3 py-2 text-center text-blue-300 bg-blue-950/10">ЦА</th>
+        <th class="px-3 py-2 text-center text-blue-300 bg-blue-950/10">% ЦА</th>
+        <th class="px-3 py-2 text-center text-purple-300 bg-purple-950/10">Ліди</th>
+        <th class="px-3 py-2 text-center text-purple-300 bg-purple-950/10">ЦА</th>
+        <th class="px-3 py-2 text-center text-purple-300 bg-purple-950/10">% ЦА</th>
+        <th class="px-3 py-2 text-center text-slate-400">Ліди ↕</th>
+        <th class="px-3 py-2 text-center text-slate-400">ЦА ↕</th>
+    </tr>`;
+
+    const diffCell = (val) => {
+        if(val===0) return '<span class="text-slate-500">—</span>';
+        const cls = val>0?'text-emerald-400':'text-red-400';
+        return `<span class="${cls} font-bold">${val>0?'▲':'▼'}${Math.abs(val)}</span>`;
+    };
+
+    document.getElementById('cmpModalTableBody').innerHTML = allSrcs.map(src => {
+        const sA2 = analyzeData(smA[src]||[]);
+        const sB2 = analyzeData(smB[src]||[]);
+        const dL = sA2.total - sB2.total, dCA = sA2.target - sB2.target;
+        const advCA = (advByGrpA[src]||[]).length, advCB = (advByGrpB[src]||[]).length;
+        const advSA = advSum(advByGrpA[src]||[]), advSB = advSum(advByGrpB[src]||[]);
+        return `<tr class="hover:bg-slate-800/30 text-xs">
+            <td class="px-3 py-2.5 font-bold text-slate-200">${src}</td>
+            <td class="px-3 py-2.5 text-center text-blue-200 bg-blue-950/10">${sA2.total}</td>
+            <td class="px-3 py-2.5 text-center text-blue-200 bg-blue-950/10">${sA2.target}</td>
+            <td class="px-3 py-2.5 text-center text-blue-200 bg-blue-950/10">${sA2.convTarget}%</td>
+            <td class="px-3 py-2.5 text-center text-purple-200 bg-purple-950/10">${sB2.total}</td>
+            <td class="px-3 py-2.5 text-center text-purple-200 bg-purple-950/10">${sB2.target}</td>
+            <td class="px-3 py-2.5 text-center text-purple-200 bg-purple-950/10">${sB2.convTarget}%</td>
+            <td class="px-3 py-2.5 text-center">${diffCell(dL)}</td>
+            <td class="px-3 py-2.5 text-center">${diffCell(dCA)}</td>
+        </tr>`;
+    }).join('');
+}
+
 function exportToCSV(){let csv="data:text/csv;charset=utf-8,\uFEFFМенеджер,Джерело,Статус,Причина\n"+mainData.map(r=>`"${r.manager||''}","${r.source||''}","${r.status||''}","${r.reason||''}"`).join("\n");const l=document.createElement("a");l.href=encodeURI(csv);l.download="SD_Report.csv";l.click();}
 </script>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- МОДАЛЬНЕ ВІКНО ПОРІВНЯННЯ                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="cmpModal" class="fixed inset-0 z-[999] hidden items-center justify-center p-4" onclick="closeCmpModal(event)">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative bg-[#1e293b] rounded-2xl border border-slate-700 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto z-10">
+        <!-- Шапка -->
+        <div class="sticky top-0 bg-[#1e293b] border-b border-slate-700 px-6 py-4 flex justify-between items-start rounded-t-2xl z-10">
+            <div>
+                <h2 id="cmpModalTitle" class="text-base font-extrabold text-white uppercase tracking-wider">⚖️ Порівняння</h2>
+                <p id="cmpModalSubtitle" class="text-xs text-slate-400 mt-0.5"></p>
+            </div>
+            <button onclick="closeCmpModal()" class="text-slate-400 hover:text-white text-xl font-bold leading-none ml-4">✕</button>
+        </div>
+
+        <!-- Вибір дат -->
+        <div class="px-6 py-4 border-b border-slate-700/50 bg-slate-900/40">
+            <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Період А (основний)</p>
+                    <div class="bg-blue-900/30 border border-blue-700/50 rounded-lg px-3 py-2 text-xs text-blue-200 font-bold" id="cmpModalPeriodA">—</div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Період Б (для порівняння)</p>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="cmpModalStartB" class="bg-[#0f172a] border border-purple-700/60 rounded-lg px-2 py-1.5 text-xs text-white outline-none">
+                        <span class="text-slate-500 text-xs">—</span>
+                        <input type="date" id="cmpModalEndB" class="bg-[#0f172a] border border-purple-700/60 rounded-lg px-2 py-1.5 text-xs text-white outline-none">
+                    </div>
+                </div>
+                <button onclick="runBlockComparison()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-5 py-2 rounded-lg text-sm transition">⚖️ Порівняти</button>
+            </div>
+        </div>
+
+        <!-- Результати -->
+        <div id="cmpModalResults" class="hidden px-6 py-5">
+            <!-- KPI картки -->
+            <div id="cmpModalKpi" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6"></div>
+
+            <!-- Підсумок -->
+            <div id="cmpModalSummary" class="bg-slate-900/60 rounded-xl px-4 py-3 mb-6 border border-slate-700/50 text-xs text-slate-300 leading-relaxed"></div>
+
+            <!-- Таблиця деталей -->
+            <div class="overflow-x-auto rounded-xl border border-slate-700/50">
+                <table class="min-w-full text-sm">
+                    <thead id="cmpModalTableHead" class="bg-slate-900 text-[10px] font-bold uppercase tracking-wider"></thead>
+                    <tbody id="cmpModalTableBody" class="divide-y divide-slate-700/40"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
-
-
