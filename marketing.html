@@ -323,9 +323,21 @@ const parseDate = str => {
 };
 
 function getUTM(obj) {
+    // Спочатку шукаємо точно utm_campaign
     for (const k of Object.keys(obj)) {
         const kl = String(k).toLowerCase().replace(/[\s_\-]/g, '');
-        if (kl.includes('utm')) {
+        if (kl === 'utmcampaign') {
+            const v = String(obj[k] || '').trim();
+            if (v && v !== 'undefined' && v !== '—' && v !== '') return v;
+        }
+    }
+    return '';
+}
+
+function getUtmSource(obj) {
+    for (const k of Object.keys(obj)) {
+        const kl = String(k).toLowerCase().replace(/[\s_\-]/g, '');
+        if (kl === 'utmsource') {
             const v = String(obj[k] || '').trim();
             if (v && v !== 'undefined' && v !== '—' && v !== '') return v;
         }
@@ -334,23 +346,26 @@ function getUTM(obj) {
 }
 
 function extractData(row, type) {
-    const utmValue = getUTM(row);
+    const utmCampaign = getUTM(row);
+    const utmSource   = getUtmSource(row);
     if (type === 'lead') {
         return {
-            date:    String(row['Дата створення'] || row.date || '').trim(),
-            source:  String(row['Джерело']        || row.source || '').trim(),
-            utm:     utmValue,
-            manager: String(row['Відповідальний'] || row.manager || '').trim(),
-            status:  String(row['Якість ліда']    || row.status || '').trim(),
-            reason:  String(row['Причина відмови']|| row.reason || '').trim()
+            date:      String(row['Дата створення'] || row.date || '').trim(),
+            source:    String(row['Джерело']        || row.source || '').trim(),
+            utm:       utmCampaign,
+            utmSource: utmSource,
+            manager:   String(row['Відповідальний'] || row.manager || '').trim(),
+            status:    String(row['Якість ліда']    || row.status || '').trim(),
+            reason:    String(row['Причина відмови']|| row.reason || '').trim()
         };
     } else if (type === 'adv') {
         return {
-            date:    String(row['Дата авансу']    || row.date || '').trim(),
-            source:  String(row['Джерело']        || row.source || '').trim(),
-            utm:     utmValue,
-            manager: String(row['Відповідальний'] || row.manager || '').trim(),
-            amount:  parseFloat(String(row['Сума угоди'] || 0).replace(/\s/g,'')) || 0
+            date:      String(row['Дата авансу']    || row.date || '').trim(),
+            source:    String(row['Джерело']        || row.source || '').trim(),
+            utm:       utmCampaign,
+            utmSource: utmSource,
+            manager:   String(row['Відповідальний'] || row.manager || '').trim(),
+            amount:    parseFloat(String(row['Сума угоди'] || 0).replace(/\s/g,'')) || 0
         };
     } else {
         return {
@@ -376,13 +391,11 @@ function classify(srcRaw, utm, mgrRaw) {
     // "дзвінок" без уточнення — тільки Оксана Савчук = органіка
     if (s === 'дзвінок') {
         if (m.includes('савчук')) return 'organic';
-        return null; // всі інші менеджери — ігноруємо
+        return null;
     }
 
-    // Всі інші дзвінки (з уточненням джерела), OLX, UTM = платна
+    // utm тут = utm_campaign; наявність = платна реклама
     if (utm || s.includes('дзвінок') || s.includes('olx')) return 'ads';
-
-    // Без UTM — органіка
     return 'organic';
 }
 
@@ -1124,9 +1137,8 @@ function buildCampaignIndex(dStart, dEnd) {
     });
 
     leads.forEach(l => {
-        // Беремо тільки ліди з utm або utm_source
         const hasUtm = !!l.utm;
-        const utmSrc = getUtmSource(l);
+        const utmSrc = l.utmSource || '';
         if (!hasUtm && !utmSrc) return;
 
         const matched = matchUtmToCampaign(l.utm, utmSrc, allCampaignNames);
@@ -1139,7 +1151,6 @@ function buildCampaignIndex(dStart, dEnd) {
         }
         if (l.utm) idx[key].utms.add(l.utm);
         idx[key].leads.push(l);
-        // Уточнюємо панель по джерелу ліда (точніше ніж по назві кампанії)
         const detectedPanel = detectPanel('', l.source);
         if (detectedPanel) idx[key].panelKey = detectedPanel;
     });
@@ -1154,18 +1165,6 @@ function buildCampaignIndex(dStart, dEnd) {
     });
 
     return idx;
-}
-
-// Отримати utm_source з ліда
-function getUtmSource(lead) {
-    for (const k of Object.keys(lead)) {
-        const kl = String(k).toLowerCase().replace(/[\s_\-]/g,'');
-        if (kl === 'utmsource') {
-            const v = String(lead[k] || '').trim();
-            if (v && v !== 'undefined' && v !== '—') return v;
-        }
-    }
-    return '';
 }
 
 function renderCampaignsView() {
