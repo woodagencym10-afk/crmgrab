@@ -1021,17 +1021,30 @@ const UTM_HARDMAP = {
     'wastore_20_03_26':                'KP | WA.store Adv+ | 20.03.26',
 };
 
-// Визначення панелі кампанії по Campaign Name
-const CAMP_PANELS = [
-    { key: 'fb_eco',    label: 'Facebook Ecoforma',    color: 'blue',   icon: '📘',
-      matchCampaign: n => n.toLowerCase().includes('kp') && !n.toLowerCase().includes('wa.') && !n.toLowerCase().includes('wa |') },
-    { key: 'fb_wood',   label: 'Facebook Wood Agency', color: 'amber',  icon: '🪵',
-      matchCampaign: n => n.toLowerCase().includes('wa.') || n.toLowerCase().includes('wa |') || n.toLowerCase().includes('wa.shop') || n.toLowerCase().includes('wa.store') },
-    { key: 'site_eco',  label: 'Сайт EcoForma',        color: 'emerald',icon: '🌿',
-      matchCampaign: n => n.toLowerCase().includes('pmax') || n.toLowerCase().includes('google') || (n.toLowerCase().includes('eco') && !n.toLowerCase().includes('kp')) },
-    { key: 'site_wood', label: 'Сайт Wood Agency',     color: 'cyan',   icon: '🌐',
-      matchCampaign: n => false }, // поки порожньо — додамо коли з'являться кампанії
+// Визначення панелі по Source зі Spend (колонка B)
+const SPEND_PANEL_MAP = [
+    { match: s => /ecoforma/i.test(s)   && !/google/i.test(s), panel: 'fb_eco' },
+    { match: s => /wood agency/i.test(s) && !/google/i.test(s), panel: 'fb_wood' },
+    { match: s => /google ads ecoforma/i.test(s),               panel: 'site_eco' },
+    { match: s => /google ads wood agency/i.test(s),            panel: 'site_wood' },
 ];
+
+function detectPanelBySpendSource(spendSource) {
+    for (const m of SPEND_PANEL_MAP) {
+        if (m.match(spendSource || '')) return m.panel;
+    }
+    return null;
+}
+
+// Визначення панелі по джерелу ліда (колонка Джерело в МП)
+function detectPanelByLeadSource(leadSource) {
+    const s = String(leadSource || '').toLowerCase();
+    if (s.includes('facebook') && (s.includes('ecoforma') || s.includes('екоформа'))) return 'fb_eco';
+    if (s.includes('facebook') && (s.includes('wood') || s.includes('вуд')))          return 'fb_wood';
+    if ((s.includes('ecoforma') || s.includes('екоформа')) && !s.includes('facebook')) return 'site_eco';
+    if ((s.includes('wood') || s.includes('вуд')) && !s.includes('facebook'))          return 'site_wood';
+    return null;
+}
 
 const PANEL_COLORS = {
     blue:    { border: 'border-blue-800/50',    header: 'bg-blue-950/40',    badge: 'bg-blue-900/30 text-blue-300',    dot: 'bg-blue-400' },
@@ -1090,52 +1103,38 @@ function matchUtmToCampaign(utm, utmSource, allCampaignNames) {
     return best;
 }
 
-// Визначення панелі для кампанії
-function detectPanel(campaignName, leadSource) {
-    const n   = campaignName || '';
-    const src = (leadSource || '').toLowerCase();
-
-    // По джерелу ліда — найточніший спосіб
-    if (src.includes('facebook') && (src.includes('ecoforma') || src.includes('екоформа'))) return 'fb_eco';
-    if (src.includes('facebook') && (src.includes('wood') || src.includes('вуд')))           return 'fb_wood';
-    if ((src.includes('ecoforma') || src.includes('екоформа')) && !src.includes('facebook')) return 'site_eco';
-    if ((src.includes('wood') || src.includes('вуд')) && !src.includes('facebook'))          return 'site_wood';
-
-    // По назві кампанії (Spend без лідів)
-    for (const p of CAMP_PANELS) {
-        if (p.matchCampaign(n)) return p.key;
-    }
-    return 'fb_eco'; // fallback
-}
-
 function buildCampaignIndex(dStart, dEnd) {
-    const idx = {}; // { campaignKey: { displayName, panelKey, utms, leads, advs, spend } }
+    const idx = {};
 
-    // Збираємо Spend по кампаніях
+    // Збираємо Spend — панель визначається по Source (колонка B)
     const spendByCampaign = {};
-    const spendSourceByCampaign = {}; // для визначення панелі
+    const panelByCampaign = {};
     globalSpend.forEach(s => {
         const d = parseDate(s.date);
         if (d < dStart || d > dEnd) return;
         if (!s.campaign) return;
         spendByCampaign[s.campaign] = (spendByCampaign[s.campaign] || 0) + s.spend;
-        spendSourceByCampaign[s.campaign] = s.source;
+        if (!panelByCampaign[s.campaign]) {
+            panelByCampaign[s.campaign] = detectPanel('', s.source) || 'fb_eco';
+        }
     });
 
     const allCampaignNames = Object.keys(spendByCampaign);
 
     // Ініціалізуємо кампанії зі Spend
     allCampaignNames.forEach(name => {
-        const panelKey = detectPanel(name, spendSourceByCampaign[name]);
-        idx[name] = { displayName: name, panelKey, utms: new Set(), leads: [], advs: [], spend: spendByCampaign[name] };
+        idx[name] = {
+            displayName: name,
+            panelKey:    panelByCampaign[name] || 'fb_eco',
+            utms:        new Set(),
+            leads:       [],
+            advs:        [],
+            spend:       spendByCampaign[name]
+        };
     });
 
-    // Ліди з UTM мітками
-    const leads = globalLeads.filter(l => {
-        const d = parseDate(l.date);
-        return d >= dStart && d <= dEnd;
-    });
-
+    // Ліди — матчимо по utm_campaign (колонка N)
+    const leads = globalLeads.filter(l => { const d = parseDate(l.date); return d >= dStart && d <= dEnd; });
     leads.forEach(l => {
         const hasUtm = !!l.utm;
         const utmSrc = l.utmSource || '';
@@ -1146,16 +1145,22 @@ function buildCampaignIndex(dStart, dEnd) {
         if (!key) return;
 
         if (!idx[key]) {
-            const panelKey = detectPanel('', l.source);
+            // Ліди без кампанії у Spend — панель по джерелу ліда
+            const panelKey = detectPanel('', l.source) || 'fb_eco';
             idx[key] = { displayName: l.utm || utmSrc, panelKey, utms: new Set(), leads: [], advs: [], spend: 0 };
         }
         if (l.utm) idx[key].utms.add(l.utm);
         idx[key].leads.push(l);
-        const detectedPanel = detectPanel('', l.source);
-        if (detectedPanel) idx[key].panelKey = detectedPanel;
+
+        // Якщо кампанія зі Spend — не перезаписуємо панель (Spend точніший)
+        // Якщо кампанія тільки з лідів — уточнюємо по джерелу
+        if (!panelByCampaign[key]) {
+            const fromLead = detectPanel('', l.source);
+            if (fromLead) idx[key].panelKey = fromLead;
+        }
     });
 
-    // Аванси з UTM
+    // Аванси
     const advs = globalAdvs.filter(a => { const d = parseDate(a.date); return d >= dStart && d <= dEnd; });
     advs.forEach(a => {
         if (!a.utm) return;
@@ -1178,8 +1183,13 @@ function renderCampaignsView() {
     const campIdx = buildCampaignIndex(dStart, dEnd);
     const entries = Object.values(campIdx);
 
-    // Групуємо по панелях
-    const panels = {};
+    // Панелі
+    const CAMP_PANELS = [
+        { key: 'fb_eco',    label: 'Facebook Ecoforma',    color: 'blue',    icon: '📘' },
+        { key: 'fb_wood',   label: 'Facebook Wood Agency', color: 'amber',   icon: '🪵' },
+        { key: 'site_eco',  label: 'Сайт EcoForma',        color: 'emerald', icon: '🌿' },
+        { key: 'site_wood', label: 'Сайт Wood Agency',     color: 'cyan',    icon: '🌐' },
+    ];
     CAMP_PANELS.forEach(p => { panels[p.key] = []; });
 
     entries.forEach(camp => {
