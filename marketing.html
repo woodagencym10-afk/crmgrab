@@ -547,17 +547,15 @@ function render() {
     renderActiveView();
     if (currentTab === 'campaigns') renderCampaignsView();
 
-    // Аналітика по днях тижня — тільки для не-кампаній вкладок
+    // Аналітика по днях тижня
     if (currentTab !== 'campaigns') {
-        const allVisibleLeads = globalLeads.filter(l => {
-            const d = parseDate(l.date);
-            if (d < dStart || d > dEnd) return false;
+        const allVisibleLeads = leads.filter(l => {
             const cat = classify(l.source, l.utm, l.manager);
             if (!cat || cat === 'repeat') return false;
             const f = findChild(l.source, l.manager, l.utm);
+            if (f.gk === 'other_src') return false;
             const grp = SOURCE_GROUPS.find(g => g.key === f.gk);
-            if (!grp) return false;
-            return isGroupVisible(grp);
+            return grp ? isGroupVisible(grp) : false;
         });
         renderWeekdayAnalytics(allVisibleLeads);
     } else {
